@@ -32,7 +32,7 @@ const G = 2000;                       // гравитация
 const JVX = 360, JVY = -640;          // прыжок от столба
 const DJVY = -560;                    // сальто в воздухе
 const HOLD_G = 0.35, HOLD_MAX = 0.26; // зажатие = длинный прыжок
-const SLIDE = 34, ICE_SLIDE = 230, STICK = 0.3;
+const SLIDE = 34, ICE_SLIDE = 230, STICK = 0.3, LIFT_SPEED = 70;
 const MAX_FALL = 900;
 const PX_PER_M = 20;
 const ROTOR_PERIOD = 5;               // шипы поворачиваются каждые 5 секунд
@@ -77,22 +77,42 @@ const ZONES = [
     en: { ghost: 1.2, bat: 1, hawk: 0.6, spiky: 0.8 }, tr: 0, stars: true },
 ];
 
-const SKINS = [
-  { name: 'ХОМЯК',    cost: 0,    body: '#f0a040', dark: '#c06a20', light: '#ffe6b0', scarf: '#ff3d7f', scarfD: '#c01f5a', ear: '#ff9fb0', ol: '#4a2410' },
-  { name: 'ПАНДА',    cost: 40,   body: '#ffffff', dark: '#2a2a3a', light: '#ffffff', scarf: '#3ce06a', scarfD: '#1a9a3a', ear: '#2a2a3a', ol: '#1a1a2a', patch: '#2a2a3a', earC: '#2a2a3a' },
-  { name: 'ЛИС',      cost: 90,   body: '#ff7a1e', dark: '#b84a10', light: '#fff4e0', scarf: '#3ab0ff', scarfD: '#1a70c0', ear: '#3a1a10', ol: '#3a1808', ears: 'cat' },
-  { name: 'ЛЯГУШ',    cost: 140,  body: '#5ad040', dark: '#2e9a2a', light: '#e0ff9a', scarf: '#ffd23a', scarfD: '#c89a10', ear: '#ffffff', ol: '#1a4a10' },
-  { name: 'КОТИК',    cost: 190,  body: '#9aa0b8', dark: '#5a6078', light: '#f0f0ff', scarf: '#ff8a1e', scarfD: '#c05a10', ear: '#ffb0c8', ol: '#22263a', ears: 'cat', stripes: '#6a7090' },
-  { name: 'ПИНГВИН',  cost: 250,  body: '#2a3048', dark: '#ff9a2a', light: '#ffffff', scarf: '#ff3a3a', scarfD: '#b01a1a', ear: '#2a3048', ol: '#10121e', ears: 'none', beak: true },
-  { name: 'ЕНОТ',     cost: 320,  body: '#8a8a98', dark: '#3a3a48', light: '#e8e8f0', scarf: '#3ce06a', scarfD: '#1a9a3a', ear: '#3a3a48', ol: '#1a1a24', ears: 'cat', mask: '#2a2a34' },
-  { name: 'ЗАЙКА',    cost: 400,  body: '#f4f0ff', dark: '#b8a8e0', light: '#ffffff', scarf: '#a64aff', scarfD: '#6a1ac0', ear: '#ffb0d0', ol: '#3a2a5a', ears: 'long' },
-  { name: 'ПЧЁЛКА',   cost: 500,  body: '#ffd23a', dark: '#3a2a10', light: '#fff4b0', scarf: '#3a2a10', scarfD: '#1a1008', ear: '#3a2a10', ol: '#3a2a10', ears: 'none', stripes: '#3a2a10', antenna: '#3a2a10' },
-  { name: 'ТИГР',     cost: 620,  body: '#ff9a2a', dark: '#2a1a10', light: '#ffffff', scarf: '#3ab0ff', scarfD: '#1a70c0', ear: '#ffffff', ol: '#2a1408', ears: 'cat', stripes: '#2a1a10' },
-  { name: 'ЕДИНОРОГ', cost: 780,  body: '#ffffff', dark: '#d8c8f0', light: '#fff0fa', scarf: '#ff5ab0', scarfD: '#3ab0ff', ear: '#ffb0e0', ol: '#4a3a6a', ears: 'cat', horn: '#ffd23a' },
-  { name: 'РОБОТ',    cost: 950,  body: '#a8b8d0', dark: '#5a6a88', light: '#e0ecff', scarf: '#ff3a3a', scarfD: '#b01a1a', ear: '#ffd23a', ol: '#1a2238', antenna: '#ffd23a' },
-  { name: 'ДРАКОША',  cost: 1200, body: '#4ad07a', dark: '#2a8a4a', light: '#fff07a', scarf: '#ff5a3a', scarfD: '#b02a1a', ear: '#fff07a', ol: '#123a20', ears: 'none', horns: '#fff6c0' },
-  { name: 'ПРИЗРАК',  cost: 1500, body: '#eef0ff', dark: '#b8c0e8', light: '#ffffff', scarf: '#7cf0ff', scarfD: '#30b0d8', ear: '#eef0ff', ol: '#4a4a7a', ears: 'none', ghost: true },
+// Редкость героев: обычные — перекраски, дальше — всё более особенные
+const RARITY = [
+  { name: 'ОБЫЧНЫЕ', one: 'ОБЫЧНЫЙ',     col: '#d8d8e0', dk: '#8a8a98', w: 55 },
+  { name: 'РЕДКИЕ',  one: 'РЕДКИЙ',      col: '#3ab0ff', dk: '#1a70c0', w: 30 },
+  { name: 'ЭПИК',    one: 'ЭПИЧЕСКИЙ',   col: '#c04aff', dk: '#7a1ab0', w: 12 },
+  { name: 'ЛЕГЕНДЫ', one: 'ЛЕГЕНДАРНЫЙ', col: '#ffb02a', dk: '#c06a00', w: 3 },
 ];
+const HAM = { body: '#f0a040', dark: '#c06a20', light: '#ffe6b0', scarf: '#ff3d7f', scarfD: '#c01f5a', ear: '#ff9fb0', ol: '#4a2410' };
+const SKINS = [
+  { id: 'hamster', r: 0, name: 'ХОМЯК',    cost: 0,  ...HAM },
+  { id: 'choco',   r: 0, name: 'ШОКО',     cost: 30, ...HAM, body: '#8a5030', dark: '#5a3018', light: '#d8a878', scarf: '#ffd23a', scarfD: '#c89a10', ol: '#2a1408' },
+  { id: 'snow',    r: 0, name: 'СНЕЖОК',   cost: 40, ...HAM, body: '#f4f4ff', dark: '#b8b8d0', light: '#ffffff', scarf: '#3ab0ff', scarfD: '#1a70c0', ol: '#4a4a6a' },
+  { id: 'pinky',   r: 0, name: 'РОЗОВЫЙ',  cost: 50, ...HAM, body: '#ff9ac8', dark: '#d0609a', light: '#ffe0f0', scarf: '#a64aff', scarfD: '#6a1ac0', ol: '#5a1a3a' },
+  { id: 'mint',    r: 0, name: 'МЯТНЫЙ',   cost: 60, ...HAM, body: '#7ae0b8', dark: '#3aa880', light: '#e0fff0', scarf: '#ff8a1e', scarfD: '#c05a10', ol: '#1a4a3a' },
+  { id: 'night',   r: 0, name: 'НОЧНОЙ',   cost: 80, ...HAM, body: '#4a4a7a', dark: '#2a2a4a', light: '#a8a8e0', scarf: '#ffd23a', scarfD: '#c89a10', ear: '#ff9ad8', ol: '#12122a' },
+  { id: 'panda',   r: 1, name: 'ПАНДА',    cost: 140, body: '#ffffff', dark: '#2a2a3a', light: '#ffffff', scarf: '#3ce06a', scarfD: '#1a9a3a', ear: '#2a2a3a', ol: '#1a1a2a', patch: '#2a2a3a', earC: '#2a2a3a' },
+  { id: 'fox',     r: 1, name: 'ЛИС',      cost: 180, body: '#ff7a1e', dark: '#b84a10', light: '#fff4e0', scarf: '#3ab0ff', scarfD: '#1a70c0', ear: '#3a1a10', ol: '#3a1808', ears: 'cat' },
+  { id: 'frog',    r: 1, name: 'ЛЯГУШ',    cost: 220, body: '#5ad040', dark: '#2e9a2a', light: '#e0ff9a', scarf: '#ffd23a', scarfD: '#c89a10', ear: '#ffffff', ol: '#1a4a10' },
+  { id: 'cat',     r: 1, name: 'КОТИК',    cost: 260, body: '#9aa0b8', dark: '#5a6078', light: '#f0f0ff', scarf: '#ff8a1e', scarfD: '#c05a10', ear: '#ffb0c8', ol: '#22263a', ears: 'cat', stripes: '#6a7090' },
+  { id: 'penguin', r: 1, name: 'ПИНГВИН',  cost: 300, body: '#2a3048', dark: '#ff9a2a', light: '#ffffff', scarf: '#ff3a3a', scarfD: '#b01a1a', ear: '#2a3048', ol: '#10121e', ears: 'none', beak: true },
+  { id: 'raccoon', r: 1, name: 'ЕНОТ',     cost: 340, body: '#8a8a98', dark: '#3a3a48', light: '#e8e8f0', scarf: '#3ce06a', scarfD: '#1a9a3a', ear: '#3a3a48', ol: '#1a1a24', ears: 'cat', mask: '#2a2a34' },
+  { id: 'bunny',   r: 1, name: 'ЗАЙКА',    cost: 380, body: '#f4f0ff', dark: '#b8a8e0', light: '#ffffff', scarf: '#a64aff', scarfD: '#6a1ac0', ear: '#ffb0d0', ol: '#3a2a5a', ears: 'long' },
+  { id: 'bee',     r: 2, name: 'ПЧЁЛКА',   cost: 500, body: '#ffd23a', dark: '#3a2a10', light: '#fff4b0', scarf: '#3a2a10', scarfD: '#1a1008', ear: '#3a2a10', ol: '#3a2a10', ears: 'none', stripes: '#3a2a10', antenna: '#3a2a10' },
+  { id: 'tiger',   r: 2, name: 'ТИГР',     cost: 600, body: '#ff9a2a', dark: '#2a1a10', light: '#ffffff', scarf: '#3ab0ff', scarfD: '#1a70c0', ear: '#ffffff', ol: '#2a1408', ears: 'cat', stripes: '#2a1a10' },
+  { id: 'unicorn', r: 2, name: 'ЕДИНОРОГ', cost: 750, body: '#ffffff', dark: '#d8c8f0', light: '#fff0fa', scarf: '#ff5ab0', scarfD: '#3ab0ff', ear: '#ffb0e0', ol: '#4a3a6a', ears: 'cat', horn: '#ffd23a' },
+  { id: 'robot',   r: 2, name: 'РОБОТ',    cost: 900, body: '#a8b8d0', dark: '#5a6a88', light: '#e0ecff', scarf: '#ff3a3a', scarfD: '#b01a1a', ear: '#ffd23a', ol: '#1a2238', antenna: '#ffd23a' },
+  { id: 'dragon',  r: 2, name: 'ДРАКОША',  cost: 1050, body: '#4ad07a', dark: '#2a8a4a', light: '#fff07a', scarf: '#ff5a3a', scarfD: '#b02a1a', ear: '#fff07a', ol: '#123a20', ears: 'none', horns: '#fff6c0' },
+  { id: 'ghost',   r: 2, name: 'ПРИЗРАК',  cost: 1200, body: '#eef0ff', dark: '#b8c0e8', light: '#ffffff', scarf: '#7cf0ff', scarfD: '#30b0d8', ear: '#eef0ff', ol: '#4a4a7a', ears: 'none', ghost: true },
+  { id: 'cyborg',  r: 3, name: 'КИБОРГ',   cost: 1800, ...HAM, scarf: '#3a3a4a', scarfD: '#1a1a24', special: 'cyborg' },
+  { id: 'crab',    r: 3, name: 'КРАБ',     cost: 2000, body: '#ff4a3a', dark: '#b01a10', light: '#ffb0a0', scarf: '#ffd23a', scarfD: '#c89a10', ear: '#ff4a3a', ol: '#3a0808', ears: 'none', special: 'crab', noMuzzle: true, noEyes: true },
+  { id: 'pirate',  r: 3, name: 'ПИРАТ',    cost: 2200, ...HAM, ears: 'none', scarf: '#e8261a', scarfD: '#a01008', special: 'pirate' },
+  { id: 'astro',   r: 3, name: 'КОСМОНАВТ', cost: 2500, body: '#ffffff', head: '#f0a040', dark: '#a8b0c8', light: '#ffe6b0', scarf: '#ff8a1e', scarfD: '#c05a10', ear: '#f0a040', ol: '#2a2a40', ears: 'none', special: 'astro' },
+  { id: 'king',    r: 3, name: 'КОРОЛЬ',   cost: 2800, ...HAM, ears: 'none', scarf: '#c01a3a', scarfD: '#800a20', cape: true, special: 'king' },
+  { id: 'fire',    r: 3, name: 'ОГОНЁК',   cost: 3200, body: '#ff6a1a', dark: '#c0300a', light: '#ffd23a', scarf: '#ffd23a', scarfD: '#ff8a1e', ear: '#ffd23a', ol: '#4a0a00', ears: 'none', special: 'fire', eye: '#fff6a0' },
+];
+const CHEST_COST = 150, DUP_REFUND = 60;
 
 const ACH = [
   { id: 'flip',    name: 'ПЕРВОЕ САЛЬТО', reward: 10 },
@@ -107,6 +127,9 @@ const ACH = [
   { id: 'crumble', name: 'ШУСТРИК',       reward: 30 },
   { id: 'shield',  name: 'ПОД ЗАЩИТОЙ',   reward: 25 },
   { id: 'zone5',   name: 'ПУТЕШЕСТВЕННИК', reward: 150 },
+  { id: 'jelly',   name: 'ПРЫГ-СКОК',     reward: 15 },
+  { id: 'chest',   name: 'КЛАДОИСКАТЕЛЬ', reward: 30 },
+  { id: 'legend',  name: 'ЛЕГЕНДА',       reward: 200 },
 ];
 
 // ---------- Хранилище ----------
@@ -116,12 +139,19 @@ const store = {
 };
 let best = store.get('best', 0);
 let bank = store.get('coins', 0);
-let owned = store.get('owned', [0]);
-let skinIdx = store.get('skin', 0);
+const OLD_ORDER = ['hamster', 'panda', 'fox', 'frog', 'cat', 'penguin', 'raccoon', 'bunny', 'bee', 'tiger', 'unicorn', 'robot', 'dragon', 'ghost'];
+let owned = store.get('ownedIds', null);
+if (!owned) {
+  owned = store.get('owned', [0]).map(i => OLD_ORDER[i]).filter(Boolean);
+  if (!owned.includes('hamster')) owned.push('hamster');
+  store.set('ownedIds', owned);
+}
+let skinId = store.get('skinId', OLD_ORDER[store.get('skin', 0)] || 'hamster');
 let muted = store.get('muted', false);
 let tutDone = store.get('tut', false);
 let achieved = store.get('ach', []);
-if (skinIdx >= SKINS.length) skinIdx = 0;
+if (!SKINS.some(k => k.id === skinId)) skinId = 'hamster';
+const curSkin = () => SKINS.find(k => k.id === skinId) || SKINS[0];
 
 // ---------- Канвас ----------
 const cv = document.getElementById('game');
@@ -379,6 +409,13 @@ function heroSprite(sk, pose, t, blink) {
   if (pose === 'idle') {
     B.ry += inh + deep * 0.5; B.rx += inh * 0.6; B.y -= inh * 0.5 + deep * 0.5;
     Hd.y -= inh + deep; A1.y -= inh + deep; A1.x += inh * 0.5;
+  } else if (pose === 'run') {
+    const ph = t * 16;
+    F1 = { x: 16 + Math.sin(ph) * 4, y: 25.5 - Math.max(0, Math.cos(ph)) * 2 };
+    F2 = { x: 16 - Math.sin(ph) * 4, y: 25.5 - Math.max(0, -Math.cos(ph)) * 2 };
+    A1 = { x: 20 - Math.sin(ph) * 2, y: 19.5 };
+    const bob = Math.abs(Math.cos(ph)) > 0.7 ? 1 : 0;
+    B.y -= bob; Hd.y -= bob;
   } else if (pose === 'cling') {
     B.x = 17; B.y = 20; Hd.x = 17.5; Hd.y = 11.5;
     F1 = { x: 11.5, y: 24.5 }; F2 = { x: 15.5, y: 26 };
@@ -418,21 +455,22 @@ function heroSprite(sk, pose, t, blink) {
   sell(c, B.x + 1, B.y + 1, B.rx - 2, B.ry - 1.5, sk.light);
   if (sk.stripes) { c.fillStyle = sk.stripes; c.fillRect(Math.round(B.x - 4), Math.round(B.y - 1), 3, 1); c.fillRect(Math.round(B.x - 4), Math.round(B.y + 2), 3, 1); }
   if (!sk.ghost) for (const f of [F1, F2]) sell(c, f.x, f.y, 2.6, 1.6, sk.dark);
-  sell(c, Hd.x, Hd.y, Hd.rx, Hd.ry, sk.body);
+  sell(c, Hd.x, Hd.y, Hd.rx, Hd.ry, sk.head || sk.body);
   if (sk.stripes) { c.fillStyle = sk.stripes; for (const dx of [-3, 0, 3]) c.fillRect(Math.round(Hd.x + dx), Math.round(Hd.y - 6), 1, 2); }
-  sell(c, Hd.x + 3.2, Hd.y + 2.5, 3.6, 2.6, sk.light);
+  if (!sk.noMuzzle) sell(c, Hd.x + 3.2, Hd.y + 2.5, 3.6, 2.6, sk.light);
   const ex1 = Math.round(Hd.x + 1), ex2 = Math.round(Hd.x + 5), ey = Math.round(Hd.y - 3);
   if (sk.mask) { c.fillStyle = sk.mask; c.fillRect(Math.round(Hd.x - 6), ey - 1, 14, 4); }
   if (sk.patch) { c.fillStyle = sk.patch; c.fillRect(ex1 - 1, ey - 1, 4, 5); c.fillRect(ex2 - 1, ey - 1, 4, 5); }
   const dark = sk.patch || sk.mask;
-  if (blink) {
+  if (sk.noEyes) { /* у краба глаза на стебельках */ }
+  else if (blink) {
     c.fillStyle = dark ? '#ffffff' : '#1a1010'; c.fillRect(ex1, ey + 2, 2, 1); c.fillRect(ex2, ey + 2, 2, 1);
   } else {
-    c.fillStyle = '#1a1010'; c.fillRect(ex1, ey, 2, 3); c.fillRect(ex2, ey, 2, 3);
+    c.fillStyle = sk.eye || '#1a1010'; c.fillRect(ex1, ey, 2, 3); c.fillRect(ex2, ey, 2, 3);
     c.fillStyle = '#ffffff'; c.fillRect(ex1, ey, 1, 1); c.fillRect(ex2, ey, 1, 1);
   }
   if (sk.beak) { c.fillStyle = '#ff9a2a'; c.fillRect(Math.round(Hd.x + 6), Math.round(Hd.y), 3, 2); }
-  else { c.fillStyle = '#ff5a8a'; c.fillRect(Math.round(Hd.x + 6), Math.round(Hd.y), 2, 1); }
+  else if (!sk.noMuzzle) { c.fillStyle = '#ff5a8a'; c.fillRect(Math.round(Hd.x + 6), Math.round(Hd.y), 2, 1); }
   c.fillStyle = '#ff9ab8'; c.fillRect(Math.round(Hd.x - 2), Math.round(Hd.y + 2), 2, 1);
   if (pose === 'tuck' || pose === 'jump') { c.fillStyle = '#1a1010'; c.fillRect(Math.round(Hd.x + 4), Math.round(Hd.y + 3), 2, 1); }
   if (sk.horn) { stri(c, Hd.x + 3, Hd.y - 12, 5, sk.horn); c.fillStyle = '#ffffff'; c.fillRect(Math.round(Hd.x + 3), Math.round(Hd.y - 10), 1, 1); }
@@ -449,26 +487,104 @@ function heroSprite(sk, pose, t, blink) {
   const sy = Math.round(B.y - B.ry + 0.5), sx = Math.round(B.x - 5.5);
   c.fillStyle = sk.scarf; c.fillRect(sx, sy, 11, 2);
   c.fillStyle = sk.scarfD; c.fillRect(sx, sy + 2, 11, 1);
-  for (let i = 0; i < 6; i++) {
-    const yy = Math.round(sy + Math.sin(t * 14 - i * 0.9) * 1.3 + i * 0.35);
+  const tail = sk.cape ? 10 : 6;
+  for (let i = 0; i < tail; i++) {
+    const yy = Math.round(sy + Math.sin(t * 14 - i * 0.9) * 1.3 + i * (sk.cape ? 0.7 : 0.35));
     c.fillStyle = i % 2 ? sk.scarfD : sk.scarf;
-    c.fillRect(sx - 1 - i, yy, 1, 2);
+    c.fillRect(sx - 1 - i, yy, 1, sk.cape ? 4 : 2);
+  }
+  if (sk.special) drawSpecial(c, sk, t, Hd, B, A1, E2, ex1, ex2, ey);
+}
+
+// пиксельное кольцо (шлем космонавта)
+function sring(c, cx, cy, rx, ry, col, ol) {
+  for (let y = Math.floor(cy - ry - 1); y <= Math.ceil(cy + ry + 1); y++)
+    for (let x = Math.floor(cx - rx - 1); x <= Math.ceil(cx + rx + 1); x++) {
+      const d = Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry);
+      if (d > 1 - 1.2 / rx && d <= 1) { c.fillStyle = col; c.fillRect(x, y, 1, 1); }
+      else if (d > 1 && d <= 1 + 1.1 / rx) { c.fillStyle = ol; c.fillRect(x, y, 1, 1); }
+    }
+}
+// легендарные герои — не перекраска, а свои детали
+function drawSpecial(c, sk, t, Hd, B, A1, E2, ex1, ex2, ey) {
+  const r = Math.round, ol = sk.ol, hx = r(Hd.x), hy = r(Hd.y);
+  if (sk.special === 'cyborg') {
+    // половина хомяка — киборг
+    const metal = '#9aa8c0', metalL = '#d0dcf0', seam = '#4a5068';
+    c.save(); c.beginPath(); c.rect(hx + 3, 0, 32, 32); c.clip();
+    sell(c, Hd.x, Hd.y, Hd.rx, Hd.ry, metal);
+    sell(c, Hd.x + 3.2, Hd.y + 2.5, 3.6, 2.6, metalL);
+    sell(c, B.x, B.y, B.rx, B.ry, metal);
+    sell(c, A1.x, A1.y, 1.8, 2, metal);
+    c.restore();
+    c.fillStyle = seam; c.fillRect(hx + 3, hy - 6, 1, 13); c.fillRect(r(B.x) + 3, r(B.y - B.ry), 1, r(B.ry * 2));
+    c.fillStyle = metalL; c.fillRect(hx + 6, hy - 5, 1, 1); c.fillRect(hx + 5, hy + 4, 1, 1); c.fillRect(r(B.x) + 5, r(B.y) - 2, 1, 1);
+    c.fillStyle = '#1a1010'; c.fillRect(ex2 - 1, ey - 1, 4, 5);
+    c.fillStyle = '#ff2a2a'; c.fillRect(ex2, ey, 2, 3);
+    c.fillStyle = Math.sin(t * 6) > 0 ? '#ffe0e0' : '#ff8080'; c.fillRect(ex2, ey + 1, 1, 1);
+    c.fillStyle = Math.sin(t * 4) > 0 ? '#3aff8a' : '#1a8a4a'; c.fillRect(r(B.x) + 5, r(B.y) + 1, 2, 1);
+    c.fillStyle = ol; c.fillRect(hx + 4, hy - 13, 1, 5);
+    c.fillStyle = '#ff2a2a'; c.fillRect(hx + 3, hy - 14, 3, 2);
+  } else if (sk.special === 'crab') {
+    for (const ex of [Hd.x + 1, Hd.x + 5]) {
+      c.fillStyle = ol; c.fillRect(r(ex), r(Hd.y - 7), 1, 3);
+      sell(c, ex + 0.5, Hd.y - 8.5, 2.6, 2.6, ol); sell(c, ex + 0.5, Hd.y - 8.5, 1.7, 1.7, '#ffffff');
+      c.fillStyle = '#1a1010'; c.fillRect(r(ex + 1), r(Hd.y - 9), 1, 1);
+    }
+    c.fillStyle = ol; c.fillRect(hx + 2, hy + 2, 4, 1); c.fillRect(hx + 1, hy + 1, 1, 1); c.fillRect(hx + 6, hy + 1, 1, 1);
+    const claw = (x, y) => {
+      sell(c, x, y, 3.8, 3.4, ol); sell(c, x, y, 2.8, 2.4, sk.body);
+      c.fillStyle = ol; c.fillRect(r(x), r(y) - 1, 3, 1);
+      c.fillStyle = sk.light; c.fillRect(r(x) - 2, r(y) - 2, 1, 1);
+    };
+    claw(B.x - 7, B.y - 3); claw(A1.x + 1.5, A1.y - 2.5);
+    c.fillStyle = ol; for (const dx of [-4, 0, 4]) c.fillRect(r(B.x + dx), r(B.y + B.ry), 1, 2);
+  } else if (sk.special === 'pirate') {
+    const ty = hy - 6;
+    c.fillStyle = ol; c.fillRect(hx - 9, ty - 1, 19, 3); c.fillRect(hx - 6, ty - 6, 13, 6);
+    c.fillStyle = '#2a2a3a'; c.fillRect(hx - 8, ty, 17, 1); c.fillRect(hx - 5, ty - 5, 11, 5);
+    c.fillStyle = '#ffd23a'; c.fillRect(hx - 5, ty - 1, 11, 1);
+    c.fillStyle = '#ffffff'; c.fillRect(hx, ty - 4, 2, 2); c.fillRect(hx - 1, ty - 2, 1, 1); c.fillRect(hx + 2, ty - 2, 1, 1);
+    c.fillStyle = '#1a1010'; c.fillRect(ex2 - 1, ey - 1, 4, 4); c.fillRect(hx - 6, ey - 2, 14, 1);
+    c.fillStyle = '#ffd23a'; c.fillRect(hx - 7, hy + 1, 1, 2);
+  } else if (sk.special === 'astro') {
+    c.globalAlpha = 0.3; sell(c, Hd.x, Hd.y - 0.5, 9.5, 9, '#bfe8ff'); c.globalAlpha = 1;
+    sring(c, Hd.x, Hd.y - 0.5, 9.5, 9, '#e8eef8', ol);
+    c.fillStyle = '#ffffff'; c.fillRect(hx - 5, hy - 6, 2, 1); c.fillRect(hx - 6, hy - 5, 1, 2);
+    c.fillStyle = ol; c.fillRect(hx - 2, hy - 12, 1, 3);
+    c.fillStyle = Math.sin(t * 5) > 0 ? '#ff3a3a' : '#ffd23a'; c.fillRect(hx - 3, hy - 13, 3, 1);
+    c.fillStyle = '#3ab0ff'; c.fillRect(r(B.x) - 1, r(B.y) - 1, 3, 2);
+  } else if (sk.special === 'king') {
+    const ty = hy - 7;
+    c.fillStyle = ol; c.fillRect(hx - 6, ty - 4, 13, 6);
+    c.fillStyle = '#ffd23a'; c.fillRect(hx - 5, ty - 1, 11, 2);
+    c.fillRect(hx - 5, ty - 3, 2, 2); c.fillRect(hx - 1, ty - 3, 3, 2); c.fillRect(hx + 4, ty - 3, 2, 2);
+    c.fillStyle = '#fff6a0'; c.fillRect(hx, ty - 3, 1, 1);
+    c.fillStyle = '#ff3a5a'; c.fillRect(hx, ty - 1, 1, 1);
+    c.fillStyle = '#3ab0ff'; c.fillRect(hx - 3, ty - 1, 1, 1); c.fillRect(hx + 3, ty - 1, 1, 1);
+  } else if (sk.special === 'fire') {
+    for (let i = 0; i < 3; i++) {
+      const fh = 3 + Math.round((Math.sin(t * 12 + i * 2) + 1) * 1.5), fx = hx - 4 + i * 4, top = hy - 5 - fh;
+      stri(c, fx, top, fh + 1, ol, 1); stri(c, fx, top, fh + 1, '#ff3a1a');
+      stri(c, fx, top + 2, fh - 1, '#ff8a1e'); stri(c, fx, top + 3, Math.max(1, fh - 3), '#ffd23a');
+    }
   }
 }
 
 // ---------- Состояние ----------
-let state = 'menu';   // menu | shop | ach | play | dead | over
-let p, poles, path, birds, ents, parts, leaves, camY, camR, minY, coinsRun, shake, deadT, zoneIdx = 0, banner, kicks, flips, combo, comboT, time = 0, paused, held = false, blinkT = 0, tutStep, toasts = [], zonesSeen;
+let state = 'load';   // load | menu | shop | ach | play | dead | over
+let p, poles, path, birds, ents, parts, leaves, camY, camR, minY, coinsRun, shake, deadT, zoneIdx = 0, banner, kicks, flips, combo, comboT, time = 0, paused, held = false, blinkT = 0, tutStep, toasts = [], zonesSeen, pathPrev = null;
+let loadT = 0, loadStep = 0, fadeT = 0, shopTab = 0, chest = null, tipIdx = Math.floor(Math.random() * 7);
 const GROUND = { x0: -400, x1: W + 400, y0: 0, y1: 2000 };
 
 function makePole(cx, y0, y1, kind, face, zone) {
   return { cx, x0: cx - 7, x1: cx + 7, y0, y1, kind, face, zone, thorn: 0, timer: 0, flipA: -1, flipped: false,
-           crT: -1, amp: 0, spd: 0, baseX: cx, t: rand(0, 6), seed: Math.floor(Math.random() * 1e5) };
+           crT: -1, amp: 0, spd: 0, baseX: cx, t: rand(0, 6), seed: Math.floor(Math.random() * 1e5), wob: 0, solid: true };
 }
 
 function reset() {
   const first = makePole(110, -200, 0, 'log', 1, 0);
-  poles = [first]; path = first;
+  poles = [first]; path = first; pathPrev = null;
   p = {
     x: first.x1 + PW / 2, y: -PH / 2, vx: 0, vy: 0, state: 'wall', side: -1, face: 1, dj: true, pole: first, stand: null,
     spin: 0, rot: 0, trail: [], squash: 0, shield: 0, magnet: 0, inv: 0, stick: 0, holdT: 0, kicksAir: 0,
@@ -491,51 +607,80 @@ const heightM = () => Math.max(0, Math.floor((-PH / 2 - minY) / PX_PER_M));
 function kindFor(m, d, mode, prev, zi) {
   const z = ZONES[zi];
   const o = { log: 3 };
-  const calm = prev.kind !== 'log';
-  if (m > 20) o.thorn = (0.7 + d) * (calm ? 0.4 : 1);
-  if (m > 40) o.crumble = (0.6 + d * 0.5) * (calm ? 0.4 : 1);
-  if (m > 55) o.ice = 0.5 * (z.ice || 1);
-  if (m > 80) o.rotor = (0.7 + d) * (calm ? 0.4 : 1);
-  if (m > 120 && mode === 'cross') o.move = 0.6 + d * 0.5;
+  const k = prev.kind === 'log' ? 1 : 0.4;   // после опасного столба — передышка
+  if (m > 20) o.thorn = (0.7 + d) * k;
+  if (m > 30 && mode === 'cross' && prev.kind !== 'jelly') o.jelly = 0.6;
+  if (m > 35) o.honey = 0.5;
+  if (m > 40) o.crumble = (0.6 + d * 0.5) * k;
+  if (m > 55) o.ice = 0.5 * (z.ice || 1) * k;
+  if (m > 70) o.lift = 0.4;
+  if (m > 80 && mode === 'cross') o.rotor = (0.7 + d) * k;
+  if (m > 100) o.blink = (0.5 + d * 0.5) * k;
+  if (m > 120 && mode === 'cross') o.move = (0.6 + d * 0.5) * k;
   return pick(o);
 }
 
-function overlapsPole(x, y0, y1, minDx) {
-  return poles.some(q => Math.abs(q.cx - x) < minDx && q.y0 < y1 + 30 && q.y1 > y0 - 30);
+function overlapsPole(x, y0, y1, minDx, except) {
+  return poles.some(q => q !== except && Math.abs(q.baseX - x) < minDx && q.y0 < y1 + 30 && q.y1 > y0 - 30);
+}
+
+// После крутилки игрок может оказаться с любой стороны: ставим два столба — слева и справа
+function addRotorPair(r) {
+  const f = r.face, g = even(rand(84, 94)), zi = r.zone;
+  const y1 = r.y1 - 10;
+  const main = makePole(r.cx + f * g, Math.min(y1 - 140, r.y0 - 180), y1, 'log', -f, zi);
+  const mirror = makePole(r.cx - f * g, r.y0 - 110, y1, 'log', f, zi);
+  poles.push(main, mirror);
+  pathPrev = r; path = main;
+  for (let i = 0; i < 3; i++) ents.push({ type: 'coin', x: r.cx, y: r.y0 - 50 - i * 22, r: 8, t: i * 0.3 });
 }
 
 function addPathPole() {
   const cur = path;
+  if (cur.kind === 'rotor' && !cur.paired) { cur.paired = true; addRotorPair(cur); return; }
   const m = -cur.y0 / PX_PER_M, d = diffAt(m), zi = zoneIdxAt(m);
-  const len = even(Math.max(84, rand(120, 260) * (1 - 0.35 * d)));
+  let len = even(Math.max(84, rand(120, 260) * (1 - 0.35 * d)));
   const dir = cur.face;   // игрок висит на грани face и прыгает в эту же сторону
-  let mode = Math.random() < 0.22 ? 'stack' : 'cross';
+  const cx = cur.baseX;
+  const canStack = cur.kind === 'log' || cur.kind === 'honey' || cur.kind === 'thorn';
+  let mode = canStack && Math.random() < 0.22 ? 'stack' : 'cross';
   let x, y1, face;
   if (mode === 'cross') {
     let lo, hi;
-    if (dir > 0) { lo = Math.max(cur.cx + 84, 114); hi = Math.min(cur.cx + 204, W - 30); }
-    else { lo = Math.max(cur.cx - 204, 30); hi = Math.min(cur.cx - 84, W - 114); }
-    if (hi < lo) mode = 'stack';
-    else { x = even(rand(lo, hi)); y1 = even(cur.y0 + (cur.y1 - cur.y0) * rand(0.25, 0.6)); face = -dir; }
+    if (dir > 0) { lo = Math.max(cx + 84, 114); hi = Math.min(cx + 204, W - 30); }
+    else { lo = Math.max(cx - 204, 30); hi = Math.min(cx - 84, W - 114); }
+    y1 = even(cur.y0 + (cur.y1 - cur.y0) * rand(0.25, 0.6));
+    // после желе игрок отлетает назад — новый столб выше прошлого
+    if (cur.kind === 'jelly' && pathPrev) y1 = Math.min(y1, pathPrev.y0 - 30);
+    x = null;
+    for (let tries = 0; tries < 8 && hi >= lo; tries++) {
+      const cand = even(rand(lo, hi));
+      if (!overlapsPole(cand, y1 - len, y1, 40, cur)) { x = cand; break; }
+    }
+    if (x === null) mode = 'stack'; else face = -dir;
   }
-  if (mode === 'stack') { x = cur.cx; y1 = even(cur.y0 - rand(30, 64)); face = cur.face; }
-  const kind = kindFor(m, d, mode, cur, zi);
+  if (mode === 'stack') { x = cx; y1 = even(cur.y0 - rand(30, 64)); face = cur.face; }
+  let kind = kindFor(m, d, mode, cur, zi);
+  if (kind === 'rotor' && (x < 124 || x > W - 124)) kind = 'thorn';
+  if (kind === 'lift') len = Math.max(len, 200);
   const pl = makePole(x, y1 - len, y1, kind, face, zi);
   if (kind === 'thorn') pl.thorn = -face;
   if (kind === 'rotor') { pl.thorn = -face; pl.timer = rand(2, ROTOR_PERIOD); }
   if (kind === 'move') {
     pl.amp = rand(22, 38); pl.spd = rand(1, 1.7);
     pl.baseX = clamp(x, 24 + pl.amp, W - 24 - pl.amp);
+    pl.cx = pl.baseX; pl.x0 = pl.cx - 7; pl.x1 = pl.cx + 7;
   }
+  if (kind === 'blink') pl.t = rand(0, 1.5);
   poles.push(pl);
-  path = pl;
+  pathPrev = cur; path = pl;
   populate(cur, pl, mode, m, d, zi);
   // лишние столбы вразброс — бонусные, с монетками
-  if (m > 3 && Math.random() < 0.35) {
-    const ex = even(dir > 0 ? rand(24, cur.cx - 84) : rand(cur.cx + 84, W - 24));
+  if (m > 3 && kind !== 'rotor' && Math.random() < 0.3) {
+    const ex = even(dir > 0 ? rand(24, cx - 84) : rand(cx + 84, W - 24));
     const ey1 = even(pl.y1 + rand(-80, 20)), elen = even(rand(80, 160));
-    if (ex > 20 && ex < W - 20 && !overlapsPole(ex, ey1 - elen, ey1, 50)) {
-      const kp = makePole(ex, ey1 - elen, ey1, Math.random() < 0.7 ? 'log' : 'crumble', 0, zi);
+    if (ex > 20 && ex < W - 20 && !overlapsPole(ex, ey1 - elen, ey1, 60)) {
+      const kp = makePole(ex, ey1 - elen, ey1, Math.random() < 0.7 ? 'log' : 'honey', 0, zi);
       poles.push(kp);
       for (let i = 0; i < 3; i++) ents.push({ type: 'coin', x: ex + (ex < W / 2 ? 26 : -26), y: kp.y0 + 20 + i * 22, r: 8, t: i * 0.3 });
     }
@@ -558,7 +703,7 @@ function populate(cur, pl, mode, m, d, zi) {
     }
   }
   // враги, свои в каждой зоне
-  if (m > 14 && Math.random() < 0.28 + 0.45 * d) {
+  if (m > 25 && Math.random() < 0.12 + 0.25 * d) {   // враги стали реже
     const z = ZONES[zi], o = {};
     for (const k in z.en) {
       const need = { bee: 14, snail: 25, cone: 50, spiky: 70, hawk: 90, bat: 0, ghost: 0 }[k];
@@ -579,8 +724,8 @@ function spawnEnemy(type, cur, pl, d) {
   else if (type === 'ghost') ents.push({ type, x: rand(40, W - 40), y, triggerY: y, r: 10, st: 'idle', life: 7, t: rand(0, 6) });
   else if (type === 'bat') ents.push({ type, x: W / 2, y, baseY: y, cx: rand(100, W - 100), amp: rand(50, 90), r: 9, t: rand(0, 6) });
   else if (type === 'snail') {
-    const host = pl.kind === 'log' || pl.kind === 'ice' ? pl : cur;
-    if (host.kind !== 'log' && host.kind !== 'ice') return;
+    const host = pl.kind === 'log' || pl.kind === 'honey' ? pl : cur;
+    if (host.kind !== 'log' && host.kind !== 'honey') return;
     if (host.y1 - host.y0 < 120) return;
     ents.push({ type, pole: host, side: Math.random() < 0.5 ? -1 : 1, x: host.cx, y: lerp(host.y0, host.y1, 0.5), vy: (Math.random() < 0.5 ? -1 : 1) * (22 + 20 * d), r: 8, t: 0 });
   }
@@ -786,6 +931,7 @@ const BTN = {
 };
 const inRect = (pt, r) => pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
 function uiClick(pt) {
+  if (state === 'load') return true;
   if (state === 'shop') { shopClick(pt); return true; }
   if (state === 'ach') { state = 'menu'; sfx.click(); return true; }
   if (state !== 'play' && state !== 'dead' && inRect(pt, BTN.mute)) { audio(); toggleMute(); sfx.click(); return true; }
@@ -795,24 +941,48 @@ function uiClick(pt) {
   if (state === 'menu' && inRect(pt, BTN.ach)) { audio(); startMusic(); state = 'ach'; sfx.click(); return true; }
   return false;
 }
-const shopRect = i => ({ x: 16 + (i % 3) * 112, y: 132 + Math.floor(i / 3) * 96, w: 104, h: 88 });
+const tabRect = i => ({ x: 14 + i * 84, y: 100, w: 80, h: 28 });
+const shopRect = j => ({ x: 16 + (j % 3) * 112, y: 142 + Math.floor(j / 3) * 96, w: 104, h: 88 });
+const CHEST_BTN = { x: 60, y: 446, w: 240, h: 52 };
+const tabSkins = () => SKINS.filter(k => k.r === shopTab);
+function selectSkin(k) { skinId = k.id; store.set('skinId', k.id); }
+function openChest() {
+  if (bank < CHEST_COST) { tone(200, 120, 0.15, 'square', 0.06); return; }
+  bank -= CHEST_COST;
+  let r = Math.random() * 100, rar = 0;
+  for (let i = 0; i < RARITY.length; i++) { if ((r -= RARITY[i].w) <= 0) { rar = i; break; } }
+  const pool = SKINS.filter(k => k.r === rar), k = pool[Math.floor(Math.random() * pool.length)];
+  const dup = owned.includes(k.id);
+  if (dup) bank += DUP_REFUND; else { owned.push(k.id); selectSkin(k); store.set('ownedIds', owned); }
+  store.set('coins', bank);
+  chest = { t: 0, k, dup };
+  unlock('chest');
+  if (rar === 3 && !dup) unlock('legend');
+  tone(300, 300, 0.1, 'square', 0.05);
+}
 function shopClick(pt) {
-  for (let i = 0; i < SKINS.length; i++) {
-    if (!inRect(pt, shopRect(i))) continue;
-    if (owned.includes(i)) { skinIdx = i; store.set('skin', i); sfx.click(); }
-    else if (bank >= SKINS[i].cost) {
-      bank -= SKINS[i].cost; owned.push(i); skinIdx = i;
-      store.set('coins', bank); store.set('owned', owned); store.set('skin', i); sfx.coin();
+  if (chest) { if (chest.t > 1.8) chest = null; return; }
+  for (let i = 0; i < 4; i++) if (inRect(pt, tabRect(i))) { shopTab = i; sfx.click(); return; }
+  const list = tabSkins();
+  for (let j = 0; j < list.length; j++) {
+    if (!inRect(pt, shopRect(j))) continue;
+    const k = list[j];
+    if (owned.includes(k.id)) { selectSkin(k); sfx.click(); }
+    else if (bank >= k.cost) {
+      bank -= k.cost; owned.push(k.id); selectSkin(k);
+      store.set('coins', bank); store.set('ownedIds', owned); sfx.coin();
+      if (k.r === 3) unlock('legend');
     } else tone(200, 120, 0.15, 'square', 0.06);
     return;
   }
+  if (inRect(pt, CHEST_BTN)) { openChest(); return; }
   state = 'menu'; sfx.click();
 }
 
 // ---------- Физика ----------
 function solidsNear(y0, y1) {
   const out = [GROUND];
-  for (const q of poles) if (q.y1 > y0 && q.y0 < y1) out.push(q);
+  for (const q of poles) if (q.solid && q.y1 > y0 && q.y0 < y1) out.push(q);
   return out;
 }
 const ovl = s => p.x + PW / 2 > s.x0 + 0.001 && p.x - PW / 2 < s.x1 - 0.001 && p.y + PH / 2 > s.y0 + 0.001 && p.y - PH / 2 < s.y1 - 0.001;
@@ -847,10 +1017,19 @@ function onGround(S) {
 // шипы смотрят на сторону pole.thorn (-1 влево, +1 вправо); игрок с p.side касается грани -p.side
 const thornHits = (pl, side) => pl && pl.thorn && pl.thorn === -side;
 
+function jellyBounce(s, dirX) {
+  p.state = 'air'; p.vx = dirX * JVX * 1.05; p.vy = -720; p.face = dirX || p.face;
+  p.dj = true; p.spin = 0; p.rot = 0; p.holdT = 0; p.pole = null; p.stand = null; p.squash = 1;
+  s.wob = 1; kicks++;
+  burst(p.x, p.y, 8, s.seed % 2 ? '#ff8ad8' : '#8affb0', 140, 0.4, 4, 300);
+  tone(200, 600, 0.18, 'sine', 0.12); tone(300, 900, 0.12, 'triangle', 0.05, 0.05);
+  unlock('jelly');
+}
 function grab(s, side) {
+  if (s.kind === 'jelly') { jellyBounce(s, -side); return; }   // желе отталкивает
   if (thornHits(s, side)) { die('thorn'); return; }
   p.state = 'wall'; p.side = side; p.face = -side; p.vx = 0; p.vy = 0; p.pole = s;
-  p.stick = s.kind === 'ice' ? 0.05 : STICK; p.dj = true; p.spin = 0; p.rot = 0; p.squash = -0.8; p.holdT = 0;
+  p.stick = s.kind === 'ice' ? 0.05 : s.kind === 'lift' ? 0.1 : STICK; p.dj = true; p.spin = 0; p.rot = 0; p.squash = -0.8; p.holdT = 0;
   kicks++; p.kicksAir++;
   if (p.kicksAir >= 5) unlock('jump5');
   if (s.kind === 'crumble' && s.crT < 0) { s.crT = 0.75; sfx.crack(); }
@@ -858,6 +1037,7 @@ function grab(s, side) {
   sfx.grab();
 }
 function land(s) {
+  if (s.kind === 'jelly') { jellyBounce(s, 0); p.vy = -800; return; }
   p.state = 'ground'; p.stand = s; p.pole = null;
   if (p.vx) p.face = Math.sign(p.vx);
   p.vx = 0; p.vy = 0; p.dj = true; p.spin = 0; p.rot = 0; p.squash = 1; p.holdT = 0;
@@ -884,7 +1064,7 @@ function die(reason) {
   p.vx = (p.x < W / 2 ? 1 : -1) * 100; p.vy = -560;
   shake = 0.45;
   burst(p.x, p.y, 22, '#ffffff', 260, 0.7, 4);
-  burst(p.x, p.y, 14, SKINS[skinIdx].body, 200, 0.8, 6);
+  burst(p.x, p.y, 14, curSkin().body, 200, 0.8, 6);
   sfx.die();
   const m = heightM();
   p.newBest = m > best;
@@ -923,6 +1103,17 @@ function updatePoles(dt) {
         if (pl.flipA >= 1) { pl.flipA = -1; pl.timer = ROTOR_PERIOD; }
       }
     }
+    if (pl.wob > 0) pl.wob = Math.max(0, pl.wob - dt * 2);
+    if (pl.kind === 'blink') {
+      // исчезающий столб: 3.2 с есть, 1 с нет
+      const was = pl.solid;
+      pl.solid = (pl.t % 4.2) < 3.2;
+      if (was && !pl.solid) {
+        burst(pl.cx, (pl.y0 + pl.y1) / 2, 10, '#c8b0ff', 120, 0.5, 4, 0);
+        if (p.pole === pl && p.state === 'wall') { p.state = 'air'; p.vx = 0; p.vy = 0; p.pole = null; }
+        if (p.stand === pl && p.state === 'ground') { p.state = 'air'; p.vy = 0; p.stand = null; }
+      }
+    }
     if (pl.kind === 'crumble' && pl.crT >= 0) {
       pl.crT -= dt;
       if (pl.crT <= 0) {
@@ -943,14 +1134,21 @@ function updatePlayer(dt) {
   p.squash *= Math.pow(0.0005, dt);
   const S = solidsNear(p.y - 200, p.y + 200);
   if (p.state === 'wall') {
-    const ice = p.pole && p.pole.kind === 'ice';
+    const kind = p.pole ? p.pole.kind : 'log';
+    const ice = kind === 'ice', lift = kind === 'lift';
     if (p.stick > 0) { p.stick -= dt; p.vy = 0; }
+    else if (lift) p.vy = -LIFT_SPEED;                        // лифт везёт наверх
+    else if (kind === 'honey') p.vy = 0;                      // мёд держит на месте
     else p.vy += ((ice ? ICE_SLIDE : SLIDE) - p.vy) * Math.min(1, dt * (ice ? 2 : 5));
     const hy = moveY(S, p.vy * dt);
     if (hy && hy.dir > 0) p.vy = 0;
     if (thornHits(p.pole, p.side)) { die('thorn'); return; }
+    if (kind === 'honey' && Math.random() < dt * 2) parts.push({ x: p.x + p.side * PW / 2, y: p.y + 6, vx: 0, vy: 20, life: 0.8, max: 0.8, color: '#ffb21a', size: 4, grav: 200 });
     const f = faceAt(S, p.side);
-    if (!f || f === GROUND) { p.state = 'air'; p.vx = 0; p.vy = Math.max(0, p.vy); p.pole = null; }
+    if (!f || f === GROUND) {
+      p.state = 'air'; p.vx = 0; p.pole = null;
+      p.vy = lift ? -380 : Math.max(0, p.vy);   // с верха лифта — подскок
+    }
     else {
       p.pole = f;
       if (p.vy > 10 && Math.random() < dt * (ice ? 30 : 10))
@@ -1095,8 +1293,29 @@ function updateParts(dt) {
   if (toasts.length) { toasts[0].t += dt; if (toasts[0].t > 2.8) toasts.shift(); }
 }
 
+const TIPS = [
+  'ДЕРЖИ — ПРЫЖОК ВЫШЕ', 'В ВОЗДУХЕ ЖМИ — САЛЬТО', 'ЖЕЛЕ ОТТАЛКИВАЕТ', 'СЛЕДИ ЗА ТАЙМЕРОМ',
+  'МЁД НЕ ДАЁТ СЪЕЗЖАТЬ', 'В СУНДУКЕ ЕСТЬ ЛЕГЕНДЫ', 'ЛИФТ ВЕЗЁТ НАВЕРХ',
+];
+const LOAD_STEPS = [
+  ...ZONES.map((z, i) => () => farTile(i)),
+  ...SKINS.map(k => () => heroSprite(k, 'idle', 0, false)),
+  () => { for (const z of ZONES) textCanvas(z.name, 2, '#ffffff', OL); },
+  () => { for (const t of TIPS) textCanvas(t, 2, '#ffffff', OL); },
+];
+const LOAD_MIN = 2.4;
+const loadProgress = () => Math.min(loadStep / LOAD_STEPS.length, loadT / LOAD_MIN);
+function updateLoad(dt) {
+  loadT += dt;
+  if (loadStep < LOAD_STEPS.length) LOAD_STEPS[loadStep++]();
+  if (loadProgress() >= 1 && loadT > LOAD_MIN + 0.3) { state = 'menu'; fadeT = 0.6; }
+}
+
 function update(dt) {
   time += dt;
+  if (fadeT > 0) fadeT -= dt;
+  if (state === 'load') { updateLoad(dt); return; }
+  if (chest) chest.t += dt;
   blinkT -= dt; if (blinkT < -0.12) blinkT = rand(2, 4);
   if (paused && state === 'play') return;
   updateParts(dt);
@@ -1136,6 +1355,8 @@ function poleColors(pl) {
   const z = ZONES[pl.zone];
   if (pl.kind === 'ice') return ['#bfe8ff', '#5aa0d8', '#ffffff'];
   if (pl.kind === 'crumble') return ['#d0a070', '#7a4a24', '#f0c890'];
+  if (pl.kind === 'blink') return ['#9a7aff', '#5a3ac0', '#e0d0ff'];
+  if (pl.kind === 'lift') return ['#a8b0c0', '#5a6078', '#e8eef8'];
   return [z.log, z.logD, z.logL];
 }
 function drawThorns(face, y0, y1, dir) {
@@ -1146,7 +1367,41 @@ function drawThorns(face, y0, y1, dir) {
     prect(ctx, dir > 0 ? face + 8 : face - 10, y + 4, 2, 2, '#ffffff');
   }
 }
+function drawJelly(pl) {
+  const h = pl.y1 - pl.y0, pink = pl.seed % 2 === 1;
+  const [base, dk, lt] = pink ? ['#ff6ad0', '#c02a90', '#ffd0f0'] : ['#4ae880', '#18a050', '#c8ffd8'];
+  const wob = Math.sin(pl.t * 30) * pl.wob * 4 + Math.sin(pl.t * 3) * 1;
+  const w = 16 + wob, x0 = pl.cx - w / 2;
+  pell(ctx, pl.cx, pl.y0 + 6, w / 2 + 2, 8, OL); pell(ctx, pl.cx, pl.y1 - 6, w / 2 + 2, 8, OL);
+  prect(ctx, x0 - 2, pl.y0 + 6, w + 4, h - 12, OL);
+  ctx.globalAlpha = 0.92;
+  pell(ctx, pl.cx, pl.y0 + 6, w / 2, 6, base); pell(ctx, pl.cx, pl.y1 - 6, w / 2, 6, base);
+  prect(ctx, x0, pl.y0 + 6, w, h - 12, base);
+  prect(ctx, x0 + w - 4, pl.y0 + 8, 4, h - 16, dk);
+  prect(ctx, x0 + 2, pl.y0 + 6, 2, h - 14, lt);
+  for (let k = 0; k < h / 30; k++) {
+    const by = pl.y1 - 10 - ((pl.t * 18 + hash2(k, pl.seed) * h) % (h - 20));
+    prect(ctx, pl.cx - 2 + (hash2(k, 3) - 0.5) * 6, by, 4, 4, lt);
+  }
+  ctx.globalAlpha = 1;
+  prect(ctx, pl.cx - 4, pl.y0 + 4, 4, 2, '#ffffff');
+}
 function drawPole(pl) {
+  if (pl.kind === 'jelly') { drawJelly(pl); return; }
+  if (pl.kind === 'blink') {
+    const ph = pl.t % 4.2;
+    if (!pl.solid) {
+      ctx.globalAlpha = 0.35;
+      for (let y = pl.y0; y < pl.y1; y += 8) prect(ctx, pl.x0, y, 14, 2, '#e0d0ff');
+      ctx.globalAlpha = 1;
+      return;
+    }
+    if (ph > 2.4 && Math.sin(pl.t * 40) > 0) ctx.globalAlpha = 0.35;
+  }
+  drawPoleBody(pl);
+  ctx.globalAlpha = 1;
+}
+function drawPoleBody(pl) {
   const [base, dk, lt] = poleColors(pl);
   const h = pl.y1 - pl.y0, cx = pl.cx;
   ctx.save();
@@ -1172,6 +1427,22 @@ function drawPole(pl) {
   if (pl.kind === 'ice') {
     for (let y = pl.y0 + 10; y < pl.y1 - 10; y += 30) prect(ctx, x0 + 4, y, 2, 12, '#ffffff');
     for (let k = 0; k < 3; k++) prect(ctx, x0 + 1 + k * 5, pl.y1, 4, 4 + k % 2 * 4, '#dff4ff');
+  }
+  if (pl.kind === 'honey') {
+    prect(ctx, x0 - 2, pl.y0 + 6, 4, h - 12, '#ffb21a'); prect(ctx, x0 + 12, pl.y0 + 6, 4, h - 12, '#ffb21a');
+    prect(ctx, x0 - 2, pl.y0 + 6, 2, h - 12, '#ffe07a');
+    for (let k = 0; k < 4; k++) {
+      const dy = pl.y0 + 20 + hash2(k, pl.seed) * (h - 40), s = k % 2 ? -1 : 1;
+      const drip = 4 + ((pl.t * 6 + k * 3) % 8);
+      prect(ctx, s > 0 ? x0 + 12 : x0 - 2, dy, 4, drip, '#ffb21a');
+      pell(ctx, s > 0 ? x0 + 14 : x0, dy + drip, 3, 3, '#ffb21a');
+    }
+  }
+  if (pl.kind === 'lift') {
+    const off = (pl.t * 40) % 16;
+    for (let y = pl.y1 - 10 - off; y > pl.y0 + 8; y -= 16) {
+      prect(ctx, cx - 2, y, 4, 2, '#ffd23a'); prect(ctx, cx - 4, y + 2, 2, 2, '#ffd23a'); prect(ctx, cx + 2, y + 2, 2, 2, '#ffd23a');
+    }
   }
   if (pl.kind === 'rotor') for (let y = pl.y0 + 20; y < pl.y1 - 10; y += 40) { prect(ctx, x0 - 2, y, 18, 4, '#5a6078'); prect(ctx, x0, y, 14, 2, '#c8d0e0'); }
   pell(ctx, cx, pl.y0, 9, 4, OL); pell(ctx, cx, pl.y0, 7, 3, lt); pell(ctx, cx, pl.y0, 3, 1.5, base);
@@ -1335,7 +1606,7 @@ function heroPose() {
   return p.vy < 0 ? 'jump' : 'fall';
 }
 function drawHero() {
-  heroSprite(SKINS[skinIdx], heroPose(), time, blinkT < 0);
+  heroSprite(curSkin(), heroPose(), time, blinkT < 0);
   const put = (x, y, rot, a) => {
     ctx.save();
     ctx.globalAlpha = a;
@@ -1466,7 +1737,6 @@ function drawHUD() {
     text(banner.text, W / 2, 190, 2, '#ffffff');
     ctx.globalAlpha = 1;
   }
-  drawToast();
   if (paused && state === 'play') {
     ctx.fillStyle = 'rgba(42,20,8,0.6)'; ctx.fillRect(0, 0, W, H);
     text('ПАУЗА', W / 2, H / 2 - 6, 5, '#ffd23a');
@@ -1507,23 +1777,75 @@ function drawMenu() {
   drawHand(W / 2 - 6, 528);
 }
 
-function drawShop() {
-  ctx.fillStyle = 'rgba(42,20,8,0.78)'; ctx.fillRect(0, 0, W, H);
-  text('ГЕРОИ', W / 2, 70, 4, '#ffd23a');
-  coinIcon(W / 2 - 30, 104);
-  text(String(bank), W / 2 - 16, 114, 2, '#ffffff', 'left');
-  for (let i = 0; i < SKINS.length; i++) {
-    const r = shopRect(i), s = SKINS[i];
-    const sel = i === skinIdx, own = owned.includes(i);
-    ctx.fillStyle = OL; ctx.fillRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6);
-    ctx.fillStyle = sel ? '#ffd23a' : own ? '#ffffff' : '#b8a898'; ctx.fillRect(r.x, r.y, r.w, r.h);
-    heroSprite(s, 'idle', time + i * 0.7, false);
-    ctx.drawImage(hcv, r.x + r.w / 2 - 32, r.y - 10, 64, 64);
-    text(s.name, r.x + r.w / 2, r.y + 68, 1, OL, 'center', null);
-    if (own) text(sel ? 'ВЫБРАН' : 'ВЗЯТЬ', r.x + r.w / 2, r.y + 82, 1, sel ? '#c01f5a' : '#1a70c0', 'center', null);
-    else { coinIcon(r.x + r.w / 2 - 16, r.y + 77, 4); text(String(s.cost), r.x + r.w / 2 - 8, r.y + 82, 1, bank >= s.cost ? OL : '#6a5a4a', 'left', null); }
+function chestIcon(x, y, open, shakeX) {
+  x += shakeX;
+  prect(ctx, x - 22, y - 8, 44, 30, OL);
+  prect(ctx, x - 20, y - 6, 40, 26, '#a8602a');
+  prect(ctx, x - 20, y + 4, 40, 4, '#ffd23a');
+  prect(ctx, x - 4, y, 8, 10, '#ffd23a'); prect(ctx, x - 2, y + 2, 4, 4, OL);
+  if (open) { prect(ctx, x - 22, y - 26, 44, 16, OL); prect(ctx, x - 20, y - 24, 40, 12, '#c8803a'); }
+  else { prect(ctx, x - 22, y - 18, 44, 14, OL); prect(ctx, x - 20, y - 16, 40, 10, '#c8803a'); prect(ctx, x - 20, y - 8, 40, 2, '#ffd23a'); }
+}
+function drawSkinCard(r, k) {
+  const R = RARITY[k.r], sel = k.id === skinId, own = owned.includes(k.id);
+  ctx.fillStyle = OL; ctx.fillRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6);
+  ctx.fillStyle = R.col; ctx.fillRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
+  ctx.fillStyle = sel ? '#ffe680' : own ? '#ffffff' : '#c8bcb0'; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4);
+  if (k.r === 3) { // блеск легендарных
+    const sx = r.x + ((time * 60 + r.y) % (r.w + 40)) - 20;
+    ctx.fillStyle = 'rgba(255,240,160,0.6)'; ctx.fillRect(sx, r.y + 2, 6, r.h - 4);
   }
+  heroSprite(k, 'idle', time + r.x * 0.01, false);
+  ctx.drawImage(hcv, r.x + r.w / 2 - 32, r.y - 10, 64, 64);
+  text(k.name, r.x + r.w / 2, r.y + 68, 1, OL, 'center', null);
+  if (own) text(sel ? 'ВЫБРАН' : 'ВЗЯТЬ', r.x + r.w / 2, r.y + 82, 1, sel ? '#c01f5a' : '#1a70c0', 'center', null);
+  else { coinIcon(r.x + r.w / 2 - 18, r.y + 77, 4); text(String(k.cost), r.x + r.w / 2 - 10, r.y + 82, 1, bank >= k.cost ? OL : '#6a5a4a', 'left', null); }
+}
+function drawShop() {
+  ctx.fillStyle = 'rgba(42,20,8,0.82)'; ctx.fillRect(0, 0, W, H);
+  text('ГЕРОИ', W / 2, 56, 4, '#ffd23a');
+  coinIcon(W / 2 - 30, 80);
+  text(String(bank), W / 2 - 16, 90, 2, '#ffffff', 'left');
+  for (let i = 0; i < 4; i++) {
+    const r = tabRect(i), R = RARITY[i], on = i === shopTab;
+    ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+    ctx.fillStyle = on ? R.col : R.dk; ctx.fillRect(r.x, r.y, r.w, r.h);
+    text(R.name, r.x + r.w / 2, r.y + 19, 1, on ? OL : '#ffffff', 'center', null);
+  }
+  tabSkins().forEach((k, j) => drawSkinCard(shopRect(j), k));
+  const b = CHEST_BTN;
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 9);
+  ctx.fillStyle = '#c06a00'; ctx.fillRect(b.x, b.y + 4, b.w, b.h);
+  ctx.fillStyle = '#ffb02a'; ctx.fillRect(b.x, b.y, b.w, b.h - 2);
+  chestIcon(b.x + 34, b.y + 26, false, 0);
+  text('СУНДУК', b.x + 70, b.y + 26, 2, '#ffffff', 'left');
+  coinIcon(b.x + 78, b.y + 38, 5);
+  text(String(CHEST_COST), b.x + 88, b.y + 44, 1, OL, 'left', null);
+  text('ШАНС 55/30/12/3%', W / 2, 532, 1, '#ffffff', 'center', null);
   text('НАЖМИ МИМО — НАЗАД', W / 2, H - 12, 1, '#ffffff', 'center', null);
+  if (chest) drawChest();
+}
+function drawChest() {
+  const c = chest, R = RARITY[c.k.r];
+  ctx.fillStyle = 'rgba(20,10,4,0.85)'; ctx.fillRect(0, 0, W, H);
+  const cy = 320;
+  if (c.t < 1.2) {
+    chestIcon(W / 2, cy, false, even(Math.sin(c.t * 50) * c.t * 4));
+    text('ОТКРЫВАЕМ...', W / 2, cy + 80, 2, '#ffffff');
+    return;
+  }
+  ctx.save(); ctx.translate(W / 2, cy - 40); ctx.rotate(time * 0.8);
+  ctx.fillStyle = R.col; ctx.globalAlpha = 0.35;
+  for (let i = 0; i < 10; i++) { ctx.rotate(Math.PI / 5); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-24, -260); ctx.lineTo(24, -260); ctx.fill(); }
+  ctx.restore(); ctx.globalAlpha = 1;
+  chestIcon(W / 2, cy + 60, true, 0);
+  heroSprite(c.k, 'idle', time, false);
+  const sc = Math.min(1, (c.t - 1.2) * 4);
+  ctx.drawImage(hcv, W / 2 - 64 * sc, cy - 40 - 64 * sc - (1 - sc) * 40, 128 * sc, 128 * sc);
+  text(R.one, W / 2, cy - 140, 2, R.col);
+  text(c.k.name, W / 2, cy + 40, 3, '#ffffff');
+  text(c.dup ? 'ПОВТОР  +' + DUP_REFUND : 'НОВЫЙ ГЕРОЙ!', W / 2, cy + 130, 2, c.dup ? '#ffd23a' : '#7cf08a');
+  if (c.t > 1.8) text('НАЖМИ, ЧТОБЫ ЗАКРЫТЬ', W / 2, H - 60, 1, '#ffffff', 'center', null);
 }
 
 function drawAch() {
@@ -1531,13 +1853,13 @@ function drawAch() {
   text('НАГРАДЫ', W / 2, 70, 4, '#ffd23a');
   text(achieved.length + ' / ' + ACH.length, W / 2, 98, 2, '#ffffff');
   ACH.forEach((a, i) => {
-    const y = 120 + i * 40, got = achieved.includes(a.id);
-    ctx.fillStyle = OL; ctx.fillRect(24, y - 2, W - 48, 36);
-    ctx.fillStyle = got ? '#ffd23a' : '#6a5a4a'; ctx.fillRect(26, y, W - 52, 32);
-    if (got) trophyIcon(46, y + 16); else { prect(ctx, 38, y + 8, 16, 16, OL); prect(ctx, 40, y + 10, 12, 12, '#8a7a6a'); }
-    text(a.name, 66, y + 23, 1, got ? OL : '#e0d0c0', 'left', null);
-    coinIcon(W - 80, y + 16, 5);
-    text('+' + a.reward, W - 70, y + 23, 1, got ? OL : '#e0d0c0', 'left', null);
+    const y = 112 + i * 33, got = achieved.includes(a.id);
+    ctx.fillStyle = OL; ctx.fillRect(24, y - 2, W - 48, 30);
+    ctx.fillStyle = got ? '#ffd23a' : '#6a5a4a'; ctx.fillRect(26, y, W - 52, 26);
+    if (got) trophyIcon(46, y + 13); else { prect(ctx, 40, y + 6, 14, 14, OL); prect(ctx, 42, y + 8, 10, 10, '#8a7a6a'); }
+    text(a.name, 66, y + 20, 1, got ? OL : '#e0d0c0', 'left', null);
+    coinIcon(W - 80, y + 13, 5);
+    text('+' + a.reward, W - 70, y + 20, 1, got ? OL : '#e0d0c0', 'left', null);
   });
   text('НАЖМИ — НАЗАД', W / 2, H - 12, 1, '#ffffff', 'center', null);
 }
@@ -1564,7 +1886,42 @@ function drawOver() {
   ctx.globalAlpha = 1;
 }
 
+function drawLoad() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#ff6a3a'); g.addColorStop(0.6, '#ffb03a'); g.addColorStop(1, '#ffe05a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // лучи солнца
+  ctx.save(); ctx.translate(W / 2, 250); ctx.rotate(time * 0.25);
+  ctx.fillStyle = 'rgba(255,255,255,0.13)';
+  for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-40, -520); ctx.lineTo(40, -520); ctx.fill(); }
+  ctx.restore();
+  pell(ctx, W / 2, 250, 74, 74, '#fff2a0'); pell(ctx, W / 2, 250, 62, 62, '#ffe24a');
+  for (let k = 0; k < 4; k++) {
+    const x = ((hash(k * 5) * (W + 200) + time * (14 + k * 8)) % (W + 200)) - 100, y = 60 + k * 120 + hash(k) * 40;
+    pell(ctx, x + 2, y + 6, 40, 10, '#ffd0a0'); pell(ctx, x, y, 38, 10, '#ffffff'); pell(ctx, x - 14, y - 6, 18, 12, '#ffffff'); pell(ctx, x + 12, y - 8, 20, 13, '#ffffff');
+  }
+  // земля с травой
+  prect(ctx, 0, 548, W, 100, '#b8552e');
+  for (let gx = -1; gx < 11; gx++) { const x = gx * 36 + 10; pell(ctx, x + 2, 590, 15, 9, '#8a3a1e'); pell(ctx, x, 587, 14, 8, '#d66a3a'); }
+  prect(ctx, 0, 544, W, 18, OL); prect(ctx, 0, 546, W, 14, '#5fe03a'); prect(ctx, 0, 546, W, 2, '#c4ff6a');
+  drawLogo(130);
+  // полоса загрузки — бревно, по которому бежит хомяк
+  const pr = clamp(loadProgress(), 0, 1), bx = 44, bw = W - 88, by = 430;
+  prect(ctx, bx - 4, by - 4, bw + 8, 28, OL);
+  prect(ctx, bx, by, bw, 20, '#5a2a10');
+  prect(ctx, bx, by, bw * pr, 20, '#f07a2a');
+  prect(ctx, bx, by + 2, bw * pr, 4, '#ffb060');
+  prect(ctx, bx, by + 14, bw * pr, 4, '#a8481a');
+  for (let x = bx + 10; x < bx + bw * pr - 6; x += 24) prect(ctx, x, by + 8, 8, 2, '#a8481a');
+  heroSprite(SKINS[0], 'run', time, false);
+  ctx.save(); ctx.translate(even(bx + bw * pr), by - 18); ctx.drawImage(hcv, -32, -36, 64, 64); ctx.restore();
+  text('ЗАГРУЗКА ' + Math.floor(pr * 100) + '%', W / 2, 500, 2, '#ffffff');
+  text('СОВЕТ:', W / 2, 600, 1, '#ffe24a');
+  text(TIPS[tipIdx], W / 2, 624, 2, '#ffffff');
+}
+
 function draw() {
+  if (state === 'load') { drawLoad(); return; }
   ctx.save();
   if (shake > 0) ctx.translate(even(rand(-1, 1) * shake * 14), even(rand(-1, 1) * shake * 14));
   drawBackground();
@@ -1578,6 +1935,8 @@ function draw() {
   if (state === 'shop') drawShop();
   if (state === 'ach') drawAch();
   if (state === 'over') drawOver();
+  drawToast();
+  if (fadeT > 0) { ctx.globalAlpha = clamp(fadeT / 0.6, 0, 1); ctx.fillStyle = '#fff6d8'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 
 // ---------- Цикл ----------
