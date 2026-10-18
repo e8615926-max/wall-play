@@ -2,6 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20,540 +22,6 @@
 </style>
 </head>
 <body>
-<!-- Заставка ELDAR STUDIOS: играет сразу при запуске, потом начинается загрузка -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap">
-<style>
-  /* Layout: one black cinematic screen, emblem + wordmark stacked in the centre, particles behind */
-  #intro {
-    --void: #000000;
-    --smoke: #0d0e10;
-    --silver: #e9eaec;
-    --steel: #9ea1a6;
-    --light: #ffffff;
-    --font-display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
-  }
-  #intro {
-    position: fixed; inset: 0; z-index: 50;
-    background: var(--void); color: var(--silver); font-family: var(--font-display);
-    overflow: hidden; transition: opacity .6s;
-  }
-  #intro.gone { opacity: 0; pointer-events: none; }
-  .stage {
-    position: fixed; inset: 0;
-    display: grid; place-items: center;
-    overflow: hidden;
-    background: radial-gradient(ellipse at 50% 45%, var(--smoke) 0%, var(--void) 70%);
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-  }
-  .stage::after { /* vignette */
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.85) 100%);
-  }
-  #fx { image-rendering: auto; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-
-  .content {
-    position: relative; z-index: 2;
-    display: flex; flex-direction: column; align-items: center;
-    gap: clamp(14px, 3vmin, 30px);
-  }
-
-  .emblem-box { position: relative; width: min(50vmin, 380px); aspect-ratio: 420 / 430; max-width: 100%; }
-  .emblem { position: relative; width: 100%; height: 100%; overflow: visible; display: block; }
-
-  .halo {
-    position: absolute; inset: -45%; pointer-events: none; opacity: 0;
-    background: radial-gradient(circle, rgba(255,255,255,.33) 0%, rgba(200,215,235,.12) 30%, transparent 62%);
-    transform: scale(.3);
-  }
-  .flare {
-    position: absolute; left: 50%; top: 48%; width: 260vw; height: 2px; margin-left: -130vw;
-    pointer-events: none; opacity: 0; transform: scaleX(0);
-    background: linear-gradient(90deg, transparent 0%, rgba(190,210,255,0) 25%, rgba(255,255,255,.95) 50%, rgba(190,210,255,0) 75%, transparent 100%);
-    box-shadow: 0 0 18px 2px rgba(220,230,255,.35);
-  }
-
-  /* SVG parts */
-  .piece { opacity: 0; transform-box: fill-box; transform-origin: center; }
-  .bladeRect { transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(0); }
-  .streak { opacity: 0; stroke-dasharray: .3 1.3; stroke-dashoffset: .3; }
-  .sheen { transform: translateX(0); }
-
-  /* Wordmark */
-  .title {
-    display: flex; font-weight: 600;
-    font-size: clamp(38px, 10.5vmin, 96px);
-    line-height: 1; letter-spacing: 0;
-  }
-  .ch { display: inline-block; opacity: 0; }
-  .ch + .ch { margin-left: .3em; }
-  .metal {
-    background: linear-gradient(180deg, var(--light) 0%, var(--silver) 42%, var(--steel) 58%, var(--silver) 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .flip { display: inline-block; transform: scaleY(-1); }
-
-  .sub { display: flex; align-items: center; gap: clamp(12px, 2.4vmin, 24px); }
-  .line { height: 3px; width: clamp(46px, 15vmin, 150px); transform: scaleX(0); }
-  .line.l { transform-origin: right center; clip-path: polygon(0 45%, 100% 0, 100% 100%, 0 55%);
-    background: linear-gradient(90deg, rgba(255,255,255,0), var(--silver)); }
-  .line.r { transform-origin: left center; clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%);
-    background: linear-gradient(90deg, var(--silver), rgba(255,255,255,0)); }
-  .studios {
-    font-weight: 500; font-size: clamp(13px, 3.3vmin, 30px);
-    letter-spacing: .55em; margin-right: -.55em; opacity: 0; color: var(--silver);
-  }
-
-  .flash { position: absolute; inset: 0; background: var(--light); opacity: 0; pointer-events: none; z-index: 3; }
-
-  /* ---------- Timeline (seconds from start) ---------- */
-  .play .up   { animation: flyUp  .55s .6s cubic-bezier(.55,.05,.9,.45) both; }
-  .play .low  { animation: flyLow .55s .6s cubic-bezier(.55,.05,.9,.45) both; }
-  .play .h1   { animation: halo 1.3s 1.15s ease-out both; }
-  .play .f1   { animation: flash .6s 1.15s ease-out both; }
-  .play .streak    { animation: streak .45s 1.55s ease-in-out both; }
-  .play .bladeRect { animation: grow .35s 1.62s cubic-bezier(.2,.9,.2,1) both; }
-  .play .s1   { animation: sheen 1s 2.3s ease-in-out both; }
-  .play .ch   { animation: letterIn .45s calc(2.9s + var(--i) * .12s) cubic-bezier(.2,.8,.2,1) both; }
-  .play .line { animation: lineIn .7s 3.75s cubic-bezier(.2,.8,.2,1) both; }
-  .play .studios { animation: studios 1s 3.85s ease-out both; }
-  .play .emblem  { animation: glow 2.6s 4.5s ease-out both; }
-  .play .title   { animation: glow 2.6s 4.5s ease-out both; }
-  .play .h2   { animation: halo 2.4s 4.5s ease-out both; }
-  .play .f2   { animation: flash .9s 4.5s ease-out both; }
-  .play .flare { animation: flare 1.8s 4.5s ease-out both; }
-  .play .s2   { animation: sheen 1.1s 4.55s ease-in-out both; }
-  .play .content { animation: fadeOut 1.5s 7.6s ease-in both; }
-
-  @keyframes flyUp  { 0% { transform: translate(-340px,-240px) rotate(-14deg); opacity: 0 } 40% { opacity: 1 } 100% { transform: none; opacity: 1 } }
-  @keyframes flyLow { 0% { transform: translate(340px,240px) rotate(14deg); opacity: 0 } 40% { opacity: 1 } 100% { transform: none; opacity: 1 } }
-  @keyframes halo   { 0% { opacity: 0; transform: scale(.3) } 12% { opacity: 1 } 100% { opacity: 0; transform: scale(1.25) } }
-  @keyframes flash  { 0% { opacity: 0 } 8% { opacity: .55 } 100% { opacity: 0 } }
-  @keyframes streak { 0% { opacity: 0; stroke-dashoffset: .3 } 8% { opacity: 1 } 85% { opacity: 1 } 100% { opacity: 0; stroke-dashoffset: -1.05 } }
-  @keyframes grow   { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-  @keyframes sheen  { from { transform: translateX(0) } to { transform: translateX(640px) } }
-  @keyframes letterIn {
-    0%   { opacity: 0; transform: translateY(-.35em) scale(1.7); filter: blur(12px) }
-    60%  { opacity: 1 }
-    100% { opacity: 1; transform: none; filter: blur(0) }
-  }
-  @keyframes lineIn  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-  @keyframes studios { from { opacity: 0; letter-spacing: 1.2em; filter: blur(6px) } to { opacity: 1; letter-spacing: .55em; filter: blur(0) } }
-  @keyframes glow {
-    0%   { filter: drop-shadow(0 0 0 rgba(255,255,255,0)) brightness(1) }
-    8%   { filter: drop-shadow(0 0 26px rgba(255,255,255,.8)) brightness(1.4) }
-    100% { filter: drop-shadow(0 0 10px rgba(255,255,255,.16)) brightness(1) }
-  }
-  @keyframes flare   { 0% { opacity: 0; transform: scaleX(0) } 10% { opacity: 1; transform: scaleX(1) } 100% { opacity: 0; transform: scaleX(1.3) } }
-  @keyframes fadeOut { from { opacity: 1 } to { opacity: 0 } }
-
-  .shake { animation: shake .5s linear; }
-  .shake.big { animation: shake .8s linear; }
-  @keyframes shake {
-    0%,100% { transform: translate(0,0) }
-    10% { transform: translate(-9px, 6px) } 20% { transform: translate(8px,-7px) }
-    30% { transform: translate(-6px,-4px) } 40% { transform: translate(5px, 5px) }
-    55% { transform: translate(-3px, 2px) } 70% { transform: translate(2px,-2px) }
-    85% { transform: translate(-1px, 1px) }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .shake, .shake.big { animation: none; }
-  }
-</style>
-<div id="intro">
-<div class="stage play" id="stage">
-  <canvas id="fx"></canvas>
-  <div class="flash f1"></div>
-  <div class="flash f2"></div>
-
-  <div class="content">
-    <div class="emblem-box" id="emblemBox">
-      <div class="halo h1"></div>
-      <div class="halo h2"></div>
-      <div class="flare"></div>
-      <svg class="emblem" id="emblem" viewBox="430 300 420 430" aria-label="Eldar Studios emblem" role="img">
-        <defs>
-          <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#fbfbfb"/>
-            <stop offset=".33" stop-color="#cfd0d2"/>
-            <stop offset=".5" stop-color="#f3f3f4"/>
-            <stop offset=".72" stop-color="#a9abae"/>
-            <stop offset="1" stop-color="#e3e4e6"/>
-          </linearGradient>
-          <linearGradient id="sheenGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#fff" stop-opacity="0"/>
-            <stop offset=".5" stop-color="#fff" stop-opacity=".85"/>
-            <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-          </linearGradient>
-          <filter id="grain" x="0" y="0" width="100%" height="100%">
-            <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="3" seed="7" result="n"/>
-            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  .9 0 0 0 -.33" result="specks"/>
-            <feComposite in="specks" in2="SourceGraphic" operator="in" result="specksIn"/>
-            <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="specksIn"/></feMerge>
-          </filter>
-          <filter id="glowF" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="5" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <clipPath id="bladeClip">
-            <rect class="bladeRect" x="540" y="380" width="270" height="210"/>
-          </clipPath>
-          <clipPath id="eClip">
-            <polygon points="448,358 485,322 825,322 758,388 545,388 545,497 668,457 448,578"/>
-            <polygon points="448,603 545,546 545,600 808,600 745,665 490,665 448,707"/>
-            <polygon points="545,546 798,397 545,575"/>
-          </clipPath>
-        </defs>
-
-        <g class="piece up">
-          <polygon points="448,358 485,322 825,322 758,388 545,388 545,497 668,457 448,578" fill="url(#metal)" filter="url(#grain)"/>
-        </g>
-        <g class="piece low">
-          <polygon points="448,603 545,546 545,600 808,600 745,665 490,665 448,707" fill="url(#metal)" filter="url(#grain)"/>
-        </g>
-        <g clip-path="url(#bladeClip)">
-          <polygon points="545,546 798,397 545,575" fill="url(#metal)"/>
-        </g>
-        <g clip-path="url(#eClip)">
-          <g transform="rotate(22 640 515)">
-            <rect class="sheen s1" x="190" y="200" width="110" height="640" fill="url(#sheenGrad)"/>
-            <rect class="sheen s2" x="190" y="200" width="160" height="640" fill="url(#sheenGrad)"/>
-          </g>
-        </g>
-        <line class="streak" x1="410" y1="612" x2="850" y2="361" pathLength="1"
-              stroke="#fff" stroke-width="5" stroke-linecap="round" filter="url(#glowF)"/>
-      </svg>
-    </div>
-
-    <div class="title" aria-label="ELDAR">
-      <span class="ch metal" style="--i:0">E</span>
-      <span class="ch metal" style="--i:1">L</span>
-      <span class="ch metal" style="--i:2">D</span>
-      <span class="ch" style="--i:3"><span class="flip metal">V</span></span>
-      <span class="ch metal" style="--i:4">R</span>
-    </div>
-
-    <div class="sub">
-      <span class="line l"></span>
-      <span class="studios">STUDIOS</span>
-      <span class="line r"></span>
-    </div>
-  </div>
-</div>
-
-</div>
-<script>
-(() => {
-  const stage = document.getElementById('stage');
-  const emblem = document.getElementById('emblem');
-  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  window.__introOn = true;
-  if (location.hash === '#nointro') { window.__introOn = false; document.getElementById('intro').remove(); return; }   // для автотестов
-  /* ================= Particles ================= */
-  const cv = document.getElementById('fx');
-  const g2 = cv.getContext('2d');
-  let W = 0, H = 0;
-  function resize() {
-    const dpr = Math.min(2, devicePixelRatio || 1);
-    W = innerWidth; H = innerHeight;
-    cv.width = W * dpr; cv.height = H * dpr;
-    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  addEventListener('resize', resize); resize();
-
-  const parts = [];
-  let dustCount = 0;
-  function spawnDust(anywhere) {
-    dustCount++;
-    parts.push({ k: 'dust', x: Math.random() * W, y: anywhere ? Math.random() * H : H + 10,
-      vx: (Math.random() - .5) * .25, vy: -(.15 + Math.random() * .45),
-      life: 0, max: 500 + Math.random() * 500, s: .4 + Math.random() * 1.5, a: .12 + Math.random() * .35 });
-  }
-  for (let i = 0; i < 45; i++) spawnDust(true);
-
-  function burst(x, y, n, speed, ang = 0, spread = Math.PI * 2) {
-    for (let i = 0; i < n; i++) {
-      const a = ang + (Math.random() - .5) * spread;
-      const v = speed * (.25 + Math.random());
-      parts.push({ k: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
-        life: 0, max: 35 + Math.random() * 55, s: .8 + Math.random() * 1.6, a: 1,
-        warm: Math.random() < .25 });
-    }
-  }
-
-  function frame() {
-    g2.clearRect(0, 0, W, H);
-    g2.globalCompositeOperation = 'lighter';
-    if (dustCount < 70 && Math.random() < .4) spawnDust(false);
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const p = parts[i];
-      p.life++;
-      if (p.k === 'spark') {
-        p.vx *= .955; p.vy = p.vy * .955 + .06;
-        const f = 1 - p.life / p.max;
-        g2.strokeStyle = p.warm ? `rgba(255,226,180,${f})` : `rgba(235,242,255,${f})`;
-        g2.lineWidth = p.s;
-        g2.beginPath(); g2.moveTo(p.x, p.y); g2.lineTo(p.x - p.vx * 3, p.y - p.vy * 3); g2.stroke();
-      } else {
-        const f = Math.sin(Math.PI * p.life / p.max) * p.a;
-        g2.fillStyle = `rgba(220,225,235,${f})`;
-        g2.beginPath(); g2.arc(p.x, p.y, p.s, 0, Math.PI * 2); g2.fill();
-      }
-      p.x += p.vx; p.y += p.vy;
-      if (p.life > p.max) { if (p.k === 'dust') dustCount--; parts.splice(i, 1); }
-    }
-    if (document.getElementById('intro')) requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-
-  // map an emblem viewBox point (430 300 420 430) to screen coordinates
-  function svgPt(x, y) {
-    const r = emblem.getBoundingClientRect();
-    return [r.left + (x - 430) / 420 * r.width, r.top + (y - 300) / 430 * r.height];
-  }
-
-  function shake(big) {
-    if (reduceMotion) return;
-    stage.classList.remove('shake', 'big');
-    void stage.offsetWidth;
-    stage.classList.add('shake');
-    if (big) stage.classList.add('big');
-  }
-
-  /* ================= Sound (Web Audio, all synthesized) ================= */
-  let ac, master, rev, noise;
-  function initAudio() {
-    ac = new (window.AudioContext || window.webkitAudioContext)();
-    const comp = ac.createDynamicsCompressor();
-    comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = .003; comp.release.value = .25;
-    comp.connect(ac.destination);
-    master = ac.createGain(); master.gain.value = .9; master.connect(comp);
-
-    rev = ac.createConvolver();
-    const len = ac.sampleRate * 3.4, ir = ac.createBuffer(2, len, ac.sampleRate);
-    for (let c = 0; c < 2; c++) {
-      const d = ir.getChannelData(c);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
-    }
-    rev.buffer = ir;
-    const revOut = ac.createGain(); revOut.gain.value = .5;
-    rev.connect(revOut).connect(comp);
-
-    const nl = ac.sampleRate * 2;
-    noise = ac.createBuffer(1, nl, ac.sampleRate);
-    const nd = noise.getChannelData(0);
-    for (let i = 0; i < nl; i++) nd[i] = Math.random() * 2 - 1;
-  }
-
-  function out(node, wet) {
-    node.connect(master);
-    const s = ac.createGain(); s.gain.value = wet;
-    node.connect(s).connect(rev);
-  }
-  function noiseSrc(t, dur) {
-    const s = ac.createBufferSource(); s.buffer = noise; s.loop = true;
-    s.start(t, Math.random()); s.stop(t + dur + .05);
-    return s;
-  }
-  function pan(p0, p1, t, dur) {
-    const p = ac.createStereoPanner ? ac.createStereoPanner() : ac.createGain();
-    if (p.pan) { p.pan.setValueAtTime(p0, t); p.pan.linearRampToValueAtTime(p1, t + dur); }
-    return p;
-  }
-
-  function drone(t, dur) {
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 7;
-    lp.frequency.setValueAtTime(110, t); lp.frequency.exponentialRampToValueAtTime(900, t + dur);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(.13, t + 2);
-    g.gain.setValueAtTime(.13, t + dur - .3);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur + .2);
-    [[55, 'sawtooth'], [55.4, 'sawtooth'], [82.4, 'triangle'], [27.5, 'sine']].forEach(([f, type]) => {
-      const o = ac.createOscillator(); o.type = type; o.frequency.value = f;
-      o.connect(lp); o.start(t); o.stop(t + dur + .3);
-    });
-    lp.connect(g); out(g, .35);
-  }
-
-  function whoosh(t, dur, f0, f1, p0, p1, vol) {
-    const s = noiseSrc(t, dur);
-    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.1;
-    bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + dur * .75);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    const p = pan(p0, p1, t, dur);
-    s.connect(bp).connect(g).connect(p); out(p, .3);
-  }
-
-  function impact(t, vol) {
-    // sub drop through soft saturation
-    const o = ac.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(34, t + .5);
-    const ws = ac.createWaveShaper();
-    const curve = new Float32Array(1024);
-    for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; curve[i] = Math.tanh(3 * x); }
-    ws.curve = curve;
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .006);
-    g.gain.exponentialRampToValueAtTime(.0001, t + 1.8);
-    o.connect(ws).connect(g); out(g, .5);
-    o.start(t); o.stop(t + 1.9);
-
-    // crack
-    const n = noiseSrc(t, .8);
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(5000, t); lp.frequency.exponentialRampToValueAtTime(250, t + .5);
-    const ng = ac.createGain();
-    ng.gain.setValueAtTime(.0001, t); ng.gain.exponentialRampToValueAtTime(.7 * vol, t + .004);
-    ng.gain.exponentialRampToValueAtTime(.0001, t + .7);
-    n.connect(lp).connect(ng); out(ng, .7);
-
-    // metallic body
-    [311, 467, 693, 1013, 1487].forEach((f, i) => {
-      const m = ac.createOscillator(); m.type = 'triangle'; m.frequency.value = f;
-      const mg = ac.createGain();
-      mg.gain.setValueAtTime(.0001, t); mg.gain.exponentialRampToValueAtTime(.06 * vol, t + .005);
-      mg.gain.exponentialRampToValueAtTime(.0001, t + 1.4 - i * .18);
-      m.connect(mg); out(mg, .8);
-      m.start(t); m.stop(t + 1.5);
-    });
-  }
-
-  function shing(t) {
-    const p = pan(-.6, .6, t, 1.2);
-    [2100, 2950, 3830, 5240, 7010, 8890].forEach((f, i) => {
-      const o = ac.createOscillator(); o.type = 'sine';
-      o.frequency.setValueAtTime(f * .97, t); o.frequency.exponentialRampToValueAtTime(f, t + .08);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.075, t + .01);
-      g.gain.exponentialRampToValueAtTime(.0001, t + 2.2 - i * .25);
-      o.connect(g).connect(p); o.start(t); o.stop(t + 2.3);
-    });
-    const n = noiseSrc(t, .3);
-    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 4500;
-    const ng = ac.createGain();
-    ng.gain.setValueAtTime(.0001, t); ng.gain.exponentialRampToValueAtTime(.3, t + .005);
-    ng.gain.exponentialRampToValueAtTime(.0001, t + .28);
-    n.connect(hp).connect(ng).connect(p);
-    out(p, .6);
-  }
-
-  function slam(t, i) {
-    const o = ac.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(120 - i * 6, t); o.frequency.exponentialRampToValueAtTime(45, t + .22);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.55, t + .004);
-    g.gain.exponentialRampToValueAtTime(.0001, t + .35);
-    o.connect(g); out(g, .3); o.start(t); o.stop(t + .4);
-
-    const n = noiseSrc(t, .1);
-    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600 + i * 250; bp.Q.value = 2.5;
-    const ng = ac.createGain();
-    ng.gain.setValueAtTime(.0001, t); ng.gain.exponentialRampToValueAtTime(.35, t + .002);
-    ng.gain.exponentialRampToValueAtTime(.0001, t + .08);
-    const p = pan(-.5 + i * .25, -.5 + i * .25, t, .1);
-    n.connect(bp).connect(ng).connect(p); out(p, .5);
-  }
-
-  function riser(t, dur) {
-    const n = noiseSrc(t, dur);
-    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3;
-    bp.frequency.setValueAtTime(350, t); bp.frequency.exponentialRampToValueAtTime(6000, t + dur);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.32, t + dur);
-    g.gain.linearRampToValueAtTime(.0001, t + dur + .03);
-    n.connect(bp).connect(g); out(g, .4);
-
-    const o = ac.createOscillator(); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(440, t + dur);
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
-    const og = ac.createGain();
-    og.gain.setValueAtTime(.0001, t); og.gain.exponentialRampToValueAtTime(.06, t + dur);
-    og.gain.linearRampToValueAtTime(.0001, t + dur + .03);
-    o.connect(lp).connect(og); out(og, .4); o.start(t); o.stop(t + dur + .05);
-  }
-
-  function pad(t) {
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 2;
-    lp.frequency.setValueAtTime(300, t);
-    lp.frequency.exponentialRampToValueAtTime(2600, t + .25);
-    lp.frequency.exponentialRampToValueAtTime(600, t + 5);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.32, t + .03);
-    g.gain.exponentialRampToValueAtTime(.12, t + 1.2);
-    g.gain.exponentialRampToValueAtTime(.0001, t + 5.5);
-    lp.connect(g); out(g, .8);
-    [55, 110, 164.81, 220, 261.63, 329.63, 440].forEach(f => {
-      [-6, 6].forEach(det => {
-        const o = ac.createOscillator(); o.type = 'sawtooth';
-        o.frequency.value = f; o.detune.value = det;
-        const og = ac.createGain(); og.gain.value = .07;
-        o.connect(og).connect(lp); o.start(t); o.stop(t + 5.6);
-      });
-    });
-  }
-
-  function shimmer(t, dur, n) {
-    for (let i = 0; i < n; i++) {
-      const tt = t + Math.random() * dur;
-      const o = ac.createOscillator(); o.type = 'sine';
-      o.frequency.value = 3000 + Math.random() * 6000;
-      const g = ac.createGain();
-      g.gain.setValueAtTime(.0001, tt); g.gain.exponentialRampToValueAtTime(.035, tt + .01);
-      g.gain.exponentialRampToValueAtTime(.0001, tt + .5);
-      const p = pan(Math.random() * 2 - 1, Math.random() * 2 - 1, tt, .5);
-      o.connect(g).connect(p); out(p, .9);
-      o.start(tt); o.stop(tt + .55);
-    }
-  }
-
-  /* ================= Timeline ================= */
-  // заставка идёт сразу при запуске. Браузер не даёт сайту звучать до первого касания:
-  // если звук ещё нельзя — первое касание запускает заставку заново с самого начала, уже со звуком
-  let t0 = performance.now(), timers = [];
-  const elapsed = () => (performance.now() - t0) / 1000;
-  const SOUNDS = [
-    [0, t => drone(t, 4.5)], [.5, t => whoosh(t, .65, 180, 2600, -.9, -.1, .45)], [.5, t => whoosh(t, .65, 220, 2200, .9, .1, .45)],
-    [1.15, t => impact(t, 1)], [1.5, t => whoosh(t, .2, 900, 7000, -.6, .6, .35)], [1.66, t => shing(t)], [2.3, t => shimmer(t, .9, 10)],
-    ...[0, 1, 2, 3, 4].map(i => [3 + i * .12, t => slam(t, i)]),
-    [3.75, t => whoosh(t, .6, 2400, 500, 0, 0, .12)], [3.55, t => riser(t, .95)], [4.5, t => impact(t, 1.1)], [4.5, t => pad(t)], [4.6, t => shimmer(t, 1.8, 24)],
-  ];
-  let soundStarted = false;
-  function playSounds() {
-    soundStarted = true;
-    const now = ac.currentTime + .03, e = elapsed();
-    for (const [s, fn] of SOUNDS) if (s >= e - .05) fn(now + Math.max(0, s - e));
-  }
-  function runTimeline() {
-    timers.forEach(clearTimeout); timers = [];
-    t0 = performance.now();
-    stage.classList.remove('play'); void stage.offsetWidth; stage.classList.add('play');
-    const at = (sec, fn) => timers.push(setTimeout(fn, sec * 1000));
-    at(1.15, () => { shake(false); const [x1, y1] = svgPt(500, 590), [x2, y2] = svgPt(700, 480); burst(x1, y1, 50, 9); burst(x2, y2, 50, 9); });
-    at(1.62, () => { const [x, y] = svgPt(798, 397); burst(x, y, 60, 11, -Math.PI / 6, .9); });
-    at(4.5, () => { shake(true); const [x, y] = svgPt(640, 515); burst(x, y, 140, 13); });
-    // конец: заставка тает, начинается загрузка игры
-    at(9.1, () => { document.getElementById('intro').classList.add('gone'); window.__introOn = false; });
-    at(10.6, () => { document.getElementById('intro').remove(); try { ac && ac.close(); } catch (e) {} });
-  }
-  runTimeline();
-  try { initAudio(); ac.resume().then(() => { if (ac.state === 'running' && !soundStarted && elapsed() < 1) playSounds(); }, () => {}); } catch (e) {}
-  const onGesture = () => {
-    if (!window.__introOn || soundStarted) return;
-    try { if (!ac) initAudio(); ac.resume(); } catch (e) { return; }
-    if (elapsed() > 0.4 && elapsed() < 7.5) runTimeline();   // заново с начала — теперь со звуком
-    if (elapsed() < 7.5) playSounds();
-  };
-  for (const ev of ['pointerdown', 'touchstart', 'keydown']) addEventListener(ev, onGesture, { capture: true, passive: true });
-})();
-</script>
 <canvas id="game"></canvas>
 <script>
 (() => {
@@ -579,7 +47,7 @@ const UI_KEYS = ('tap1 tap2 heroes awards settings backMiss back hold flip1 flip
 const UI2_KEYS = ('shop wheel dealsTab dailyReward day claim tomorrow skinsDay sale megaSale refreshIn spin free premium payNote1 payNote2 ' +
   'youWon starter legendChest collected ok crystals').split(' ');
 // порядок карт: o — прежние, n — новые
-const UI3_KEYS = 'tent powers tentTitle tentHi tentTip pMagnet pTele pRocket pJet pClone pMagnetD pTeleD pRocketD pJetD pCloneD fuel pShield pX2 pSlow pMega pBomb pGhost pShieldD pX2D pSlowD pMegaD pBombD pGhostD cloneSwap pFreeze pRain pRevive pFreezeD pRainD pReviveD pFeather pGem2 pStar pWings pFeatherD pGem2D pStarD pWingsD goldShop'.split(' ');
+const UI3_KEYS = 'tent powers tentTitle tentHi tentTip pMagnet pTele pRocket pJet pClone pMagnetD pTeleD pRocketD pJetD pCloneD fuel pShield pX2 pSlow pMega pBomb pGhost pShieldD pX2D pSlowD pMegaD pBombD pGhostD cloneSwap pFreeze pRain pRevive pFreezeD pRainD pReviveD pFeather pGem2 pStar pWings pFeatherD pGem2D pStarD pWingsD goldShop allies keddy keddyD1 keddyD2 takeAlly inRun alliesSoon allyBye popCrunch popBam popHuey popKiya subTitle subDesc perMonth devMsg1 devMsg2 devMsg3 devMsg4 devSign'.split(' ');
 const ZONE_ORDER = ['o0', 'n0', 'n47', 'o1', 'n7', 'n27', 'n37', 'n1', 'n17', 'o2', 'n2', 'n28', 'n38', 'n9', 'n22', 'o3', 'o4', 'n29', 'n39', 'n18', 'n10', 'o5', 'n3', 'n30', 'n40', 'n21', 'o6', 'n8', 'n4', 'n31', 'n41', 'n24', 'o7', 'n11', 'o8', 'n32', 'n42', 'n23', 'n12', 'n5', 'n19', 'n33', 'n43', 'n13', 'n20', 'o9', 'n14', 'n34', 'n44', 'n26', 'o10', 'n6', 'n15', 'n35', 'n45', 'o11', 'n25', 'o12', 'n16', 'n36', 'n46', 'n48', 'n49', 'n50', 'n51', 'n52', 'n53'];
 const ZONE_M = [0, 70, 142, 216, 292, 370, 450, 532, 616, 702, 790, 880, 972, 1066, 1162, 1260, 1360, 1462, 1566, 1672, 1780, 1890, 2002, 2116, 2232, 2350, 2470, 2592, 2716, 2842, 2970, 3100, 3232, 3366, 3502, 3640, 3780, 3922, 4066, 4212, 4360, 4510, 4662, 4816, 4972, 5130, 5290, 5452, 5616, 5782, 5950, 6120, 6292, 6466, 6642, 6820, 7000, 7182, 7366, 7552, 7740, 7930, 8122, 8316, 8512, 8710, 8910];
 const zoneFrom = (o, n) => ZONE_ORDER.map(k => (k[0] === 'o' ? o : n)[+k.slice(1)]);
@@ -590,12 +58,12 @@ const LANG_DATA = {
     zones: 'ЗЕЛЁНЫЙ ЛЕС|ОСЕННИЙ ЛЕС|ДЖУНГЛИ|СНЕЖНЫЕ ГОРЫ|ПУСТЫНЯ|ТРОПИЧЕСКИЙ ПЛЯЖ|ХРУСТАЛЬНАЯ ПЕЩЕРА|ПОДВОДНЫЙ МИР|КОНФЕТНАЯ СТРАНА|ОГНЕННЫЙ ВУЛКАН|ОБЛАЧНОЕ ЦАРСТВО|ЗВЁЗДНАЯ НОЧЬ|ОТКРЫТЫЙ КОСМОС',
     ach: 'ПЕРВОЕ САЛЬТО|ПЕРЕПРЫГУН|100 МЕТРОВ|250 МЕТРОВ|500 МЕТРОВ|1000 МЕТРОВ|КОПИЛКА|АКРОБАТ|КРУТИЛКА|ШУСТРИК|ПОД ЗАЩИТОЙ|ПУТЕШЕСТВЕННИК|ПРЫГ-СКОК|КЛАДОИСКАТЕЛЬ|ЛЕГЕНДА|ТЕЛЕПОРТ',
     tips: 'ДЕРЖИ — ПРЫЖОК ВЫШЕ|В ВОЗДУХЕ ЖМИ — САЛЬТО|ЖЕЛЕ ОТТАЛКИВАЕТ|СЛЕДИ ЗА ТАЙМЕРОМ|МЁД НЕ ДАЁТ СЪЕЗЖАТЬ|В СУНДУКЕ ЕСТЬ ЛЕГЕНДЫ|ЛИФТ ВЕЗЁТ НАВЕРХ|БЕРЕГИСЬ ТОКА!',
-    skins: 'ХОМЯК|ШОКО|СНЕЖОК|РОЗОВЫЙ|МЯТНЫЙ|НОЧНОЙ|ЛИМОН|ЯГОДКА|ПАНДА|ЛИС|ЛЯГУШ|КОТИК|ПИНГВИН|ЕНОТ|ЗАЙКА|МИШКА|МАРТЫШКА|КОАЛА|СОВА|ПЧЁЛКА|ТИГР|ЕДИНОРОГ|РОБОТ|ДРАКОША|ПРИЗРАК|ВАМПИР|ЗОМБИ|НИНДЗЯ|КИБОРГ|КРАБ|ПИРАТ|КОСМОНАВТ|КОРОЛЬ|ОГОНЁК|РАДУГА|ЛЕДЫШ|ПОВАР|КОВБОЙ|ПОЖАРНЫЙ|ПОЛИЦЕЙСКИЙ|ДОКТОР|ШАХТЁР|ХРЮША|ОТЛИЧНИК|ВЕРТОЛЁТИК|ИМЕНИННИК|БАРАШЕК|БУРЁНКА|ЦЫПЛЁНОК|МЫШОНОК|ЁЖИК|ЖУЧОК|ВОЛШЕБНИК|ВЕДЬМОЧКА|РЫЦАРЬ|ВИКИНГ|САМУРАЙ|ФАРАОН|МУМИЯ|СКЕЛЕТ|ТЫКВА|СНЕГОВИК|САНТА|КЛОУН|ШУТ|СУПЕРГЕРОЙ|ПРИШЕЛЕЦ|АКУЛЁНОК|ОСЬМИНОЖКА|БАБОЧКА|ЧЕРЕПАШКА|ДИНОЗАВРИК|АНГЕЛ|ДЕМОН|ФЕЯ|ФЕНИКС|ДРАКОН-ЦАРЬ|ОБОРОТЕНЬ|ЙЕТИ|КРАКЕН|МЕХ-ПИЛОТ|НЛО|ДУХ САМУРАЯ|СНЕГУРОЧКА|ЛАВОГОЛЕМ|КОСМОКОТ|ПАЛАДИН|НЕОН-ГОНЩИК|ТЕНЬ-НИНДЗЯ|САМОЦВЕТ|ГРОМОВЕРЖЕЦ|ПЕГАС|РУСАЛОЧКА|ЖНЕЦ|ВОДОЛАЗ|ЗАВОДНОЙ|ОБЛАЧКО|МАРМЕЛАДКА|ГЛИТЧ|ЗВЕЗДОЧЁТ|ДЖЕНТЛЬМЕН|ОГНЕННЫЙ ГОНЩИК|ДЖЕЙСОН|ЛЕВ|РОБОПАНДА|ЧЁРНАЯ ДЫРА|ДИДЖЕЙ|КОРОЛЕВА ПЧЁЛ|ЧЕШИРСКИЙ КОТ|АНУБИС|ЛЕСНОЙ ДУХ|ДЖИНН|ГОРГОНА|ХУДОЖНИК|РЫБАК|САДОВНИК|МОРЯЧОК|ФУТБОЛИСТ|РОКЕР|ДЕТЕКТИВ|ЭЛЬФ-ЛУЧНИК|ГЛАДИАТОР|БАЛЕРИНА|АЛХИМИК|КАПИТАН|КИБЕР-САМУРАЙ|ВАЛЬКИРИЯ|НЕКРОМАНТ|ХРАНИТЕЛЬ ВРЕМЕНИ|КИЦУНЭ|МИНОТАВР|ГРИБНОЙ КОРОЛЬ|ПОСЕЙДОН|ПОЧТАЛЬОН|ПЛОВЕЦ|ТЕННИСИСТ|СТРОИТЕЛЬ|ЛЁТЧИК|ФОКУСНИК|КОРОЛЕВСКИЙ СТРАЖ|МАСТЕР КУНГ-ФУ|ЛЕДЯНОЙ ДРАКОН|ПРИЗРАК-ПИРАТ|ЗВЁЗДНЫЙ ВОЛК|БОГ СОЛНЦА|ТУРИСТ|БАРАБАНЩИК|ПАСЕЧНИК|СКЕЙТЕР|МУШКЕТЁР|ЛЕПРЕКОН|ЭСКИМОС|БОКСЁР|КОРОЛЬ ОБЕЗЬЯН|ТЁМНЫЙ РЫЦАРЬ|ЛУННАЯ ВЕДЬМА|РОБО-ДРАКОН|КАПКЕЙК|ПОНЧИК|ЗЕФИРКА|ВАФЕЛЬКА|ПРЯНИК|МОРОЖЕНКА|ЛЕДЕНЕЦ|МАРМЕЛАДНЫЙ МИШКА|КОНФЕТНЫЙ КОРОЛЬ|САХАРНАЯ ФЕЯ|БАНАН|СОНЯ|ФЕРМЕР|ЛЫЖНИК|ГЕЙМЕР|СУШИ-ПОВАР|ЖВАЧКА|СПАСАТЕЛЬ|ДИНО-КОСТЮМ|СИЛАЧ|ШЕРИФ|СНЕЖНЫЙ БАРС|ВОРИШКА|ПОП-ЗВЕЗДА|РОБОКОТ|ГРИФОН|КОСМО-ИМПЕРАТОР|АЛИКОРН|ЛАВОВЫЙ ДРАКОН|ЗОЛОТОЙ НИНДЗЯ|ПИЦЦАЙОЛО|СКРИПАЧ|ФОТОГРАФ|ЮНГА|СЁРФЕР|ЗОНТИК|ПРИНЦ-ЛЯГУШКА|МАГ ВОДЫ|МЕХАНИК|МАГ ОГНЯ|ПАНДА-САМУРАЙ|ЗВЁЗДНЫЙ РЫЦАРЬ|ДРЕВНИЙ ЭНТ|КОРОЛЕВА ТЬМЫ|ПЛАЗМОИД|МЕДСЕСТРА|УЧЁНЫЙ|ПОХОДНИК|РЕСТЛЕР|ЧИРЛИДЕР|ГОЛЬФИСТ|БЕЙСБОЛИСТ|БАСКЕТБОЛИСТ|БИБЛИОТЕКАРЬ|ЛЕСОРУБ|СКАУТ|САНТЕХНИК|БОТАНИК|ХИППИ|МИМ|АЦТЕК|СТИМПАНК|ОХОТНИК ЗА СОКРОВИЩАМИ|БАРД|МОНАХ|ДРУИД|ВЕДУЩИЙ ЦИРКА|ПУГАЛО|ГНОМ|КОСМОКУРСАНТ|МЕДВЕДЬ-ВИКИНГ|СУЛТАН|КРОЛИК-РЫЦАРЬ|СОВА-МАГ|ЛЯГУШКА-НИНДЗЯ|АРХАНГЕЛ|ПОВЕЛИТЕЛЬ ДЕМОНОВ|ГРОЗОВОЙ ДРАКОН|ВЛАДЫКА КОСМОСА|СЁГУН|ДЕМОН ОНИ|ЛЕДЯНОЙ ВЕЛИКАН|ПРИЗРАЧНЫЙ РЫЦАРЬ|ГРОМОВАЯ ПТИЦА|КИБЕР-НИНДЗЯ|ЛЕВИАФАН|КОРОЛЬ ЕДИНОРОГОВ|МЕХ-ТИТАН|ГРАФ ВАМПИРОВ|ТЫКВЕННЫЙ КОРОЛЬ|РАДУЖНЫЙ ДРАКОН|КОСМИЧЕСКИЙ ПИРАТ|ВЕРХОВНЫЙ МАГ|ЗОЛОТОЙ ДРАКОН|ГОЛОГРАММА',
+    skins: 'ХОМЯК|ШОКО|СНЕЖОК|РОЗОВЫЙ|МЯТНЫЙ|НОЧНОЙ|ЛИМОН|ЯГОДКА|ПАНДА|ЛИС|ЛЯГУШ|КОТИК|ПИНГВИН|ЕНОТ|ЗАЙКА|МИШКА|МАРТЫШКА|КОАЛА|СОВА|ПЧЁЛКА|ТИГР|ЕДИНОРОГ|РОБОТ|ДРАКОША|ПРИЗРАК|ВАМПИР|ЗОМБИ|НИНДЗЯ|КИБОРГ|КРАБ|ПИРАТ|КОСМОНАВТ|КОРОЛЬ|ОГОНЁК|РАДУГА|ЛЕДЫШ|ПОВАР|КОВБОЙ|ПОЖАРНЫЙ|ПОЛИЦЕЙСКИЙ|ДОКТОР|ШАХТЁР|ХРЮША|ОТЛИЧНИК|ВЕРТОЛЁТИК|ИМЕНИННИК|БАРАШЕК|БУРЁНКА|ЦЫПЛЁНОК|МЫШОНОК|ЁЖИК|ЖУЧОК|ВОЛШЕБНИК|ВЕДЬМОЧКА|РЫЦАРЬ|ВИКИНГ|САМУРАЙ|ФАРАОН|МУМИЯ|СКЕЛЕТ|ТЫКВА|СНЕГОВИК|САНТА|КЛОУН|ШУТ|СУПЕРГЕРОЙ|ПРИШЕЛЕЦ|АКУЛЁНОК|ОСЬМИНОЖКА|БАБОЧКА|ЧЕРЕПАШКА|ДИНОЗАВРИК|АНГЕЛ|ДЕМОН|ФЕЯ|ФЕНИКС|ДРАКОН-ЦАРЬ|ОБОРОТЕНЬ|ЙЕТИ|КРАКЕН|МЕХ-ПИЛОТ|НЛО|ДУХ САМУРАЯ|СНЕГУРОЧКА|ЛАВОГОЛЕМ|КОСМОКОТ|ПАЛАДИН|НЕОН-ГОНЩИК|ТЕНЬ-НИНДЗЯ|САМОЦВЕТ|ГРОМОВЕРЖЕЦ|ПЕГАС|РУСАЛОЧКА|ЖНЕЦ|ВОДОЛАЗ|ЗАВОДНОЙ|ОБЛАЧКО|МАРМЕЛАДКА|ГЛИТЧ|ЗВЕЗДОЧЁТ|ДЖЕНТЛЬМЕН|ОГНЕННЫЙ ГОНЩИК|ДЖЕЙСОН|ЛЕВ|РОБОПАНДА|ЧЁРНАЯ ДЫРА|ДИДЖЕЙ|КОРОЛЕВА ПЧЁЛ|ЧЕШИРСКИЙ КОТ|АНУБИС|ЛЕСНОЙ ДУХ|ДЖИНН|ГОРГОНА|ХУДОЖНИК|РЫБАК|САДОВНИК|МОРЯЧОК|ФУТБОЛИСТ|РОКЕР|ДЕТЕКТИВ|ЭЛЬФ-ЛУЧНИК|ГЛАДИАТОР|БАЛЕРИНА|АЛХИМИК|КАПИТАН|КИБЕР-САМУРАЙ|ВАЛЬКИРИЯ|НЕКРОМАНТ|ХРАНИТЕЛЬ ВРЕМЕНИ|КИЦУНЭ|МИНОТАВР|ГРИБНОЙ КОРОЛЬ|ПОСЕЙДОН|ПОЧТАЛЬОН|ПЛОВЕЦ|ТЕННИСИСТ|СТРОИТЕЛЬ|ЛЁТЧИК|ФОКУСНИК|КОРОЛЕВСКИЙ СТРАЖ|МАСТЕР КУНГ-ФУ|ЛЕДЯНОЙ ДРАКОН|ПРИЗРАК-ПИРАТ|ЗВЁЗДНЫЙ ВОЛК|БОГ СОЛНЦА|ТУРИСТ|БАРАБАНЩИК|ПАСЕЧНИК|СКЕЙТЕР|МУШКЕТЁР|ЛЕПРЕКОН|ЭСКИМОС|БОКСЁР|КОРОЛЬ ОБЕЗЬЯН|ТЁМНЫЙ РЫЦАРЬ|ЛУННАЯ ВЕДЬМА|РОБО-ДРАКОН|КАПКЕЙК|ПОНЧИК|ЗЕФИРКА|ВАФЕЛЬКА|ПРЯНИК|МОРОЖЕНКА|ЛЕДЕНЕЦ|МАРМЕЛАДНЫЙ МИШКА|КОНФЕТНЫЙ КОРОЛЬ|САХАРНАЯ ФЕЯ|БАНАН|СОНЯ|ФЕРМЕР|ЛЫЖНИК|ГЕЙМЕР|СУШИ-ПОВАР|ЖВАЧКА|СПАСАТЕЛЬ|ДИНО-КОСТЮМ|СИЛАЧ|ШЕРИФ|СНЕЖНЫЙ БАРС|ВОРИШКА|ПОП-ЗВЕЗДА|РОБОКОТ|ГРИФОН|КОСМО-ИМПЕРАТОР|АЛИКОРН|ЛАВОВЫЙ ДРАКОН|ЗОЛОТОЙ НИНДЗЯ|ПИЦЦАЙОЛО|СКРИПАЧ|ФОТОГРАФ|ЮНГА|СЁРФЕР|ЗОНТИК|ПРИНЦ-ЛЯГУШКА|МАГ ВОДЫ|МЕХАНИК|МАГ ОГНЯ|ПАНДА-САМУРАЙ|ЗВЁЗДНЫЙ РЫЦАРЬ|ДРЕВНИЙ ЭНТ|КОРОЛЕВА ТЬМЫ|ПЛАЗМОИД|МЕДСЕСТРА|УЧЁНЫЙ|ПОХОДНИК|РЕСТЛЕР|ЧИРЛИДЕР|ГОЛЬФИСТ|БЕЙСБОЛИСТ|БАСКЕТБОЛИСТ|БИБЛИОТЕКАРЬ|ЛЕСОРУБ|СКАУТ|САНТЕХНИК|БОТАНИК|ХИППИ|МИМ|АЦТЕК|СТИМПАНК|ОХОТНИК ЗА СОКРОВИЩАМИ|БАРД|МОНАХ|ДРУИД|ВЕДУЩИЙ ЦИРКА|ПУГАЛО|ГНОМ|КОСМОКУРСАНТ|МЕДВЕДЬ-ВИКИНГ|СУЛТАН|КРОЛИК-РЫЦАРЬ|СОВА-МАГ|ЛЯГУШКА-НИНДЗЯ|АРХАНГЕЛ|ПОВЕЛИТЕЛЬ ДЕМОНОВ|ГРОЗОВОЙ ДРАКОН|ВЛАДЫКА КОСМОСА|СЁГУН|ДЕМОН ОНИ|ЛЕДЯНОЙ ВЕЛИКАН|ПРИЗРАЧНЫЙ РЫЦАРЬ|ГРОМОВАЯ ПТИЦА|КИБЕР-НИНДЗЯ|ЛЕВИАФАН|КОРОЛЬ ЕДИНОРОГОВ|МЕХ-ТИТАН|ГРАФ ВАМПИРОВ|ТЫКВЕННЫЙ КОРОЛЬ|РАДУЖНЫЙ ДРАКОН|КОСМИЧЕСКИЙ ПИРАТ|ВЕРХОВНЫЙ МАГ|ЗОЛОТОЙ ДРАКОН|ГОЛОГРАММА|ТЁМНЫЙ ЛОРД|РЫЦАРЬ СВЕТА|ВОИН-СПАРТАНЕЦ|ПАУЧИЙ ГЕРОЙ|ЖЕЛЕЗНЫЙ ГЕРОЙ|ЗЕЛЁНЫЙ ГРОМИЛА|ЮНЫЙ ВОЛШЕБНИК|ЛЕДЯНОЙ ГОНЩИК|ГОНЩИК БОЛИДА|ОХОТНИК НА ПРИВИДЕНИЙ|КАПИТАН ЩИТ|НОЧНОЙ СТРАЖ|НИНДЗЯ-РОБОТ',
     ui2: 'МАГАЗИН|КОЛЕСО|СКИНЫ ДНЯ|НАГРАДА ЗА ВХОД|ДЕНЬ|ЗАБРАТЬ|ПРИХОДИ ЗАВТРА|СКИНЫ ДНЯ|СКИДКА|МЕГА-СКИДКА!|НОВЫЕ ЧЕРЕЗ|КРУТИТЬ|БЕСПЛАТНО|ПРЕМИУМ|ПОКУПКИ ЗА ДЕНЬГИ ЗАРАБОТАЮТ|В ВЕРСИИ ДЛЯ МАГАЗИНА ПРИЛОЖЕНИЙ|ТВОЙ ПРИЗ!|НАБОР НОВИЧКА|ЛЕГЕНД. СУНДУК|СОБРАНО|ОК|КРИСТАЛЛЫ',
     packs: 'ГОРСТЬ|МЕШОК|СУНДУК|ГОРА',
     zones2: 'САКУРОВЫЙ САД|ГРИБНАЯ ПОЛЯНА|ТУМАННОЕ БОЛОТО|СТАРЫЙ ЗАМОК|ПРИЗРАЧНЫЙ ЛЕС|НЕОНОВЫЙ ГОРОД|РАДУЖНОЕ НЕБО|ЗАКАТНАЯ ДОЛИНА|ГРОЗОВЫЕ ТУЧИ|ЛЕТАЮЩИЕ ОСТРОВА|ПРАЗДНИК ФОНАРИКОВ|МОРСКАЯ БЕЗДНА|ДИСКО-ГОРОД|ЦИФРОВОЙ МИР|СЕВЕРНОЕ СИЯНИЕ|МЕТЕОРИТНЫЙ ДОЖДЬ|ЧЁРНАЯ ДЫРА|ПИРАТСКАЯ БУХТА|ЕГИПЕТСКИЕ ПИРАМИДЫ|ГОРОД БУДУЩЕГО|МЕХАНИЧЕСКИЙ ЗАВОД|СТАРОЕ КЛАДБИЩЕ|ВОЛШЕБНЫЙ ЛЕС|ШОКОЛАДНАЯ ФАБРИКА|РАДУЖНЫЙ ВОДОПАД|ЛУННАЯ БАЗА|ХРАМ В ДЖУНГЛЯХ|ВОЗДУШНЫЕ ШАРЫ|ОГНЕННЫЕ ГОРЫ|НЕБЕСНЫЕ КИТЫ|ЛЕДЯНОЙ ЗАМОК|ВЕСЁЛАЯ ЯРМАРКА|КОРАЛЛОВЫЙ РИФ|САКУРОВАЯ БУРЯ|ЗАБРОШЕННАЯ ШАХТА|ЗАМОК ВАМПИРА|КОСМИЧЕСКАЯ СТАНЦИЯ|ТЫКВЕННАЯ НОЧЬ|ЗИМНЯЯ ДЕРЕВНЯ|АТЛАНТИДА|ПУСТЫННЫЙ ОАЗИС|НЕБЕСНЫЕ ВРАТА|ДОЛИНА ДИНОЗАВРОВ|ГОРОД-СТИМПАНК|СЕВЕРНЫЙ ПОЛЮС|ПОЛЕ ПОДСОЛНУХОВ|СТАРОЕ КИНО|СЛАДКОЕ КОРОЛЕВСТВО|БАМБУКОВАЯ РОЩА|ХРУСТАЛЬНАЯ ПЕЩЕРА|СТРАНА ИГРУШЕК|САВАННА НА ЗАКАТЕ|НОЧЬ СВЕТЛЯЧКОВ|ВОЛШЕБНАЯ БИБЛИОТЕКА',
     ach2: 'ВЕЗУНЧИК|НЕДЕЛЯ ПОДРЯД|КОЛЛЕКЦИОНЕР',
-    ui3: 'ПАЛАТКА|СИЛЫ|ПАЛАТКА АЛХИМИКА|ЗАХОДИ, ДРУЖОК!|НАЖМИ НА ТОВАР — КУПИТЬ|МАГНИТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯНЕТ МОНЕТЫ И АЛМАЗЫ|НА БЕЗОПАСНЫЙ СТОЛБ ВЫШЕ|5 СЕКУНД ВВЕРХ|ДЕРЖИ СЛЕВА ИЛИ СПРАВА|NPC-ПРОФИ ЛЕЗЕТ С ТОБОЙ|ТОПЛИВО|ЩИТ|МОНЕТЫ X2|ЗАМЕДЛЕНИЕ|МЕГА-ПРЫЖОК|БОМБА|ПРИЗРАК|ВЫДЕРЖИТ ОДИН УДАР|20 СЕКУНД ДВОЙНЫЕ МОНЕТЫ|ВРЕМЯ ИДЁТ МЕДЛЕННЕЕ|12 СЕКУНД ПРЫЖКИ ВЫШЕ|ВЗРЫВ УНИЧТОЖАЕТ ВРАГОВ|8 СЕКУНД НИЧТО НЕ СТРАШНО|ТЕПЕРЬ ТЫ — КЛОН!|ЗАМОРОЗКА|ДОЖДЬ МОНЕТ|ВТОРАЯ ЖИЗНЬ|ВРАГИ ЗАМИРАЮТ НА 8 СЕКУНД|С НЕБА СЫПЛЮТСЯ МОНЕТЫ|ВОСКРЕШАЕТ ОДИН РАЗ|ПЁРЫШКО|АЛМАЗЫ X2|ЗВЕЗДА|КРЫЛЬЯ|10 СЕКУНД МЕДЛЕННО ПАДАЕШЬ|30 СЕКУНД АЛМАЗЫ ВДВОЙНЕ|8 СЕКУНД НЕУЯЗВИМ И КРУШИШЬ ВРАГОВ|10 СЕКУНД САЛЬТО БЕЗ ОГРАНИЧЕНИЙ|ЗОЛОТО ЗА КРИСТАЛЛЫ',
+    ui3: 'ПАЛАТКА|СИЛЫ|ПАЛАТКА АЛХИМИКА|ЗАХОДИ, ДРУЖОК!|НАЖМИ НА ТОВАР — КУПИТЬ|МАГНИТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯНЕТ МОНЕТЫ И АЛМАЗЫ|НА БЕЗОПАСНЫЙ СТОЛБ ВЫШЕ|5 СЕКУНД ВВЕРХ|ДЕРЖИ СЛЕВА ИЛИ СПРАВА|NPC-ПРОФИ ЛЕЗЕТ С ТОБОЙ|ТОПЛИВО|ЩИТ|МОНЕТЫ X2|ЗАМЕДЛЕНИЕ|МЕГА-ПРЫЖОК|БОМБА|ПРИЗРАК|ВЫДЕРЖИТ ОДИН УДАР|20 СЕКУНД ДВОЙНЫЕ МОНЕТЫ|ВРЕМЯ ИДЁТ МЕДЛЕННЕЕ|12 СЕКУНД ПРЫЖКИ ВЫШЕ|ВЗРЫВ УНИЧТОЖАЕТ ВРАГОВ|8 СЕКУНД НИЧТО НЕ СТРАШНО|ТЕПЕРЬ ТЫ — КЛОН!|ЗАМОРОЗКА|ДОЖДЬ МОНЕТ|ВТОРАЯ ЖИЗНЬ|ВРАГИ ЗАМИРАЮТ НА 8 СЕКУНД|С НЕБА СЫПЛЮТСЯ МОНЕТЫ|ВОСКРЕШАЕТ ОДИН РАЗ|ПЁРЫШКО|АЛМАЗЫ X2|ЗВЕЗДА|КРЫЛЬЯ|10 СЕКУНД МЕДЛЕННО ПАДАЕШЬ|30 СЕКУНД АЛМАЗЫ ВДВОЙНЕ|8 СЕКУНД НЕУЯЗВИМ И КРУШИШЬ ВРАГОВ|10 СЕКУНД САЛЬТО БЕЗ ОГРАНИЧЕНИЙ|ЗОЛОТО ЗА КРИСТАЛЛЫ|СОЮЗНИКИ|КЕДДИ|КАРАТИСТ С ЧЁРНЫМ ПОЯСОМ|ЛЕЗЕТ ВВЕРХ С ТОБОЙ И БЬЁТ ВРАГОВ НОГАМИ|ВЗЯТЬ В ЗАБЕГ|В ЗАБЕГЕ|НОВЫЕ СОЮЗНИКИ СКОРО|ПОКА!|ХРУСЬ!|БАМ!|ХУЭЙ!|КИЯ!|ПОДПИСКА БЕЗ РЕКЛАМЫ|НИКАКОЙ РЕКЛАМЫ, ТОЛЬКО ИГРА|/МЕС|БУДУ РАД, ЕСЛИ ВЫ ЧТО-ТО КУПИТЕ!|Я ИНДИ-РАЗРАБОТЧИК ИГР И ХОЧУ|ПРОДОЛЖАТЬ ДЕЛАТЬ ИГРЫ. ЕСЛИ НЕ СЛОЖНО,|КУПИТЕ ЧТО-НИБУДЬ, ПОЖАЛУЙСТА :)|С ЛЮБОВЬЮ, ELDAR STUDIOS',
   },
   en: {
     ui: 'TAP —|TO JUMP OFF A WALL|HEROES|AWARDS|SETTINGS|TAP OUTSIDE TO GO BACK|TAP TO GO BACK|HOLD FOR A LONG JUMP|TAP IN THE AIR —|FLIP AND TURN!|PAUSED|TAP TO PLAY|BEST|NEW RECORD!|OOPS!|KICKS|FLIPS|TAP TO TRY AGAIN|MAGNET|SELECTED|USE|CHEST|ODDS|OPENING...|DUPLICATE|NEW HERO!|TAP TO CLOSE|LOADING|TIP:|MUSIC|SOUNDS|SCREEN SHAKE|EFFECTS|VIBRATION|HINTS|LANGUAGE|RESET PROGRESS|SURE? TAP AGAIN|ON|OFF|ENGLISH|M',
@@ -603,12 +71,12 @@ const LANG_DATA = {
     zones: 'GREEN FOREST|AUTUMN WOODS|JUNGLE|SNOWY PEAKS|DESERT|TROPICAL BEACH|CRYSTAL CAVE|UNDERWATER|CANDY LAND|FIRE VOLCANO|CLOUD KINGDOM|STARRY NIGHT|OUTER SPACE',
     ach: 'FIRST FLIP|JUMPER|100 METERS|250 METERS|500 METERS|1000 METERS|PIGGY BANK|ACROBAT|SPINNER|QUICK FEET|SHIELDED|TRAVELER|BOING!|TREASURE HUNTER|LEGEND|TELEPORTED',
     tips: 'HOLD TO JUMP HIGHER|TAP IN AIR TO FLIP|JELLY BOUNCES YOU|WATCH THE TIMER|HONEY STOPS SLIDING|CHESTS HIDE LEGENDS|LIFTS CARRY YOU UP|BEWARE THE SPARKS!',
-    skins: 'HAMSTER|CHOCO|SNOWY|PINKY|MINTY|MIDNIGHT|LEMON|BERRY|PANDA|FOX|FROG|KITTY|PENGUIN|RACCOON|BUNNY|BEAR|MONKEY|KOALA|OWL|BEE|TIGER|UNICORN|ROBOT|DRAGON|GHOST|VAMPIRE|ZOMBIE|NINJA|CYBORG|CRAB|PIRATE|ASTRONAUT|KING|BLAZE|RAINBOW|FROSTY|CHEF|COWBOY|FIREFIGHTER|POLICE|DOCTOR|MINER|PIGGY|GRADUATE|PROPELLER|BIRTHDAY|LAMB|COW|CHICK|MOUSE|HEDGEHOG|LADYBUG|WIZARD|WITCH|KNIGHT|VIKING|SAMURAI|PHARAOH|MUMMY|SKELETON|PUMPKIN|SNOWMAN|SANTA|CLOWN|JESTER|SUPERHERO|ALIEN|SHARK|OCTOPUS|BUTTERFLY|TURTLE|DINO|ANGEL|DEMON|FAIRY|PHOENIX|DRAGON LORD|WEREWOLF|YETI|KRAKEN|MECH PILOT|UFO|GHOST RONIN|ICE QUEEN|LAVA GOLEM|SPACE CAT|PALADIN|NEON RACER|SHADOW NINJA|GEM GOLEM|THUNDER|PEGASUS|MERMAID|REAPER|DIVER|CLOCKWORK|CLOUDY|GUMMY BEAR|GLITCH|STARGAZER|GENTLEMAN|FIRE RIDER|JASON|LION|ROBO PANDA|BLACK HOLE|DJ|QUEEN BEE|CHESHIRE CAT|ANUBIS|FOREST SPIRIT|GENIE|GORGON|ARTIST|FISHER|GARDENER|SAILOR|FOOTBALLER|ROCKER|DETECTIVE|ELF ARCHER|GLADIATOR|BALLERINA|ALCHEMIST|CAPTAIN|CYBER SAMURAI|VALKYRIE|NECROMANCER|TIME KEEPER|KITSUNE|MINOTAUR|MUSHROOM KING|POSEIDON|POSTMAN|SWIMMER|TENNIS PRO|BUILDER|PILOT|MAGICIAN|ROYAL GUARD|KUNG FU MASTER|ICE DRAGON|GHOST PIRATE|STAR WOLF|SUN GOD|TOURIST|DRUMMER|BEEKEEPER|SKATER|MUSKETEER|LEPRECHAUN|ESKIMO|BOXER|MONKEY KING|DARK KNIGHT|MOON WITCH|ROBO DRAGON|CUPCAKE|DONUT|MARSHMALLOW|WAFFLE|GINGERBREAD|ICE CREAM|LOLLIPOP|GUMMY BEAR|CANDY KING|SUGAR FAIRY|BANANA|SLEEPYHEAD|FARMER|SKIER|GAMER|SUSHI CHEF|BUBBLEGUM|LIFEGUARD|DINO SUIT|STRONGMAN|SHERIFF|SNOW LEOPARD|LITTLE THIEF|POP STAR|ROBOCAT|GRIFFIN|SPACE EMPEROR|ALICORN|LAVA DRAGON|GOLDEN NINJA|PIZZA CHEF|VIOLINIST|PHOTOGRAPHER|CABIN BOY|SURFER|UMBRELLA|FROG PRINCE|WATER MAGE|MECHANIC|FIRE MAGE|SAMURAI PANDA|STAR KNIGHT|ANCIENT ENT|VOID QUEEN|PLASMOID|NURSE|SCIENTIST|CAMPER|WRESTLER|CHEERLEADER|GOLFER|BATTER|HOOPSTER|LIBRARIAN|LUMBERJACK|SCOUT|PLUMBER|NERD|HIPPIE|MIME|AZTEC|STEAMPUNK|TREASURE HUNTER|BARD|MONK|DRUID|RINGMASTER|SCARECROW|GNOME|SPACE CADET|VIKING BEAR|SULTAN|KNIGHT RABBIT|WIZARD OWL|NINJA FROG|ARCHANGEL|DEMON LORD|STORM DRAGON|COSMOS LORD|SHOGUN|ONI DEMON|FROST GIANT|PHANTOM KNIGHT|THUNDERBIRD|CYBER NINJA|LEVIATHAN|UNICORN KING|MECHA TITAN|VAMPIRE COUNT|PUMPKIN KING|RAINBOW DRAGON|SPACE PIRATE|ARCHMAGE|GOLD DRAGON|HOLOGRAM',
+    skins: 'HAMSTER|CHOCO|SNOWY|PINKY|MINTY|MIDNIGHT|LEMON|BERRY|PANDA|FOX|FROG|KITTY|PENGUIN|RACCOON|BUNNY|BEAR|MONKEY|KOALA|OWL|BEE|TIGER|UNICORN|ROBOT|DRAGON|GHOST|VAMPIRE|ZOMBIE|NINJA|CYBORG|CRAB|PIRATE|ASTRONAUT|KING|BLAZE|RAINBOW|FROSTY|CHEF|COWBOY|FIREFIGHTER|POLICE|DOCTOR|MINER|PIGGY|GRADUATE|PROPELLER|BIRTHDAY|LAMB|COW|CHICK|MOUSE|HEDGEHOG|LADYBUG|WIZARD|WITCH|KNIGHT|VIKING|SAMURAI|PHARAOH|MUMMY|SKELETON|PUMPKIN|SNOWMAN|SANTA|CLOWN|JESTER|SUPERHERO|ALIEN|SHARK|OCTOPUS|BUTTERFLY|TURTLE|DINO|ANGEL|DEMON|FAIRY|PHOENIX|DRAGON LORD|WEREWOLF|YETI|KRAKEN|MECH PILOT|UFO|GHOST RONIN|ICE QUEEN|LAVA GOLEM|SPACE CAT|PALADIN|NEON RACER|SHADOW NINJA|GEM GOLEM|THUNDER|PEGASUS|MERMAID|REAPER|DIVER|CLOCKWORK|CLOUDY|GUMMY BEAR|GLITCH|STARGAZER|GENTLEMAN|FIRE RIDER|JASON|LION|ROBO PANDA|BLACK HOLE|DJ|QUEEN BEE|CHESHIRE CAT|ANUBIS|FOREST SPIRIT|GENIE|GORGON|ARTIST|FISHER|GARDENER|SAILOR|FOOTBALLER|ROCKER|DETECTIVE|ELF ARCHER|GLADIATOR|BALLERINA|ALCHEMIST|CAPTAIN|CYBER SAMURAI|VALKYRIE|NECROMANCER|TIME KEEPER|KITSUNE|MINOTAUR|MUSHROOM KING|POSEIDON|POSTMAN|SWIMMER|TENNIS PRO|BUILDER|PILOT|MAGICIAN|ROYAL GUARD|KUNG FU MASTER|ICE DRAGON|GHOST PIRATE|STAR WOLF|SUN GOD|TOURIST|DRUMMER|BEEKEEPER|SKATER|MUSKETEER|LEPRECHAUN|ESKIMO|BOXER|MONKEY KING|DARK KNIGHT|MOON WITCH|ROBO DRAGON|CUPCAKE|DONUT|MARSHMALLOW|WAFFLE|GINGERBREAD|ICE CREAM|LOLLIPOP|GUMMY BEAR|CANDY KING|SUGAR FAIRY|BANANA|SLEEPYHEAD|FARMER|SKIER|GAMER|SUSHI CHEF|BUBBLEGUM|LIFEGUARD|DINO SUIT|STRONGMAN|SHERIFF|SNOW LEOPARD|LITTLE THIEF|POP STAR|ROBOCAT|GRIFFIN|SPACE EMPEROR|ALICORN|LAVA DRAGON|GOLDEN NINJA|PIZZA CHEF|VIOLINIST|PHOTOGRAPHER|CABIN BOY|SURFER|UMBRELLA|FROG PRINCE|WATER MAGE|MECHANIC|FIRE MAGE|SAMURAI PANDA|STAR KNIGHT|ANCIENT ENT|VOID QUEEN|PLASMOID|NURSE|SCIENTIST|CAMPER|WRESTLER|CHEERLEADER|GOLFER|BATTER|HOOPSTER|LIBRARIAN|LUMBERJACK|SCOUT|PLUMBER|NERD|HIPPIE|MIME|AZTEC|STEAMPUNK|TREASURE HUNTER|BARD|MONK|DRUID|RINGMASTER|SCARECROW|GNOME|SPACE CADET|VIKING BEAR|SULTAN|KNIGHT RABBIT|WIZARD OWL|NINJA FROG|ARCHANGEL|DEMON LORD|STORM DRAGON|COSMOS LORD|SHOGUN|ONI DEMON|FROST GIANT|PHANTOM KNIGHT|THUNDERBIRD|CYBER NINJA|LEVIATHAN|UNICORN KING|MECHA TITAN|VAMPIRE COUNT|PUMPKIN KING|RAINBOW DRAGON|SPACE PIRATE|ARCHMAGE|GOLD DRAGON|HOLOGRAM|DARK LORD|LIGHT KNIGHT|SPARTAN WARRIOR|SPIDER HERO|IRON HERO|GREEN BRUTE|YOUNG WIZARD|ICE RIDER|GRAND PRIX RACER|GHOST HUNTER|CAPTAIN SHIELD|NIGHT GUARDIAN|NINJA ROBOT',
     ui2: 'SHOP|WHEEL|DAILY DEALS|LOGIN REWARD|DAY|CLAIM|COME BACK TOMORROW|SKINS OF THE DAY|SALE|MEGA SALE!|NEW IN|SPIN|FREE|PREMIUM|REAL-MONEY PURCHASES WILL WORK|IN THE APP STORE VERSION|YOUR PRIZE!|STARTER PACK|LEGEND CHEST|COLLECTED|OK|CRYSTALS',
     packs: 'HANDFUL|BAG|CHEST|MOUNTAIN',
     zones2: 'SAKURA GARDEN|MUSHROOM GLADE|MISTY SWAMP|OLD CASTLE|HAUNTED WOODS|NEON CITY|RAINBOW SKY|SUNSET VALLEY|THUNDERCLOUDS|FLOATING ISLANDS|LANTERN FESTIVAL|OCEAN ABYSS|DISCO CITY|DIGITAL WORLD|NORTHERN LIGHTS|METEOR SHOWER|BLACK HOLE|PIRATE BAY|EGYPTIAN PYRAMIDS|FUTURE CITY|CLOCKWORK FACTORY|OLD GRAVEYARD|ENCHANTED FOREST|CHOCOLATE FACTORY|RAINBOW FALLS|MOON BASE|JUNGLE TEMPLE|HOT AIR BALLOONS|FIRE MOUNTAINS|SKY WHALES|ICE CASTLE|FUNFAIR|CORAL REEF|SAKURA STORM|ABANDONED MINE|VAMPIRE CASTLE|SPACE STATION|PUMPKIN NIGHT|WINTER VILLAGE|ATLANTIS|DESERT OASIS|HEAVEN GATES|DINO VALLEY|STEAMPUNK CITY|NORTH POLE|SUNFLOWER FIELD|OLD MOVIE|CANDY KINGDOM|BAMBOO GROVE|CRYSTAL CAVE|TOYLAND|SUNSET SAVANNA|FIREFLY NIGHT|MAGIC LIBRARY',
     ach2: 'LUCKY SPIN|7-DAY STREAK|COLLECTOR',
-    ui3: 'TENT|POWERS|ALCHEMIST TENT|COME IN, FRIEND!|TAP AN ITEM TO BUY|MAGNET|TELEPORT|FIRECRACKER|JETPACK|CLONE|PULLS COINS AND GEMS|TO A SAFE POLE ABOVE|5 SECONDS STRAIGHT UP|HOLD LEFT OR RIGHT|A PRO NPC CLIMBS WITH YOU|FUEL|SHIELD|COINS X2|SLOW-MO|MEGA JUMP|BOMB|GHOST|BLOCKS ONE HIT|20 SECONDS OF DOUBLE COINS|TIME GOES SLOWER|12 SECONDS OF HIGHER JUMPS|BLAST DESTROYS ENEMIES|8 SECONDS OF NO DANGER|NOW YOU ARE THE CLONE!|FREEZE|COIN RAIN|EXTRA LIFE|ENEMIES FREEZE FOR 8 SEC|COINS FALL FROM THE SKY|REVIVES YOU ONCE|FEATHER|GEMS X2|STAR|WINGS|SLOW FALL FOR 10 SEC|DOUBLE GEMS FOR 30 SEC|8 SEC INVINCIBLE, SMASH ENEMIES|UNLIMITED FLIPS FOR 10 SEC|GOLD FOR CRYSTALS',
+    ui3: 'TENT|POWERS|ALCHEMIST TENT|COME IN, FRIEND!|TAP AN ITEM TO BUY|MAGNET|TELEPORT|FIRECRACKER|JETPACK|CLONE|PULLS COINS AND GEMS|TO A SAFE POLE ABOVE|5 SECONDS STRAIGHT UP|HOLD LEFT OR RIGHT|A PRO NPC CLIMBS WITH YOU|FUEL|SHIELD|COINS X2|SLOW-MO|MEGA JUMP|BOMB|GHOST|BLOCKS ONE HIT|20 SECONDS OF DOUBLE COINS|TIME GOES SLOWER|12 SECONDS OF HIGHER JUMPS|BLAST DESTROYS ENEMIES|8 SECONDS OF NO DANGER|NOW YOU ARE THE CLONE!|FREEZE|COIN RAIN|EXTRA LIFE|ENEMIES FREEZE FOR 8 SEC|COINS FALL FROM THE SKY|REVIVES YOU ONCE|FEATHER|GEMS X2|STAR|WINGS|SLOW FALL FOR 10 SEC|DOUBLE GEMS FOR 30 SEC|8 SEC INVINCIBLE, SMASH ENEMIES|UNLIMITED FLIPS FOR 10 SEC|GOLD FOR CRYSTALS|ALLIES|KEDDY|BLACK BELT KARATE MASTER|CLIMBS WITH YOU AND KICKS ENEMIES|TAKE ON RUN|ON RUN|MORE ALLIES SOON|BYE!|CRUNCH!|BAM!|HIYAH!|KIAI!|NO-ADS SUBSCRIPTION|NO ADS, JUST THE GAME|/MO|I WILL BE HAPPY IF YOU BUY SOMETHING!|I AM AN INDIE GAME DEVELOPER AND|WANT TO KEEP MAKING GAMES. IF YOU CAN,|PLEASE BUY SOMETHING :)|WITH LOVE, ELDAR STUDIOS',
   },
   es: {
     ui: 'TOCA —|PARA SALTAR DE LA PARED|HÉROES|PREMIOS|AJUSTES|TOCA FUERA PARA VOLVER|TOCA PARA VOLVER|MANTÉN PARA SALTO LARGO|TOCA EN EL AIRE —|¡VOLTERETA Y GIRO!|PAUSA|TOCA PARA JUGAR|RÉCORD|¡NUEVO RÉCORD!|¡UY!|REBOTES|VOLTERETAS|TOCA PARA REPETIR|IMÁN|ELEGIDO|USAR|COFRE|PROBABILIDAD|ABRIENDO...|REPETIDO|¡NUEVO HÉROE!|TOCA PARA CERRAR|CARGANDO|CONSEJO:|MÚSICA|SONIDOS|TEMBLOR|EFECTOS|VIBRACIÓN|PISTAS|IDIOMA|BORRAR PROGRESO|¿SEGURO? TOCA OTRA VEZ|SÍ|NO|ESPAÑOL|M',
@@ -616,12 +84,12 @@ const LANG_DATA = {
     zones: 'BOSQUE VERDE|BOSQUE OTOÑAL|SELVA|PICOS NEVADOS|DESIERTO|PLAYA TROPICAL|CUEVA DE CRISTAL|MUNDO SUBMARINO|PAÍS DE DULCES|VOLCÁN DE FUEGO|REINO DE NUBES|NOCHE ESTRELLADA|ESPACIO EXTERIOR',
     ach: 'PRIMERA VOLTERETA|SALTARÍN|100 METROS|250 METROS|500 METROS|1000 METROS|HUCHA|ACRÓBATA|GIRATORIO|PIES LIGEROS|PROTEGIDO|VIAJERO|¡BOING!|BUSCATESOROS|LEYENDA|TELETRANSPORTE',
     tips: 'MANTÉN PARA SALTAR MÁS|TOCA EN EL AIRE: VOLTERETA|LA GELATINA REBOTA|MIRA EL TEMPORIZADOR|LA MIEL NO RESBALA|LOS COFRES TIENEN LEYENDAS|EL ASCENSOR SUBE|¡CUIDADO CON LA CHISPA!',
-    skins: 'HÁMSTER|CHOCO|NIEVE|ROSITA|MENTA|NOCHE|LIMÓN|BAYA|PANDA|ZORRO|RANA|GATITO|PINGÜINO|MAPACHE|CONEJITO|OSO|MONO|KOALA|BÚHO|ABEJA|TIGRE|UNICORNIO|ROBOT|DRAGÓN|FANTASMA|VAMPIRO|ZOMBI|NINJA|CÍBORG|CANGREJO|PIRATA|ASTRONAUTA|REY|LLAMITA|ARCOÍRIS|ESCARCHA|CHEF|VAQUERO|BOMBERO|POLICÍA|DOCTOR|MINERO|CERDITO|GRADUADO|HÉLICE|CUMPLEAÑERO|CORDERITO|VAQUITA|POLLITO|RATONCITO|ERIZO|MARIQUITA|MAGO|BRUJITA|CABALLERO|VIKINGO|SAMURÁI|FARAÓN|MOMIA|ESQUELETO|CALABAZA|MUÑECO NIEVE|PAPÁ NOEL|PAYASO|BUFÓN|SUPERHÉROE|ALIENÍGENA|TIBURÓN|PULPO|MARIPOSA|TORTUGA|DINO|ÁNGEL|DEMONIO|HADA|FÉNIX|SEÑOR DRAGÓN|HOMBRE LOBO|YETI|KRAKEN|PILOTO MECH|OVNI|RONIN|REINA HIELO|GÓLEM LAVA|GATO CÓSMICO|PALADÍN|PILOTO NEÓN|NINJA SOMBRA|GÓLEM GEMA|TRUENO|PEGASO|SIRENITA|SEGADOR|BUZO|MECÁNICO|NUBECITA|GOMINOLA|GLITCH|ASTRÓLOGO|CABALLERO|JINETE DE FUEGO|JASON|LEÓN|ROBOPANDA|AGUJERO NEGRO|DJ|ABEJA REINA|GATO CHESHIRE|ANUBIS|ESPÍRITU DEL BOSQUE|GENIO|GORGONA|ARTISTA|PESCADOR|JARDINERO|MARINERO|FUTBOLISTA|ROQUERO|DETECTIVE|ELFO ARQUERO|GLADIADOR|BAILARINA|ALQUIMISTA|CAPITÁN|CIBER SAMURÁI|VALQUIRIA|NIGROMANTE|GUARDIÁN DEL TIEMPO|KITSUNE|MINOTAURO|REY HONGO|POSEIDÓN|CARTERO|NADADOR|TENISTA|CONSTRUCTOR|PILOTO|MAGO|GUARDIA REAL|MAESTRO DE KUNG FU|DRAGÓN DE HIELO|PIRATA FANTASMA|LOBO ESTELAR|DIOS DEL SOL|TURISTA|BATERISTA|APICULTOR|PATINADOR|MOSQUETERO|DUENDE|ESQUIMAL|BOXEADOR|REY MONO|CABALLERO OSCURO|BRUJA LUNAR|ROBODRAGÓN|MAGDALENA|DONA|MALVAVISCO|GOFRE|JENGIBRE|HELADO|PIRULETA|OSITO DE GOMINOLA|REY DULCE|HADA DE AZÚCAR|PLÁTANO|DORMILÓN|GRANJERO|ESQUIADOR|GAMER|CHEF DE SUSHI|CHICLE|SOCORRISTA|DISFRAZ DE DINO|FORZUDO|SHERIFF|LEOPARDO DE LAS NIEVES|LADRONZUELO|ESTRELLA POP|ROBOGATO|GRIFO|EMPERADOR ESPACIAL|ALICORNIO|DRAGÓN DE LAVA|NINJA DORADO|PIZZERO|VIOLINISTA|FOTÓGRAFO|GRUMETE|SURFISTA|PARAGUAS|PRÍNCIPE RANA|MAGO DEL AGUA|MECÁNICO|MAGO DE FUEGO|PANDA SAMURÁI|CABALLERO ESTELAR|ENT ANCESTRAL|REINA DEL VACÍO|PLASMOIDE|ENFERMERA|CIENTÍFICO|CAMPISTA|LUCHADOR|ANIMADORA|GOLFISTA|BATEADOR|BALONCESTISTA|BIBLIOTECARIO|LEÑADOR|EXPLORADOR|FONTANERO|EMPOLLÓN|HIPPIE|MIMO|AZTECA|STEAMPUNK|CAZATESOROS|BARDO|MONJE|DRUIDA|MAESTRO DE PISTA|ESPANTAPÁJAROS|GNOMO|CADETE ESPACIAL|OSO VIKINGO|SULTÁN|CONEJO CABALLERO|BÚHO MAGO|RANA NINJA|ARCÁNGEL|SEÑOR DEMONIO|DRAGÓN TORMENTA|SEÑOR DEL COSMOS|SHOGUN|DEMONIO ONI|GIGANTE DE HIELO|CABALLERO FANTASMA|AVE DEL TRUENO|CIBERNINJA|LEVIATÁN|REY UNICORNIO|TITÁN MECA|CONDE VAMPIRO|REY CALABAZA|DRAGÓN ARCOÍRIS|PIRATA ESPACIAL|ARCHIMAGO|DRAGÓN DORADO|HOLOGRAMA',
+    skins: 'HÁMSTER|CHOCO|NIEVE|ROSITA|MENTA|NOCHE|LIMÓN|BAYA|PANDA|ZORRO|RANA|GATITO|PINGÜINO|MAPACHE|CONEJITO|OSO|MONO|KOALA|BÚHO|ABEJA|TIGRE|UNICORNIO|ROBOT|DRAGÓN|FANTASMA|VAMPIRO|ZOMBI|NINJA|CÍBORG|CANGREJO|PIRATA|ASTRONAUTA|REY|LLAMITA|ARCOÍRIS|ESCARCHA|CHEF|VAQUERO|BOMBERO|POLICÍA|DOCTOR|MINERO|CERDITO|GRADUADO|HÉLICE|CUMPLEAÑERO|CORDERITO|VAQUITA|POLLITO|RATONCITO|ERIZO|MARIQUITA|MAGO|BRUJITA|CABALLERO|VIKINGO|SAMURÁI|FARAÓN|MOMIA|ESQUELETO|CALABAZA|MUÑECO NIEVE|PAPÁ NOEL|PAYASO|BUFÓN|SUPERHÉROE|ALIENÍGENA|TIBURÓN|PULPO|MARIPOSA|TORTUGA|DINO|ÁNGEL|DEMONIO|HADA|FÉNIX|SEÑOR DRAGÓN|HOMBRE LOBO|YETI|KRAKEN|PILOTO MECH|OVNI|RONIN|REINA HIELO|GÓLEM LAVA|GATO CÓSMICO|PALADÍN|PILOTO NEÓN|NINJA SOMBRA|GÓLEM GEMA|TRUENO|PEGASO|SIRENITA|SEGADOR|BUZO|MECÁNICO|NUBECITA|GOMINOLA|GLITCH|ASTRÓLOGO|CABALLERO|JINETE DE FUEGO|JASON|LEÓN|ROBOPANDA|AGUJERO NEGRO|DJ|ABEJA REINA|GATO CHESHIRE|ANUBIS|ESPÍRITU DEL BOSQUE|GENIO|GORGONA|ARTISTA|PESCADOR|JARDINERO|MARINERO|FUTBOLISTA|ROQUERO|DETECTIVE|ELFO ARQUERO|GLADIADOR|BAILARINA|ALQUIMISTA|CAPITÁN|CIBER SAMURÁI|VALQUIRIA|NIGROMANTE|GUARDIÁN DEL TIEMPO|KITSUNE|MINOTAURO|REY HONGO|POSEIDÓN|CARTERO|NADADOR|TENISTA|CONSTRUCTOR|PILOTO|MAGO|GUARDIA REAL|MAESTRO DE KUNG FU|DRAGÓN DE HIELO|PIRATA FANTASMA|LOBO ESTELAR|DIOS DEL SOL|TURISTA|BATERISTA|APICULTOR|PATINADOR|MOSQUETERO|DUENDE|ESQUIMAL|BOXEADOR|REY MONO|CABALLERO OSCURO|BRUJA LUNAR|ROBODRAGÓN|MAGDALENA|DONA|MALVAVISCO|GOFRE|JENGIBRE|HELADO|PIRULETA|OSITO DE GOMINOLA|REY DULCE|HADA DE AZÚCAR|PLÁTANO|DORMILÓN|GRANJERO|ESQUIADOR|GAMER|CHEF DE SUSHI|CHICLE|SOCORRISTA|DISFRAZ DE DINO|FORZUDO|SHERIFF|LEOPARDO DE LAS NIEVES|LADRONZUELO|ESTRELLA POP|ROBOGATO|GRIFO|EMPERADOR ESPACIAL|ALICORNIO|DRAGÓN DE LAVA|NINJA DORADO|PIZZERO|VIOLINISTA|FOTÓGRAFO|GRUMETE|SURFISTA|PARAGUAS|PRÍNCIPE RANA|MAGO DEL AGUA|MECÁNICO|MAGO DE FUEGO|PANDA SAMURÁI|CABALLERO ESTELAR|ENT ANCESTRAL|REINA DEL VACÍO|PLASMOIDE|ENFERMERA|CIENTÍFICO|CAMPISTA|LUCHADOR|ANIMADORA|GOLFISTA|BATEADOR|BALONCESTISTA|BIBLIOTECARIO|LEÑADOR|EXPLORADOR|FONTANERO|EMPOLLÓN|HIPPIE|MIMO|AZTECA|STEAMPUNK|CAZATESOROS|BARDO|MONJE|DRUIDA|MAESTRO DE PISTA|ESPANTAPÁJAROS|GNOMO|CADETE ESPACIAL|OSO VIKINGO|SULTÁN|CONEJO CABALLERO|BÚHO MAGO|RANA NINJA|ARCÁNGEL|SEÑOR DEMONIO|DRAGÓN TORMENTA|SEÑOR DEL COSMOS|SHOGUN|DEMONIO ONI|GIGANTE DE HIELO|CABALLERO FANTASMA|AVE DEL TRUENO|CIBERNINJA|LEVIATÁN|REY UNICORNIO|TITÁN MECA|CONDE VAMPIRO|REY CALABAZA|DRAGÓN ARCOÍRIS|PIRATA ESPACIAL|ARCHIMAGO|DRAGÓN DORADO|HOLOGRAMA|SEÑOR OSCURO|CABALLERO DE LUZ|GUERRERO ESPARTANO|HÉROE ARAÑA|HÉROE DE HIERRO|BRUTO VERDE|JOVEN MAGO|JINETE DE HIELO|PILOTO DE CARRERAS|CAZADOR DE FANTASMAS|CAPITÁN ESCUDO|GUARDIÁN NOCTURNO|ROBOT NINJA',
     ui2: 'TIENDA|RULETA|OFERTAS|PREMIO DIARIO|DÍA|RECOGER|VUELVE MAÑANA|SKINS DEL DÍA|DESCUENTO|¡MEGAOFERTA!|NUEVAS EN|GIRAR|GRATIS|PREMIUM|LAS COMPRAS CON DINERO FUNCIONARÁN|EN LA VERSIÓN DE LA TIENDA DE APPS|¡TU PREMIO!|PACK INICIAL|COFRE LEGENDARIO|COLECCIÓN|OK|CRISTALES',
     packs: 'PUÑADO|BOLSA|COFRE|MONTAÑA',
     zones2: 'JARDÍN SAKURA|CLARO DE SETAS|PANTANO BRUMOSO|CASTILLO ANTIGUO|BOSQUE ENCANTADO|CIUDAD NEÓN|CIELO ARCOÍRIS|VALLE DEL OCASO|NUBES DE TORMENTA|ISLAS FLOTANTES|FIESTA DE FAROLILLOS|ABISMO MARINO|CIUDAD DISCO|MUNDO DIGITAL|AURORA BOREAL|LLUVIA DE METEOROS|AGUJERO NEGRO|BAHÍA PIRATA|PIRÁMIDES DE EGIPTO|CIUDAD DEL FUTURO|FÁBRICA MECÁNICA|VIEJO CEMENTERIO|BOSQUE ENCANTADO|FÁBRICA DE CHOCOLATE|CASCADA ARCOÍRIS|BASE LUNAR|TEMPLO DE LA SELVA|GLOBOS AEROSTÁTICOS|MONTAÑAS DE FUEGO|BALLENAS DEL CIELO|CASTILLO DE HIELO|FERIA|ARRECIFE DE CORAL|TORMENTA DE SAKURA|MINA ABANDONADA|CASTILLO DEL VAMPIRO|ESTACIÓN ESPACIAL|NOCHE DE CALABAZAS|ALDEA INVERNAL|ATLÁNTIDA|OASIS DEL DESIERTO|PUERTAS DEL CIELO|VALLE DE DINOSAURIOS|CIUDAD STEAMPUNK|POLO NORTE|CAMPO DE GIRASOLES|CINE ANTIGUO|REINO DE CARAMELO|BOSQUE DE BAMBÚ|CUEVA DE CRISTAL|PAÍS DE JUGUETES|SABANA AL ATARDECER|NOCHE DE LUCIÉRNAGAS|BIBLIOTECA MÁGICA',
     ach2: '¡QUÉ SUERTE!|7 DÍAS SEGUIDOS|COLECCIONISTA',
-    ui3: 'TIENDA|PODERES|TIENDA DEL ALQUIMISTA|PASA, AMIGO!|TOCA PARA COMPRAR|IMÁN|TELETRANSPORTE|PETARDO|JETPACK|CLON|ATRAE MONEDAS Y GEMAS|A UN POSTE SEGURO ARRIBA|5 SEGUNDOS HACIA ARRIBA|MANTÉN IZQUIERDA O DERECHA|UN NPC PRO SUBE CONTIGO|COMBUSTIBLE|ESCUDO|MONEDAS X2|CÁMARA LENTA|SUPERSALTO|BOMBA|FANTASMA|AGUANTA UN GOLPE|20 SEGUNDOS DE MONEDAS DOBLES|EL TIEMPO VA MÁS LENTO|12 SEGUNDOS DE SALTOS ALTOS|LA EXPLOSIÓN BORRA ENEMIGOS|8 SEGUNDOS SIN PELIGRO|AHORA ERES EL CLON!|CONGELAR|LLUVIA DE MONEDAS|VIDA EXTRA|ENEMIGOS CONGELADOS 8 S|LLUEVEN MONEDAS DEL CIELO|TE REVIVE UNA VEZ|PLUMA|GEMAS X2|ESTRELLA|ALAS|CAÍDA LENTA 10 S|GEMAS DOBLES 30 S|8 S INVENCIBLE, ROMPE ENEMIGOS|MORTALES SIN LÍMITE 10 S|ORO POR CRISTALES',
+    ui3: 'TIENDA|PODERES|TIENDA DEL ALQUIMISTA|PASA, AMIGO!|TOCA PARA COMPRAR|IMÁN|TELETRANSPORTE|PETARDO|JETPACK|CLON|ATRAE MONEDAS Y GEMAS|A UN POSTE SEGURO ARRIBA|5 SEGUNDOS HACIA ARRIBA|MANTÉN IZQUIERDA O DERECHA|UN NPC PRO SUBE CONTIGO|COMBUSTIBLE|ESCUDO|MONEDAS X2|CÁMARA LENTA|SUPERSALTO|BOMBA|FANTASMA|AGUANTA UN GOLPE|20 SEGUNDOS DE MONEDAS DOBLES|EL TIEMPO VA MÁS LENTO|12 SEGUNDOS DE SALTOS ALTOS|LA EXPLOSIÓN BORRA ENEMIGOS|8 SEGUNDOS SIN PELIGRO|AHORA ERES EL CLON!|CONGELAR|LLUVIA DE MONEDAS|VIDA EXTRA|ENEMIGOS CONGELADOS 8 S|LLUEVEN MONEDAS DEL CIELO|TE REVIVE UNA VEZ|PLUMA|GEMAS X2|ESTRELLA|ALAS|CAÍDA LENTA 10 S|GEMAS DOBLES 30 S|8 S INVENCIBLE, ROMPE ENEMIGOS|MORTALES SIN LÍMITE 10 S|ORO POR CRISTALES|ALIADOS|KEDDY|MAESTRO DE KARATE CINTURÓN NEGRO|SUBE CONTIGO Y PATEA ENEMIGOS|LLEVAR|EN CARRERA|MÁS ALIADOS PRONTO|ADIÓS!|CRAC!|BAM!|HIYAH!|KIAI!|SUSCRIPCIÓN SIN ANUNCIOS|SIN ANUNCIOS, SOLO EL JUEGO|/MES|ME ALEGRARÁ QUE COMPRES ALGO!|SOY DESARROLLADOR INDIE Y QUIERO|SEGUIR CREANDO JUEGOS. SI PUEDES,|COMPRA ALGO, POR FAVOR :)|CON CARIÑO, ELDAR STUDIOS',
   },
   de: {
     ui: 'TIPPE —|UM VON DER WAND ZU SPRINGEN|HELDEN|PREISE|EINSTELLUNGEN|AUSSERHALB TIPPEN: ZURÜCK|TIPPEN: ZURÜCK|HALTEN FÜR WEITEN SPRUNG|IN DER LUFT TIPPEN —|SALTO UND WENDE!|PAUSE|TIPPEN ZUM SPIELEN|REKORD|NEUER REKORD!|HOPPLA!|SPRÜNGE|SALTOS|TIPPEN FÜR NOCHMAL|MAGNET|GEWÄHLT|NEHMEN|TRUHE|CHANCE|ÖFFNEN...|DOPPELT|NEUER HELD!|TIPPEN ZUM SCHLIESSEN|LADEN|TIPP:|MUSIK|TÖNE|WACKELN|EFFEKTE|VIBRATION|HINWEISE|SPRACHE|FORTSCHRITT LÖSCHEN|SICHER? NOCHMAL TIPPEN|AN|AUS|DEUTSCH|M',
@@ -629,12 +97,12 @@ const LANG_DATA = {
     zones: 'GRÜNER WALD|HERBSTWALD|DSCHUNGEL|SCHNEEGIPFEL|WÜSTE|TROPENSTRAND|KRISTALLHÖHLE|UNTERWASSERWELT|SÜSSIGKEITENLAND|FEUERVULKAN|WOLKENREICH|STERNENNACHT|WELTRAUM',
     ach: 'ERSTER SALTO|SPRINGER|100 METER|250 METER|500 METER|1000 METER|SPARSCHWEIN|AKROBAT|DREHER|FLINKE FÜSSE|BESCHÜTZT|REISENDER|BOING!|SCHATZSUCHER|LEGENDE|TELEPORTIERT',
     tips: 'HALTEN = HÖHER SPRINGEN|IN DER LUFT TIPPEN: SALTO|GELEE STÖSST DICH WEG|ACHTE AUF DEN TIMER|HONIG HÄLT DICH FEST|TRUHEN HABEN LEGENDEN|LIFTE FAHREN NACH OBEN|VORSICHT, STROM!',
-    skins: 'HAMSTER|SCHOKO|SCHNEE|ROSA|MINZE|NACHT|ZITRONE|BEERE|PANDA|FUCHS|FROSCH|KÄTZCHEN|PINGUIN|WASCHBÄR|HASE|BÄR|AFFE|KOALA|EULE|BIENE|TIGER|EINHORN|ROBOTER|DRACHE|GEIST|VAMPIR|ZOMBIE|NINJA|CYBORG|KRABBE|PIRAT|ASTRONAUT|KÖNIG|FLÄMMCHEN|REGENBOGEN|FROSTI|KOCH|COWBOY|FEUERWEHR|POLIZEI|DOKTOR|BERGMANN|SCHWEINCHEN|ABSOLVENT|PROPELLER|GEBURTSTAG|SCHÄFCHEN|KUH|KÜKEN|MÄUSCHEN|IGEL|MARIENKÄFER|ZAUBERER|HEXE|RITTER|WIKINGER|SAMURAI|PHARAO|MUMIE|SKELETT|KÜRBIS|SCHNEEMANN|NIKOLAUS|CLOWN|NARR|SUPERHELD|ALIEN|HAI|OKTOPUS|FALTER|SCHILDKRÖTE|DINO|ENGEL|DÄMON|FEE|PHÖNIX|DRACHENHERR|WERWOLF|YETI|KRAKE|MECH-PILOT|UFO|GEISTRONIN|EISKÖNIGIN|LAVAGOLEM|STERNKATZE|GOLDRITTER|NEONRASER|SCHATTEN|EDELSTEIN|DONNER|PEGASUS|MEERJUNGFRAU|SENSENMANN|TAUCHER|AUFZIEHER|WÖLKCHEN|GUMMIBÄR|GLITCH|STERNGUCKER|GENTLEMAN|FEUERREITER|JASON|LÖWE|ROBOPANDA|SCHWARZES LOCH|DJ|BIENENKÖNIGIN|GRINSEKATZE|ANUBIS|WALDGEIST|DSCHINN|GORGONE|KÜNSTLER|ANGLER|GÄRTNER|MATROSE|FUSSBALLER|ROCKER|DETEKTIV|ELFENSCHÜTZE|GLADIATOR|BALLERINA|ALCHEMIST|KAPITÄN|CYBER-SAMURAI|WALKÜRE|NEKROMANT|ZEITWÄCHTER|KITSUNE|MINOTAURUS|PILZKÖNIG|POSEIDON|BRIEFTRÄGER|SCHWIMMER|TENNISPROFI|BAUARBEITER|PILOT|ZAUBERER|KÖNIGSWACHE|KUNG-FU-MEISTER|EISDRACHE|GEISTERPIRAT|STERNENWOLF|SONNENGOTT|TOURIST|TROMMLER|IMKER|SKATER|MUSKETIER|KOBOLD|ESKIMO|BOXER|AFFENKÖNIG|DUNKLER RITTER|MONDHEXE|ROBODRACHE|CUPCAKE|DONUT|MARSHMALLOW|WAFFEL|LEBKUCHEN|EISCREME|LUTSCHER|GUMMIBÄR|SÜSSKÖNIG|ZUCKERFEE|BANANE|SCHLAFMÜTZE|BAUER|SKIFAHRER|GAMER|SUSHI-KOCH|KAUGUMMI|RETTUNGSSCHWIMMER|DINO-KOSTÜM|KRAFTPROTZ|SHERIFF|SCHNEELEOPARD|KLEINER DIEB|POPSTAR|ROBOKATZE|GREIF|WELTRAUMKAISER|ALIKORN|LAVADRACHE|GOLDNINJA|PIZZABÄCKER|GEIGER|FOTOGRAF|SCHIFFSJUNGE|SURFER|REGENSCHIRM|FROSCHKÖNIG|WASSERMAGIER|MECHANIKER|FEUERMAGIER|SAMURAI-PANDA|STERNENRITTER|URALTER ENT|KÖNIGIN DER LEERE|PLASMOID|PFLEGERIN|FORSCHER|CAMPER|WRESTLER|CHEERLEADER|GOLFER|SCHLAGMANN|BASKETBALLER|BIBLIOTHEKAR|HOLZFÄLLER|PFADFINDER|KLEMPNER|STREBER|HIPPIE|PANTOMIME|AZTEKE|STEAMPUNK|SCHATZJÄGER|BARDE|MÖNCH|DRUIDE|ZIRKUSDIREKTOR|VOGELSCHEUCHE|GNOM|RAUMKADETT|WIKINGERBÄR|SULTAN|RITTERHASE|ZAUBEREULE|NINJAFROSCH|ERZENGEL|DÄMONENFÜRST|STURMDRACHE|HERR DES KOSMOS|SHOGUN|ONI-DÄMON|FROSTRIESE|PHANTOMRITTER|DONNERVOGEL|CYBER-NINJA|LEVIATHAN|EINHORNKÖNIG|MECHA-TITAN|VAMPIRGRAF|KÜRBISKÖNIG|REGENBOGEN-DRACHE|WELTRAUMPIRAT|ERZMAGIER|GOLDDRACHE|HOLOGRAMM',
+    skins: 'HAMSTER|SCHOKO|SCHNEE|ROSA|MINZE|NACHT|ZITRONE|BEERE|PANDA|FUCHS|FROSCH|KÄTZCHEN|PINGUIN|WASCHBÄR|HASE|BÄR|AFFE|KOALA|EULE|BIENE|TIGER|EINHORN|ROBOTER|DRACHE|GEIST|VAMPIR|ZOMBIE|NINJA|CYBORG|KRABBE|PIRAT|ASTRONAUT|KÖNIG|FLÄMMCHEN|REGENBOGEN|FROSTI|KOCH|COWBOY|FEUERWEHR|POLIZEI|DOKTOR|BERGMANN|SCHWEINCHEN|ABSOLVENT|PROPELLER|GEBURTSTAG|SCHÄFCHEN|KUH|KÜKEN|MÄUSCHEN|IGEL|MARIENKÄFER|ZAUBERER|HEXE|RITTER|WIKINGER|SAMURAI|PHARAO|MUMIE|SKELETT|KÜRBIS|SCHNEEMANN|NIKOLAUS|CLOWN|NARR|SUPERHELD|ALIEN|HAI|OKTOPUS|FALTER|SCHILDKRÖTE|DINO|ENGEL|DÄMON|FEE|PHÖNIX|DRACHENHERR|WERWOLF|YETI|KRAKE|MECH-PILOT|UFO|GEISTRONIN|EISKÖNIGIN|LAVAGOLEM|STERNKATZE|GOLDRITTER|NEONRASER|SCHATTEN|EDELSTEIN|DONNER|PEGASUS|MEERJUNGFRAU|SENSENMANN|TAUCHER|AUFZIEHER|WÖLKCHEN|GUMMIBÄR|GLITCH|STERNGUCKER|GENTLEMAN|FEUERREITER|JASON|LÖWE|ROBOPANDA|SCHWARZES LOCH|DJ|BIENENKÖNIGIN|GRINSEKATZE|ANUBIS|WALDGEIST|DSCHINN|GORGONE|KÜNSTLER|ANGLER|GÄRTNER|MATROSE|FUSSBALLER|ROCKER|DETEKTIV|ELFENSCHÜTZE|GLADIATOR|BALLERINA|ALCHEMIST|KAPITÄN|CYBER-SAMURAI|WALKÜRE|NEKROMANT|ZEITWÄCHTER|KITSUNE|MINOTAURUS|PILZKÖNIG|POSEIDON|BRIEFTRÄGER|SCHWIMMER|TENNISPROFI|BAUARBEITER|PILOT|ZAUBERER|KÖNIGSWACHE|KUNG-FU-MEISTER|EISDRACHE|GEISTERPIRAT|STERNENWOLF|SONNENGOTT|TOURIST|TROMMLER|IMKER|SKATER|MUSKETIER|KOBOLD|ESKIMO|BOXER|AFFENKÖNIG|DUNKLER RITTER|MONDHEXE|ROBODRACHE|CUPCAKE|DONUT|MARSHMALLOW|WAFFEL|LEBKUCHEN|EISCREME|LUTSCHER|GUMMIBÄR|SÜSSKÖNIG|ZUCKERFEE|BANANE|SCHLAFMÜTZE|BAUER|SKIFAHRER|GAMER|SUSHI-KOCH|KAUGUMMI|RETTUNGSSCHWIMMER|DINO-KOSTÜM|KRAFTPROTZ|SHERIFF|SCHNEELEOPARD|KLEINER DIEB|POPSTAR|ROBOKATZE|GREIF|WELTRAUMKAISER|ALIKORN|LAVADRACHE|GOLDNINJA|PIZZABÄCKER|GEIGER|FOTOGRAF|SCHIFFSJUNGE|SURFER|REGENSCHIRM|FROSCHKÖNIG|WASSERMAGIER|MECHANIKER|FEUERMAGIER|SAMURAI-PANDA|STERNENRITTER|URALTER ENT|KÖNIGIN DER LEERE|PLASMOID|PFLEGERIN|FORSCHER|CAMPER|WRESTLER|CHEERLEADER|GOLFER|SCHLAGMANN|BASKETBALLER|BIBLIOTHEKAR|HOLZFÄLLER|PFADFINDER|KLEMPNER|STREBER|HIPPIE|PANTOMIME|AZTEKE|STEAMPUNK|SCHATZJÄGER|BARDE|MÖNCH|DRUIDE|ZIRKUSDIREKTOR|VOGELSCHEUCHE|GNOM|RAUMKADETT|WIKINGERBÄR|SULTAN|RITTERHASE|ZAUBEREULE|NINJAFROSCH|ERZENGEL|DÄMONENFÜRST|STURMDRACHE|HERR DES KOSMOS|SHOGUN|ONI-DÄMON|FROSTRIESE|PHANTOMRITTER|DONNERVOGEL|CYBER-NINJA|LEVIATHAN|EINHORNKÖNIG|MECHA-TITAN|VAMPIRGRAF|KÜRBISKÖNIG|REGENBOGEN-DRACHE|WELTRAUMPIRAT|ERZMAGIER|GOLDDRACHE|HOLOGRAMM|DUNKLER LORD|LICHTRITTER|SPARTANER|SPINNENHELD|EISENHELD|GRÜNER RIESE|JUNGER ZAUBERER|EISREITER|RENNFAHRER|GEISTERJÄGER|KAPITÄN SCHILD|NACHTWÄCHTER|NINJA-ROBOTER',
     ui2: 'SHOP|GLÜCKSRAD|ANGEBOTE|TAGESBONUS|TAG|ABHOLEN|KOMM MORGEN WIEDER|SKINS DES TAGES|RABATT|MEGA-RABATT!|NEU IN|DREHEN|GRATIS|PREMIUM|ECHTGELD-KÄUFE FUNKTIONIEREN|IN DER APP-STORE-VERSION|DEIN PREIS!|STARTERPAKET|LEGENDÄRE TRUHE|GESAMMELT|OK|KRISTALLE',
     packs: 'HANDVOLL|BEUTEL|TRUHE|BERG',
     zones2: 'KIRSCHBLÜTENGARTEN|PILZLICHTUNG|NEBELSUMPF|ALTE BURG|SPUKWALD|NEONSTADT|REGENBOGENHIMMEL|ABENDROT-TAL|GEWITTERWOLKEN|SCHWEBENDE INSELN|LATERNENFEST|TIEFSEE|DISCO-STADT|DIGITALE WELT|NORDLICHTER|METEORSCHAUER|SCHWARZES LOCH|PIRATENBUCHT|ÄGYPTISCHE PYRAMIDEN|STADT DER ZUKUNFT|MECHANISCHE FABRIK|ALTER FRIEDHOF|ZAUBERWALD|SCHOKOLADENFABRIK|REGENBOGENFALL|MONDBASIS|DSCHUNGELTEMPEL|HEISSLUFTBALLONS|FEUERBERGE|HIMMELSWALE|EISSCHLOSS|JAHRMARKT|KORALLENRIFF|KIRSCHBLÜTENSTURM|VERLASSENE MINE|VAMPIRSCHLOSS|RAUMSTATION|KÜRBISNACHT|WINTERDORF|ATLANTIS|WÜSTENOASE|HIMMELSTOR|DINOTAL|STEAMPUNK-STADT|NORDPOL|SONNENBLUMENFELD|ALTER FILM|SÜSSIGKEITENREICH|BAMBUSHAIN|KRISTALLHÖHLE|SPIELZEUGLAND|SAVANNE IM ABENDROT|GLÜHWÜRMCHENNACHT|ZAUBERBIBLIOTHEK',
     ach2: 'GLÜCKSPILZ|7 TAGE AM STÜCK|SAMMLER',
-    ui3: 'ZELT|KRÄFTE|ALCHEMISTENZELT|KOMM REIN, FREUND!|TIPPE ZUM KAUFEN|MAGNET|TELEPORT|BÖLLER|JETPACK|KLON|ZIEHT MÜNZEN UND KRISTALLE AN|AUF EINEN SICHEREN PFAHL OBEN|5 SEKUNDEN NACH OBEN|HALTE LINKS ODER RECHTS|EIN PROFI-NPC KLETTERT MIT|TREIBSTOFF|SCHILD|MÜNZEN X2|ZEITLUPE|MEGASPRUNG|BOMBE|GEIST|HÄLT EINEN TREFFER AUS|20 SEKUNDEN DOPPELTE MÜNZEN|DIE ZEIT LÄUFT LANGSAMER|12 SEKUNDEN HÖHERE SPRÜNGE|EXPLOSION ZERSTÖRT GEGNER|8 SEKUNDEN KEINE GEFAHR|JETZT BIST DU DER KLON!|FROST|MÜNZREGEN|EXTRALEBEN|GEGNER 8 SEK EINGEFROREN|MÜNZEN FALLEN VOM HIMMEL|BELEBT DICH EINMAL WIEDER|FEDER|EDELSTEINE X2|STERN|FLÜGEL|10 SEK LANGSAM FALLEN|30 SEK DOPPELTE STEINE|8 SEK UNBESIEGBAR|10 SEK ENDLOS SALTOS|GOLD FÜR KRISTALLE',
+    ui3: 'ZELT|KRÄFTE|ALCHEMISTENZELT|KOMM REIN, FREUND!|TIPPE ZUM KAUFEN|MAGNET|TELEPORT|BÖLLER|JETPACK|KLON|ZIEHT MÜNZEN UND KRISTALLE AN|AUF EINEN SICHEREN PFAHL OBEN|5 SEKUNDEN NACH OBEN|HALTE LINKS ODER RECHTS|EIN PROFI-NPC KLETTERT MIT|TREIBSTOFF|SCHILD|MÜNZEN X2|ZEITLUPE|MEGASPRUNG|BOMBE|GEIST|HÄLT EINEN TREFFER AUS|20 SEKUNDEN DOPPELTE MÜNZEN|DIE ZEIT LÄUFT LANGSAMER|12 SEKUNDEN HÖHERE SPRÜNGE|EXPLOSION ZERSTÖRT GEGNER|8 SEKUNDEN KEINE GEFAHR|JETZT BIST DU DER KLON!|FROST|MÜNZREGEN|EXTRALEBEN|GEGNER 8 SEK EINGEFROREN|MÜNZEN FALLEN VOM HIMMEL|BELEBT DICH EINMAL WIEDER|FEDER|EDELSTEINE X2|STERN|FLÜGEL|10 SEK LANGSAM FALLEN|30 SEK DOPPELTE STEINE|8 SEK UNBESIEGBAR|10 SEK ENDLOS SALTOS|GOLD FÜR KRISTALLE|VERBÜNDETE|KEDDY|KARATEMEISTER MIT SCHWARZGURT|KLETTERT MIT DIR UND TRITT GEGNER|MITNEHMEN|DABEI|BALD MEHR VERBÜNDETE|TSCHÜSS!|KNACK!|BAM!|HIYAH!|KIAI!|ABO OHNE WERBUNG|KEINE WERBUNG, NUR DAS SPIEL|/MON|ICH FREUE MICH ÜBER JEDEN KAUF!|ICH BIN INDIE-SPIELEENTWICKLER UND|WILL WEITER SPIELE MACHEN. WENN ES GEHT,|KAUF BITTE ETWAS :)|IN LIEBE, ELDAR STUDIOS',
   },
   fr: {
     ui: "TOUCHE —|POUR SAUTER DU MUR|HÉROS|TROPHÉES|RÉGLAGES|TOUCHE À CÔTÉ : RETOUR|TOUCHE : RETOUR|MAINTIENS : GRAND SAUT|TOUCHE EN L'AIR —|SALTO ET DEMI-TOUR !|PAUSE|TOUCHE POUR JOUER|RECORD|NOUVEAU RECORD !|OUPS !|REBONDS|SALTOS|TOUCHE POUR REJOUER|AIMANT|CHOISI|PRENDRE|COFFRE|CHANCES|OUVERTURE...|DOUBLON|NOUVEAU HÉROS !|TOUCHE POUR FERMER|CHARGEMENT|ASTUCE :|MUSIQUE|SONS|SECOUSSES|EFFETS|VIBRATION|ASTUCES|LANGUE|EFFACER LA PROGRESSION|SÛR ? TOUCHE ENCORE|OUI|NON|FRANÇAIS|M",
@@ -642,12 +110,12 @@ const LANG_DATA = {
     zones: "FORÊT VERTE|FORÊT D'AUTOMNE|JUNGLE|PICS ENNEIGÉS|DÉSERT|PLAGE TROPICALE|GROTTE DE CRISTAL|MONDE SOUS-MARIN|PAYS DES BONBONS|VOLCAN DE FEU|ROYAUME DES NUAGES|NUIT ÉTOILÉE|ESPACE",
     ach: 'PREMIER SALTO|SAUTEUR|100 MÈTRES|250 MÈTRES|500 MÈTRES|1000 MÈTRES|TIRELIRE|ACROBATE|TOUPIE|PIEDS LÉGERS|PROTÉGÉ|VOYAGEUR|BOING !|CHASSEUR DE TRÉSOR|LÉGENDE|TÉLÉPORTÉ',
     tips: "MAINTIENS POUR SAUTER HAUT|TOUCHE EN L'AIR : SALTO|LA GELÉE TE REPOUSSE|SURVEILLE LE MINUTEUR|LE MIEL NE GLISSE PAS|LES COFFRES ONT DES LÉGENDES|L'ASCENSEUR MONTE|ATTENTION AU COURANT !",
-    skins: 'HAMSTER|CHOCO|FLOCON|ROSE|MENTHE|MINUIT|CITRON|BAIE|PANDA|RENARD|GRENOUILLE|CHATON|PINGOUIN|RATON|LAPIN|OURS|SINGE|KOALA|HIBOU|ABEILLE|TIGRE|LICORNE|ROBOT|DRAGON|FANTÔME|VAMPIRE|ZOMBIE|NINJA|CYBORG|CRABE|PIRATE|ASTRONAUTE|ROI|FLAMME|ARC-EN-CIEL|GIVRÉ|CHEF|COWBOY|POMPIER|POLICIER|DOCTEUR|MINEUR|COCHON|DIPLÔMÉ|HÉLICE|ANNIVERSAIRE|AGNEAU|VACHE|POUSSIN|SOURIS|HÉRISSON|COCCINELLE|SORCIER|SORCIÈRE|CHEVALIER|VIKING|SAMOURAÏ|PHARAON|MOMIE|SQUELETTE|CITROUILLE|BONHOMME|PÈRE NOËL|CLOWN|BOUFFON|SUPER-HÉROS|ALIEN|REQUIN|PIEUVRE|PAPILLON|TORTUE|DINO|ANGE|DÉMON|FÉE|PHÉNIX|ROI DRAGON|LOUP-GAROU|YÉTI|KRAKEN|PILOTE MÉCA|OVNI|RONIN|REINE GLACE|GOLEM LAVE|COSMOCHAT|PALADIN|PILOTE NÉON|NINJA OMBRE|GOLEM GEMME|TONNERRE|PÉGASE|SIRÈNE|FAUCHEUSE|PLONGEUR|MÉCANIQUE|NUAGE|OURSON|GLITCH|ASTROLOGUE|GENTLEMAN|MOTARD DE FEU|JASON|LION|ROBOPANDA|TROU NOIR|DJ|REINE ABEILLE|CHAT DE CHESHIRE|ANUBIS|ESPRIT DE LA FORÊT|GÉNIE|GORGONE|ARTISTE|PÊCHEUR|JARDINIER|MATELOT|FOOTBALLEUR|ROCKEUR|DÉTECTIVE|ELFE ARCHER|GLADIATEUR|BALLERINE|ALCHIMISTE|CAPITAINE|CYBER SAMOURAÏ|VALKYRIE|NÉCROMANCIEN|GARDIEN DU TEMPS|KITSUNE|MINOTAURE|ROI CHAMPIGNON|POSÉIDON|FACTEUR|NAGEUR|TENNISMAN|MAÇON|PILOTE|MAGICIEN|GARDE ROYAL|MAÎTRE DE KUNG-FU|DRAGON DE GLACE|PIRATE FANTÔME|LOUP ÉTOILÉ|DIEU SOLEIL|TOURISTE|BATTEUR|APICULTEUR|SKATEUR|MOUSQUETAIRE|FARFADET|ESQUIMAU|BOXEUR|ROI SINGE|CHEVALIER NOIR|SORCIÈRE LUNAIRE|ROBODRAGON|CUPCAKE|BEIGNET|GUIMAUVE|GAUFRE|BISCUIT ÉPICÉ|GLACE|SUCETTE|OURSON EN GOMME|ROI BONBON|FÉE SUCRÉE|BANANE|DORMEUR|FERMIER|SKIEUR|GAMER|CHEF SUSHI|CHEWING-GUM|SAUVETEUR|COSTUME DINO|HERCULE|SHÉRIF|PANTHÈRE DES NEIGES|PETIT VOLEUR|POP STAR|ROBOCHAT|GRIFFON|EMPEREUR SPATIAL|ALICORNE|DRAGON DE LAVE|NINJA DORÉ|PIZZAIOLO|VIOLONISTE|PHOTOGRAPHE|MOUSSE|SURFEUR|PARAPLUIE|PRINCE GRENOUILLE|MAGE AQUATIQUE|MÉCANICIEN|MAGE DE FEU|PANDA SAMOURAÏ|CHEVALIER ÉTOILÉ|ENT ANCESTRAL|REINE DU VIDE|PLASMOÏDE|INFIRMIÈRE|SCIENTIFIQUE|CAMPEUR|CATCHEUR|POM-POM GIRL|GOLFEUR|BATTEUR|BASKETTEUR|BIBLIOTHÉCAIRE|BÛCHERON|SCOUT|PLOMBIER|INTELLO|HIPPIE|MIME|AZTÈQUE|STEAMPUNK|CHASSEUR DE TRÉSOR|BARDE|MOINE|DRUIDE|MONSIEUR LOYAL|ÉPOUVANTAIL|GNOME|CADET SPATIAL|OURS VIKING|SULTAN|LAPIN CHEVALIER|HIBOU MAGE|GRENOUILLE NINJA|ARCHANGE|SEIGNEUR DÉMON|DRAGON DE TEMPÊTE|SEIGNEUR DU COSMOS|SHOGUN|DÉMON ONI|GÉANT DE GLACE|CHEVALIER FANTÔME|OISEAU-TONNERRE|CYBER-NINJA|LÉVIATHAN|ROI LICORNE|TITAN MÉCA|COMTE VAMPIRE|ROI CITROUILLE|DRAGON ARC-EN-CIEL|PIRATE SPATIAL|ARCHIMAGE|DRAGON DORÉ|HOLOGRAMME',
+    skins: 'HAMSTER|CHOCO|FLOCON|ROSE|MENTHE|MINUIT|CITRON|BAIE|PANDA|RENARD|GRENOUILLE|CHATON|PINGOUIN|RATON|LAPIN|OURS|SINGE|KOALA|HIBOU|ABEILLE|TIGRE|LICORNE|ROBOT|DRAGON|FANTÔME|VAMPIRE|ZOMBIE|NINJA|CYBORG|CRABE|PIRATE|ASTRONAUTE|ROI|FLAMME|ARC-EN-CIEL|GIVRÉ|CHEF|COWBOY|POMPIER|POLICIER|DOCTEUR|MINEUR|COCHON|DIPLÔMÉ|HÉLICE|ANNIVERSAIRE|AGNEAU|VACHE|POUSSIN|SOURIS|HÉRISSON|COCCINELLE|SORCIER|SORCIÈRE|CHEVALIER|VIKING|SAMOURAÏ|PHARAON|MOMIE|SQUELETTE|CITROUILLE|BONHOMME|PÈRE NOËL|CLOWN|BOUFFON|SUPER-HÉROS|ALIEN|REQUIN|PIEUVRE|PAPILLON|TORTUE|DINO|ANGE|DÉMON|FÉE|PHÉNIX|ROI DRAGON|LOUP-GAROU|YÉTI|KRAKEN|PILOTE MÉCA|OVNI|RONIN|REINE GLACE|GOLEM LAVE|COSMOCHAT|PALADIN|PILOTE NÉON|NINJA OMBRE|GOLEM GEMME|TONNERRE|PÉGASE|SIRÈNE|FAUCHEUSE|PLONGEUR|MÉCANIQUE|NUAGE|OURSON|GLITCH|ASTROLOGUE|GENTLEMAN|MOTARD DE FEU|JASON|LION|ROBOPANDA|TROU NOIR|DJ|REINE ABEILLE|CHAT DE CHESHIRE|ANUBIS|ESPRIT DE LA FORÊT|GÉNIE|GORGONE|ARTISTE|PÊCHEUR|JARDINIER|MATELOT|FOOTBALLEUR|ROCKEUR|DÉTECTIVE|ELFE ARCHER|GLADIATEUR|BALLERINE|ALCHIMISTE|CAPITAINE|CYBER SAMOURAÏ|VALKYRIE|NÉCROMANCIEN|GARDIEN DU TEMPS|KITSUNE|MINOTAURE|ROI CHAMPIGNON|POSÉIDON|FACTEUR|NAGEUR|TENNISMAN|MAÇON|PILOTE|MAGICIEN|GARDE ROYAL|MAÎTRE DE KUNG-FU|DRAGON DE GLACE|PIRATE FANTÔME|LOUP ÉTOILÉ|DIEU SOLEIL|TOURISTE|BATTEUR|APICULTEUR|SKATEUR|MOUSQUETAIRE|FARFADET|ESQUIMAU|BOXEUR|ROI SINGE|CHEVALIER NOIR|SORCIÈRE LUNAIRE|ROBODRAGON|CUPCAKE|BEIGNET|GUIMAUVE|GAUFRE|BISCUIT ÉPICÉ|GLACE|SUCETTE|OURSON EN GOMME|ROI BONBON|FÉE SUCRÉE|BANANE|DORMEUR|FERMIER|SKIEUR|GAMER|CHEF SUSHI|CHEWING-GUM|SAUVETEUR|COSTUME DINO|HERCULE|SHÉRIF|PANTHÈRE DES NEIGES|PETIT VOLEUR|POP STAR|ROBOCHAT|GRIFFON|EMPEREUR SPATIAL|ALICORNE|DRAGON DE LAVE|NINJA DORÉ|PIZZAIOLO|VIOLONISTE|PHOTOGRAPHE|MOUSSE|SURFEUR|PARAPLUIE|PRINCE GRENOUILLE|MAGE AQUATIQUE|MÉCANICIEN|MAGE DE FEU|PANDA SAMOURAÏ|CHEVALIER ÉTOILÉ|ENT ANCESTRAL|REINE DU VIDE|PLASMOÏDE|INFIRMIÈRE|SCIENTIFIQUE|CAMPEUR|CATCHEUR|POM-POM GIRL|GOLFEUR|BATTEUR|BASKETTEUR|BIBLIOTHÉCAIRE|BÛCHERON|SCOUT|PLOMBIER|INTELLO|HIPPIE|MIME|AZTÈQUE|STEAMPUNK|CHASSEUR DE TRÉSOR|BARDE|MOINE|DRUIDE|MONSIEUR LOYAL|ÉPOUVANTAIL|GNOME|CADET SPATIAL|OURS VIKING|SULTAN|LAPIN CHEVALIER|HIBOU MAGE|GRENOUILLE NINJA|ARCHANGE|SEIGNEUR DÉMON|DRAGON DE TEMPÊTE|SEIGNEUR DU COSMOS|SHOGUN|DÉMON ONI|GÉANT DE GLACE|CHEVALIER FANTÔME|OISEAU-TONNERRE|CYBER-NINJA|LÉVIATHAN|ROI LICORNE|TITAN MÉCA|COMTE VAMPIRE|ROI CITROUILLE|DRAGON ARC-EN-CIEL|PIRATE SPATIAL|ARCHIMAGE|DRAGON DORÉ|HOLOGRAMME|SEIGNEUR NOIR|CHEVALIER DE LUMIÈRE|GUERRIER SPARTIATE|HÉROS ARAIGNÉE|HÉROS DE FER|BRUTE VERTE|JEUNE SORCIER|MOTARD DE GLACE|PILOTE DE COURSE|CHASSEUR DE FANTÔMES|CAPITAINE BOUCLIER|GARDIEN DE LA NUIT|ROBOT NINJA',
     ui2: 'BOUTIQUE|ROUE|OFFRES|BONUS DU JOUR|JOUR|PRENDRE|REVIENS DEMAIN|SKINS DU JOUR|PROMO|MÉGA PROMO !|NOUVEAUX DANS|TOURNER|GRATUIT|PREMIUM|LES ACHATS RÉELS FONCTIONNERONT|DANS LA VERSION APP STORE|TON PRIX !|PACK DÉBUTANT|COFFRE LÉGENDAIRE|COLLECTION|OK|CRISTAUX',
     packs: 'POIGNÉE|SAC|COFFRE|MONTAGNE',
     zones2: 'JARDIN SAKURA|CLAIRIÈRE AUX CHAMPIGNONS|MARAIS BRUMEUX|VIEUX CHÂTEAU|BOIS HANTÉ|VILLE NÉON|CIEL ARC-EN-CIEL|VALLÉE DU COUCHANT|NUAGES ORAGEUX|ÎLES FLOTTANTES|FÊTE DES LANTERNES|ABYSSES MARINS|DISCO-VILLE|MONDE NUMÉRIQUE|AURORE BORÉALE|PLUIE DE MÉTÉORES|TROU NOIR|BAIE DES PIRATES|PYRAMIDES ÉGYPTIENNES|VILLE DU FUTUR|USINE MÉCANIQUE|VIEUX CIMETIÈRE|FORÊT ENCHANTÉE|CHOCOLATERIE|CASCADE ARC-EN-CIEL|BASE LUNAIRE|TEMPLE DE LA JUNGLE|MONTGOLFIÈRES|MONTAGNES DE FEU|BALEINES DU CIEL|CHÂTEAU DE GLACE|FÊTE FORAINE|RÉCIF DE CORAIL|TEMPÊTE DE SAKURA|MINE ABANDONNÉE|CHÂTEAU DU VAMPIRE|STATION SPATIALE|NUIT DES CITROUILLES|VILLAGE ENNEIGÉ|ATLANTIDE|OASIS DU DÉSERT|PORTES DU CIEL|VALLÉE DES DINOS|VILLE STEAMPUNK|PÔLE NORD|CHAMP DE TOURNESOLS|VIEUX FILM|ROYAUME SUCRÉ|BAMBOUSERAIE|GROTTE DE CRISTAL|PAYS DES JOUETS|SAVANE AU COUCHANT|NUIT DES LUCIOLES|BIBLIOTHÈQUE MAGIQUE',
     ach2: 'CHANCEUX|7 JOURS DE SUITE|COLLECTIONNEUR',
-    ui3: 'TENTE|POUVOIRS|TENTE ALCHIMISTE|ENTRE, AMI!|TOUCHE POUR ACHETER|AIMANT|TÉLÉPORT|PÉTARD|JETPACK|CLONE|ATTIRE PIÈCES ET GEMMES|VERS UN POTEAU SÛR EN HAUT|5 SECONDES VERS LE HAUT|MAINTIENS À GAUCHE OU À DROITE|UN PNJ PRO GRIMPE AVEC TOI|CARBURANT|BOUCLIER|PIÈCES X2|RALENTI|MÉGA SAUT|BOMBE|FANTÔME|ENCAISSE UN COUP|20 SECONDES DE PIÈCES DOUBLES|LE TEMPS RALENTIT|12 SECONDES DE SAUTS PLUS HAUTS|EXPLOSION CONTRE LES ENNEMIS|8 SECONDES SANS DANGER|TU ES LE CLONE!|GEL|PLUIE DE PIÈCES|VIE BONUS|ENNEMIS GELÉS 8 S|DES PIÈCES TOMBENT DU CIEL|TE RESSUSCITE UNE FOIS|PLUME|GEMMES X2|ÉTOILE|AILES|CHUTE LENTE 10 S|GEMMES DOUBLÉES 30 S|INVINCIBLE 8 S, ÉCRASE TOUT|SALTOS ILLIMITÉS 10 S|OR CONTRE CRISTAUX',
+    ui3: 'TENTE|POUVOIRS|TENTE ALCHIMISTE|ENTRE, AMI!|TOUCHE POUR ACHETER|AIMANT|TÉLÉPORT|PÉTARD|JETPACK|CLONE|ATTIRE PIÈCES ET GEMMES|VERS UN POTEAU SÛR EN HAUT|5 SECONDES VERS LE HAUT|MAINTIENS À GAUCHE OU À DROITE|UN PNJ PRO GRIMPE AVEC TOI|CARBURANT|BOUCLIER|PIÈCES X2|RALENTI|MÉGA SAUT|BOMBE|FANTÔME|ENCAISSE UN COUP|20 SECONDES DE PIÈCES DOUBLES|LE TEMPS RALENTIT|12 SECONDES DE SAUTS PLUS HAUTS|EXPLOSION CONTRE LES ENNEMIS|8 SECONDES SANS DANGER|TU ES LE CLONE!|GEL|PLUIE DE PIÈCES|VIE BONUS|ENNEMIS GELÉS 8 S|DES PIÈCES TOMBENT DU CIEL|TE RESSUSCITE UNE FOIS|PLUME|GEMMES X2|ÉTOILE|AILES|CHUTE LENTE 10 S|GEMMES DOUBLÉES 30 S|INVINCIBLE 8 S, ÉCRASE TOUT|SALTOS ILLIMITÉS 10 S|OR CONTRE CRISTAUX|ALLIÉS|KEDDY|MAÎTRE DE KARATÉ CEINTURE NOIRE|GRIMPE AVEC TOI ET FRAPPE LES ENNEMIS|EMMENER|EN COURSE|AUTRES ALLIÉS BIENTÔT|SALUT!|CRAC!|BAM!|HIYAH!|KIAI!|ABONNEMENT SANS PUB|SANS PUB, JUSTE LE JEU|/MOIS|JE SERAIS RAVI QUE VOUS ACHETIEZ!|JE SUIS DÉVELOPPEUR INDÉ ET JE VEUX|CONTINUER À CRÉER DES JEUX. SI POSSIBLE,|ACHETEZ QUELQUE CHOSE SVP :)|AVEC AMOUR, ELDAR STUDIOS',
   },
   pt: {
     ui: 'TOQUE —|PARA PULAR DA PAREDE|HERÓIS|PRÊMIOS|AJUSTES|TOQUE FORA PARA VOLTAR|TOQUE PARA VOLTAR|SEGURE PARA SALTO LONGO|TOQUE NO AR —|MORTAL E VIRADA!|PAUSA|TOQUE PARA JOGAR|RECORDE|NOVO RECORDE!|OPA!|PULOS|MORTAIS|TOQUE PARA REPETIR|ÍMÃ|ESCOLHIDO|USAR|BAÚ|CHANCE|ABRINDO...|REPETIDO|NOVO HERÓI!|TOQUE PARA FECHAR|CARREGANDO|DICA:|MÚSICA|SONS|TREMOR|EFEITOS|VIBRAÇÃO|DICAS|IDIOMA|APAGAR PROGRESSO|CERTEZA? TOQUE DE NOVO|LIG|DESL|PORTUGUÊS|M',
@@ -655,12 +123,12 @@ const LANG_DATA = {
     zones: 'FLORESTA VERDE|FLORESTA DE OUTONO|SELVA|PICOS NEVADOS|DESERTO|PRAIA TROPICAL|CAVERNA DE CRISTAL|MUNDO SUBMARINO|TERRA DOS DOCES|VULCÃO DE FOGO|REINO DAS NUVENS|NOITE ESTRELADA|ESPAÇO SIDERAL',
     ach: 'PRIMEIRO MORTAL|SALTADOR|100 METROS|250 METROS|500 METROS|1000 METROS|COFRINHO|ACROBATA|GIRA-GIRA|PÉS LIGEIROS|PROTEGIDO|VIAJANTE|BOING!|CAÇA-TESOUROS|LENDA|TELETRANSPORTE',
     tips: 'SEGURE PARA PULAR MAIS|TOQUE NO AR: MORTAL|A GELEIA TE REPELE|OLHE O CRONÔMETRO|O MEL NÃO ESCORREGA|BAÚS TÊM LENDAS|O ELEVADOR SOBE|CUIDADO COM O CHOQUE!',
-    skins: 'HAMSTER|CHOCO|NEVE|ROSINHA|HORTELÃ|MEIA-NOITE|LIMÃO|AMORA|PANDA|RAPOSA|SAPO|GATINHO|PINGUIM|GUAXINIM|COELHINHO|URSO|MACACO|COALA|CORUJA|ABELHA|TIGRE|UNICÓRNIO|ROBÔ|DRAGÃO|FANTASMA|VAMPIRO|ZUMBI|NINJA|CIBORGUE|CARANGUEJO|PIRATA|ASTRONAUTA|REI|CHAMINHA|ARCO-ÍRIS|GEADA|CHEF|CAUBÓI|BOMBEIRO|POLICIAL|DOUTOR|MINEIRO|PORQUINHO|FORMANDO|HÉLICE|ANIVERSÁRIO|CORDEIRO|VAQUINHA|PINTINHO|RATINHO|OURIÇO|JOANINHA|MAGO|BRUXINHA|CAVALEIRO|VIKING|SAMURAI|FARAÓ|MÚMIA|ESQUELETO|ABÓBORA|BONECO NEVE|PAPAI NOEL|PALHAÇO|BUFÃO|SUPER-HERÓI|ALIENÍGENA|TUBARÃO|POLVO|BORBOLETA|TARTARUGA|DINO|ANJO|DEMÔNIO|FADA|FÊNIX|REI DRAGÃO|LOBISOMEM|YETI|KRAKEN|PILOTO MECH|ÓVNI|RONIN|RAINHA GELO|GOLEM LAVA|GATO CÓSMICO|PALADINO|PILOTO NEON|NINJA SOMBRA|GOLEM GEMA|TROVÃO|PÉGASO|SEREIA|CEIFADOR|MERGULHADOR|MECÂNICO|NUVENZINHA|JUJUBA|GLITCH|ASTRÓLOGO|CAVALHEIRO|MOTOQUEIRO DE FOGO|JASON|LEÃO|ROBOPANDA|BURACO NEGRO|DJ|ABELHA RAINHA|GATO DE CHESHIRE|ANÚBIS|ESPÍRITO DA FLORESTA|GÊNIO|GÓRGONA|ARTISTA|PESCADOR|JARDINEIRO|MARINHEIRO|FUTEBOLISTA|ROQUEIRO|DETETIVE|ELFO ARQUEIRO|GLADIADOR|BAILARINA|ALQUIMISTA|CAPITÃO|CIBER SAMURAI|VALQUÍRIA|NECROMANTE|GUARDIÃO DO TEMPO|KITSUNE|MINOTAURO|REI COGUMELO|POSEIDON|CARTEIRO|NADADOR|TENISTA|PEDREIRO|PILOTO|MÁGICO|GUARDA REAL|MESTRE DE KUNG FU|DRAGÃO DE GELO|PIRATA FANTASMA|LOBO ESTELAR|DEUS SOL|TURISTA|BATERISTA|APICULTOR|SKATISTA|MOSQUETEIRO|DUENDE|ESQUIMÓ|BOXEADOR|REI MACACO|CAVALEIRO SOMBRIO|BRUXA DA LUA|ROBODRAGÃO|CUPCAKE|ROSQUINHA|MARSHMALLOW|WAFFLE|BISCOITO DE GENGIBRE|SORVETE|PIRULITO|URSINHO DE GOMA|REI DOCE|FADA DO AÇÚCAR|BANANA|DORMINHOCO|FAZENDEIRO|ESQUIADOR|GAMER|SUSHIMAN|CHICLETE|SALVA-VIDAS|FANTASIA DE DINO|FORTÃO|XERIFE|LEOPARDO-DAS-NEVES|LADRÃOZINHO|ESTRELA POP|ROBOGATO|GRIFO|IMPERADOR ESPACIAL|ALICÓRNIO|DRAGÃO DE LAVA|NINJA DOURADO|PIZZAIOLO|VIOLINISTA|FOTÓGRAFO|GRUMETE|SURFISTA|GUARDA-CHUVA|PRÍNCIPE SAPO|MAGO DA ÁGUA|MECÂNICO|MAGO DO FOGO|PANDA SAMURAI|CAVALEIRO ESTELAR|ENT ANCESTRAL|RAINHA DO VAZIO|PLASMOIDE|ENFERMEIRA|CIENTISTA|CAMPISTA|LUTADOR|LÍDER DE TORCIDA|GOLFISTA|REBATEDOR|CESTINHA|BIBLIOTECÁRIO|LENHADOR|ESCOTEIRO|ENCANADOR|NERD|HIPPIE|MÍMICO|ASTECA|STEAMPUNK|CAÇADOR DE TESOUROS|BARDO|MONGE|DRUIDA|MESTRE DE PICADEIRO|ESPANTALHO|GNOMO|CADETE ESPACIAL|URSO VIKING|SULTÃO|COELHO CAVALEIRO|CORUJA MAGA|SAPO NINJA|ARCANJO|SENHOR DEMÔNIO|DRAGÃO DA TEMPESTADE|SENHOR DO COSMOS|XOGUM|DEMÔNIO ONI|GIGANTE DE GELO|CAVALEIRO FANTASMA|PÁSSARO-TROVÃO|CIBERNINJA|LEVIATÃ|REI UNICÓRNIO|TITÃ MECA|CONDE VAMPIRO|REI ABÓBORA|DRAGÃO ARCO-ÍRIS|PIRATA ESPACIAL|ARQUIMAGO|DRAGÃO DOURADO|HOLOGRAMA',
+    skins: 'HAMSTER|CHOCO|NEVE|ROSINHA|HORTELÃ|MEIA-NOITE|LIMÃO|AMORA|PANDA|RAPOSA|SAPO|GATINHO|PINGUIM|GUAXINIM|COELHINHO|URSO|MACACO|COALA|CORUJA|ABELHA|TIGRE|UNICÓRNIO|ROBÔ|DRAGÃO|FANTASMA|VAMPIRO|ZUMBI|NINJA|CIBORGUE|CARANGUEJO|PIRATA|ASTRONAUTA|REI|CHAMINHA|ARCO-ÍRIS|GEADA|CHEF|CAUBÓI|BOMBEIRO|POLICIAL|DOUTOR|MINEIRO|PORQUINHO|FORMANDO|HÉLICE|ANIVERSÁRIO|CORDEIRO|VAQUINHA|PINTINHO|RATINHO|OURIÇO|JOANINHA|MAGO|BRUXINHA|CAVALEIRO|VIKING|SAMURAI|FARAÓ|MÚMIA|ESQUELETO|ABÓBORA|BONECO NEVE|PAPAI NOEL|PALHAÇO|BUFÃO|SUPER-HERÓI|ALIENÍGENA|TUBARÃO|POLVO|BORBOLETA|TARTARUGA|DINO|ANJO|DEMÔNIO|FADA|FÊNIX|REI DRAGÃO|LOBISOMEM|YETI|KRAKEN|PILOTO MECH|ÓVNI|RONIN|RAINHA GELO|GOLEM LAVA|GATO CÓSMICO|PALADINO|PILOTO NEON|NINJA SOMBRA|GOLEM GEMA|TROVÃO|PÉGASO|SEREIA|CEIFADOR|MERGULHADOR|MECÂNICO|NUVENZINHA|JUJUBA|GLITCH|ASTRÓLOGO|CAVALHEIRO|MOTOQUEIRO DE FOGO|JASON|LEÃO|ROBOPANDA|BURACO NEGRO|DJ|ABELHA RAINHA|GATO DE CHESHIRE|ANÚBIS|ESPÍRITO DA FLORESTA|GÊNIO|GÓRGONA|ARTISTA|PESCADOR|JARDINEIRO|MARINHEIRO|FUTEBOLISTA|ROQUEIRO|DETETIVE|ELFO ARQUEIRO|GLADIADOR|BAILARINA|ALQUIMISTA|CAPITÃO|CIBER SAMURAI|VALQUÍRIA|NECROMANTE|GUARDIÃO DO TEMPO|KITSUNE|MINOTAURO|REI COGUMELO|POSEIDON|CARTEIRO|NADADOR|TENISTA|PEDREIRO|PILOTO|MÁGICO|GUARDA REAL|MESTRE DE KUNG FU|DRAGÃO DE GELO|PIRATA FANTASMA|LOBO ESTELAR|DEUS SOL|TURISTA|BATERISTA|APICULTOR|SKATISTA|MOSQUETEIRO|DUENDE|ESQUIMÓ|BOXEADOR|REI MACACO|CAVALEIRO SOMBRIO|BRUXA DA LUA|ROBODRAGÃO|CUPCAKE|ROSQUINHA|MARSHMALLOW|WAFFLE|BISCOITO DE GENGIBRE|SORVETE|PIRULITO|URSINHO DE GOMA|REI DOCE|FADA DO AÇÚCAR|BANANA|DORMINHOCO|FAZENDEIRO|ESQUIADOR|GAMER|SUSHIMAN|CHICLETE|SALVA-VIDAS|FANTASIA DE DINO|FORTÃO|XERIFE|LEOPARDO-DAS-NEVES|LADRÃOZINHO|ESTRELA POP|ROBOGATO|GRIFO|IMPERADOR ESPACIAL|ALICÓRNIO|DRAGÃO DE LAVA|NINJA DOURADO|PIZZAIOLO|VIOLINISTA|FOTÓGRAFO|GRUMETE|SURFISTA|GUARDA-CHUVA|PRÍNCIPE SAPO|MAGO DA ÁGUA|MECÂNICO|MAGO DO FOGO|PANDA SAMURAI|CAVALEIRO ESTELAR|ENT ANCESTRAL|RAINHA DO VAZIO|PLASMOIDE|ENFERMEIRA|CIENTISTA|CAMPISTA|LUTADOR|LÍDER DE TORCIDA|GOLFISTA|REBATEDOR|CESTINHA|BIBLIOTECÁRIO|LENHADOR|ESCOTEIRO|ENCANADOR|NERD|HIPPIE|MÍMICO|ASTECA|STEAMPUNK|CAÇADOR DE TESOUROS|BARDO|MONGE|DRUIDA|MESTRE DE PICADEIRO|ESPANTALHO|GNOMO|CADETE ESPACIAL|URSO VIKING|SULTÃO|COELHO CAVALEIRO|CORUJA MAGA|SAPO NINJA|ARCANJO|SENHOR DEMÔNIO|DRAGÃO DA TEMPESTADE|SENHOR DO COSMOS|XOGUM|DEMÔNIO ONI|GIGANTE DE GELO|CAVALEIRO FANTASMA|PÁSSARO-TROVÃO|CIBERNINJA|LEVIATÃ|REI UNICÓRNIO|TITÃ MECA|CONDE VAMPIRO|REI ABÓBORA|DRAGÃO ARCO-ÍRIS|PIRATA ESPACIAL|ARQUIMAGO|DRAGÃO DOURADO|HOLOGRAMA|LORDE SOMBRIO|CAVALEIRO DA LUZ|GUERREIRO ESPARTANO|HERÓI ARANHA|HERÓI DE FERRO|BRUTAMONTES VERDE|JOVEM BRUXO|MOTOQUEIRO DE GELO|PILOTO DE CORRIDA|CAÇADOR DE FANTASMAS|CAPITÃO ESCUDO|GUARDIÃO NOTURNO|ROBÔ NINJA',
     ui2: 'LOJA|ROLETA|OFERTAS|PRÊMIO DIÁRIO|DIA|PEGAR|VOLTE AMANHÃ|SKINS DO DIA|DESCONTO|MEGA DESCONTO!|NOVAS EM|GIRAR|GRÁTIS|PREMIUM|COMPRAS COM DINHEIRO FUNCIONARÃO|NA VERSÃO DA LOJA DE APPS|SEU PRÊMIO!|PACOTE INICIAL|BAÚ LENDÁRIO|COLEÇÃO|OK|CRISTAIS',
     packs: 'PUNHADO|SACO|BAÚ|MONTANHA',
     zones2: 'JARDIM SAKURA|CLAREIRA DE COGUMELOS|PÂNTANO NEBULOSO|CASTELO ANTIGO|FLORESTA ASSOMBRADA|CIDADE NEON|CÉU ARCO-ÍRIS|VALE DO PÔR DO SOL|NUVENS DE TEMPESTADE|ILHAS FLUTUANTES|FESTA DAS LANTERNAS|ABISMO DO MAR|CIDADE DISCO|MUNDO DIGITAL|AURORA BOREAL|CHUVA DE METEOROS|BURACO NEGRO|BAÍA PIRATA|PIRÂMIDES DO EGITO|CIDADE DO FUTURO|FÁBRICA MECÂNICA|VELHO CEMITÉRIO|FLORESTA ENCANTADA|FÁBRICA DE CHOCOLATE|CASCATA ARCO-ÍRIS|BASE LUNAR|TEMPLO DA SELVA|BALÕES DE AR|MONTANHAS DE FOGO|BALEIAS DO CÉU|CASTELO DE GELO|PARQUE DE DIVERSÕES|RECIFE DE CORAL|TEMPESTADE DE SAKURA|MINA ABANDONADA|CASTELO DO VAMPIRO|ESTAÇÃO ESPACIAL|NOITE DAS ABÓBORAS|ALDEIA DE INVERNO|ATLÂNTIDA|OÁSIS DO DESERTO|PORTÕES DO CÉU|VALE DOS DINOSSAUROS|CIDADE STEAMPUNK|POLO NORTE|CAMPO DE GIRASSÓIS|FILME ANTIGO|REINO DOS DOCES|BAMBUZAL|CAVERNA DE CRISTAL|TERRA DOS BRINQUEDOS|SAVANA AO PÔR DO SOL|NOITE DE VAGA-LUMES|BIBLIOTECA MÁGICA',
     ach2: 'SORTUDO|7 DIAS SEGUIDOS|COLECIONADOR',
-    ui3: 'TENDA|PODERES|TENDA DO ALQUIMISTA|ENTRE, AMIGO!|TOQUE PARA COMPRAR|ÍMÃ|TELETRANSPORTE|ROJÃO|JETPACK|CLONE|PUXA MOEDAS E GEMAS|PARA UM POSTE SEGURO ACIMA|5 SEGUNDOS PARA CIMA|SEGURE ESQUERDA OU DIREITA|UM NPC PRO SOBE CONTIGO|COMBUSTÍVEL|ESCUDO|MOEDAS X2|CÂMERA LENTA|MEGAPULO|BOMBA|FANTASMA|AGUENTA UM GOLPE|20 SEGUNDOS DE MOEDAS EM DOBRO|O TEMPO FICA MAIS LENTO|12 SEGUNDOS DE PULOS ALTOS|EXPLOSÃO DESTRÓI INIMIGOS|8 SEGUNDOS SEM PERIGO|AGORA VOCÊ É O CLONE!|CONGELAR|CHUVA DE MOEDAS|VIDA EXTRA|INIMIGOS CONGELADOS 8 S|MOEDAS CAEM DO CÉU|TE REVIVE UMA VEZ|PENA|GEMAS X2|ESTRELA|ASAS|QUEDA LENTA 10 S|GEMAS EM DOBRO 30 S|8 S INVENCÍVEL, ESMAGA INIMIGOS|MORTAIS SEM LIMITE 10 S|OURO POR CRISTAIS',
+    ui3: 'TENDA|PODERES|TENDA DO ALQUIMISTA|ENTRE, AMIGO!|TOQUE PARA COMPRAR|ÍMÃ|TELETRANSPORTE|ROJÃO|JETPACK|CLONE|PUXA MOEDAS E GEMAS|PARA UM POSTE SEGURO ACIMA|5 SEGUNDOS PARA CIMA|SEGURE ESQUERDA OU DIREITA|UM NPC PRO SOBE CONTIGO|COMBUSTÍVEL|ESCUDO|MOEDAS X2|CÂMERA LENTA|MEGAPULO|BOMBA|FANTASMA|AGUENTA UM GOLPE|20 SEGUNDOS DE MOEDAS EM DOBRO|O TEMPO FICA MAIS LENTO|12 SEGUNDOS DE PULOS ALTOS|EXPLOSÃO DESTRÓI INIMIGOS|8 SEGUNDOS SEM PERIGO|AGORA VOCÊ É O CLONE!|CONGELAR|CHUVA DE MOEDAS|VIDA EXTRA|INIMIGOS CONGELADOS 8 S|MOEDAS CAEM DO CÉU|TE REVIVE UMA VEZ|PENA|GEMAS X2|ESTRELA|ASAS|QUEDA LENTA 10 S|GEMAS EM DOBRO 30 S|8 S INVENCÍVEL, ESMAGA INIMIGOS|MORTAIS SEM LIMITE 10 S|OURO POR CRISTAIS|ALIADOS|KEDDY|MESTRE DE CARATÊ FAIXA PRETA|SOBE COM VOCÊ E CHUTA INIMIGOS|LEVAR|NA CORRIDA|MAIS ALIADOS EM BREVE|TCHAU!|CRAC!|BAM!|HIYAH!|KIAI!|ASSINATURA SEM ANÚNCIOS|SEM ANÚNCIOS, SÓ O JOGO|/MÊS|FICAREI FELIZ SE VOCÊ COMPRAR ALGO!|SOU DESENVOLVEDOR INDIE E QUERO|CONTINUAR CRIANDO JOGOS. SE PUDER,|COMPRE ALGO, POR FAVOR :)|COM AMOR, ELDAR STUDIOS',
   },
   it: {
     ui: 'TOCCA —|PER SALTARE DAL MURO|EROI|PREMI|IMPOSTAZIONI|TOCCA FUORI PER TORNARE|TOCCA PER TORNARE|TIENI PER SALTO LUNGO|TOCCA IN ARIA —|CAPRIOLA E GIRO!|PAUSA|TOCCA PER GIOCARE|RECORD|NUOVO RECORD!|OPS!|RIMBALZI|CAPRIOLE|TOCCA PER RIPROVARE|CALAMITA|SCELTO|USA|FORZIERE|PROBABILITÀ|APERTURA...|DOPPIONE|NUOVO EROE!|TOCCA PER CHIUDERE|CARICAMENTO|CONSIGLIO:|MUSICA|SUONI|SCOSSE|EFFETTI|VIBRAZIONE|SUGGERIMENTI|LINGUA|CANCELLA PROGRESSI|SICURO? TOCCA ANCORA|SÌ|NO|ITALIANO|M',
@@ -668,12 +136,12 @@ const LANG_DATA = {
     zones: "FORESTA VERDE|BOSCO D'AUTUNNO|GIUNGLA|VETTE INNEVATE|DESERTO|SPIAGGIA TROPICALE|GROTTA DI CRISTALLO|MONDO SOTTOMARINO|PAESE DEI DOLCI|VULCANO DI FUOCO|REGNO DELLE NUVOLE|NOTTE STELLATA|SPAZIO PROFONDO",
     ach: 'PRIMA CAPRIOLA|SALTERINO|100 METRI|250 METRI|500 METRI|1000 METRI|SALVADANAIO|ACROBATA|TROTTOLA|PIEDI SVELTI|PROTETTO|VIAGGIATORE|BOING!|CACCIATORE DI TESORI|LEGGENDA|TELETRASPORTO',
     tips: "TIENI PER SALTARE DI PIÙ|TOCCA IN ARIA: CAPRIOLA|LA GELATINA TI RESPINGE|GUARDA IL TIMER|IL MIELE NON SCIVOLA|NEI FORZIERI CI SONO LEGGENDE|L'ASCENSORE SALE|ATTENTO ALLA SCOSSA!",
-    skins: 'CRICETO|CIOCCO|NEVE|ROSA|MENTA|MEZZANOTTE|LIMONE|BACCA|PANDA|VOLPE|RANA|GATTINO|PINGUINO|PROCIONE|CONIGLIO|ORSO|SCIMMIA|KOALA|GUFO|APE|TIGRE|UNICORNO|ROBOT|DRAGO|FANTASMA|VAMPIRO|ZOMBIE|NINJA|CYBORG|GRANCHIO|PIRATA|ASTRONAUTA|RE|FIAMMA|ARCOBALENO|GELO|CUOCO|COWBOY|POMPIERE|POLIZIOTTO|DOTTORE|MINATORE|MAIALINO|LAUREATO|ELICA|FESTEGGIATO|AGNELLINO|MUCCA|PULCINO|TOPOLINO|RICCIO|COCCINELLA|MAGO|STREGHETTA|CAVALIERE|VICHINGO|SAMURAI|FARAONE|MUMMIA|SCHELETRO|ZUCCA|PUPAZZO|BABBO NATALE|PAGLIACCIO|GIULLARE|SUPEREROE|ALIENO|SQUALO|POLPO|FARFALLA|TARTARUGA|DINO|ANGELO|DEMONE|FATA|FENICE|RE DRAGO|LUPO MANNARO|YETI|KRAKEN|PILOTA MECH|UFO|RONIN|REGINA GELO|GOLEM LAVA|COSMOGATTO|PALADINO|PILOTA NEON|NINJA OMBRA|GOLEM GEMMA|TUONO|PEGASO|SIRENETTA|MIETITORE|PALOMBARO|MECCANICO|NUVOLETTA|ORSETTO|GLITCH|ASTROLOGO|GENTILUOMO|CAVALIERE DI FUOCO|JASON|LEONE|ROBOPANDA|BUCO NERO|DJ|APE REGINA|STREGATTO|ANUBI|SPIRITO DEL BOSCO|GENIO|GORGONE|ARTISTA|PESCATORE|GIARDINIERE|MARINAIO|CALCIATORE|ROCKER|DETECTIVE|ELFO ARCIERE|GLADIATORE|BALLERINA|ALCHIMISTA|CAPITANO|CYBER SAMURAI|VALCHIRIA|NEGROMANTE|CUSTODE DEL TEMPO|KITSUNE|MINOTAURO|RE FUNGO|POSEIDONE|POSTINO|NUOTATORE|TENNISTA|MURATORE|PILOTA|PRESTIGIATORE|GUARDIA REALE|MAESTRO DI KUNG FU|DRAGO DI GHIACCIO|PIRATA FANTASMA|LUPO STELLARE|DIO DEL SOLE|TURISTA|BATTERISTA|APICOLTORE|SKATER|MOSCHETTIERE|FOLLETTO|ESCHIMESE|PUGILE|RE SCIMMIA|CAVALIERE OSCURO|STREGA LUNARE|ROBODRAGO|CUPCAKE|CIAMBELLA|MARSHMALLOW|WAFFLE|OMINO DI PAN ZENZERO|GELATO|LECCA-LECCA|ORSETTO GOMMOSO|RE DEI DOLCI|FATA ZUCCHERINA|BANANA|DORMIGLIONE|CONTADINO|SCIATORE|GAMER|CHEF SUSHI|GOMMA DA MASTICARE|BAGNINO|COSTUME DA DINO|FORZUTO|SCERIFFO|LEOPARDO DELLE NEVI|LADRUNCOLO|POP STAR|ROBOGATTO|GRIFONE|IMPERATORE SPAZIALE|ALICORNO|DRAGO DI LAVA|NINJA DORATO|PIZZAIOLO|VIOLINISTA|FOTOGRAFO|MOZZO|SURFISTA|OMBRELLO|PRINCIPE RANOCCHIO|MAGO ACQUATICO|MECCANICO|MAGO DEL FUOCO|PANDA SAMURAI|CAVALIERE STELLARE|ENT ANTICO|REGINA DEL VUOTO|PLASMOIDE|INFERMIERA|SCIENZIATO|CAMPEGGIATORE|LOTTATORE|CHEERLEADER|GOLFISTA|BATTITORE|CESTISTA|BIBLIOTECARIO|BOSCAIOLO|SCOUT|IDRAULICO|SECCHIONE|HIPPIE|MIMO|AZTECO|STEAMPUNK|CACCIATORE DI TESORI|BARDO|MONACO|DRUIDO|DIRETTORE DEL CIRCO|SPAVENTAPASSERI|GNOMO|CADETTO SPAZIALE|ORSO VICHINGO|SULTANO|CONIGLIO CAVALIERE|GUFO MAGO|RANA NINJA|ARCANGELO|SIGNORE DEI DEMONI|DRAGO DELLA TEMPESTA|SIGNORE DEL COSMO|SHOGUN|DEMONE ONI|GIGANTE DI GHIACCIO|CAVALIERE FANTASMA|UCCELLO DEL TUONO|CYBER NINJA|LEVIATANO|RE UNICORNO|TITANO MECHA|CONTE VAMPIRO|RE ZUCCA|DRAGO ARCOBALENO|PIRATA SPAZIALE|ARCIMAGO|DRAGO DORATO|OLOGRAMMA',
+    skins: 'CRICETO|CIOCCO|NEVE|ROSA|MENTA|MEZZANOTTE|LIMONE|BACCA|PANDA|VOLPE|RANA|GATTINO|PINGUINO|PROCIONE|CONIGLIO|ORSO|SCIMMIA|KOALA|GUFO|APE|TIGRE|UNICORNO|ROBOT|DRAGO|FANTASMA|VAMPIRO|ZOMBIE|NINJA|CYBORG|GRANCHIO|PIRATA|ASTRONAUTA|RE|FIAMMA|ARCOBALENO|GELO|CUOCO|COWBOY|POMPIERE|POLIZIOTTO|DOTTORE|MINATORE|MAIALINO|LAUREATO|ELICA|FESTEGGIATO|AGNELLINO|MUCCA|PULCINO|TOPOLINO|RICCIO|COCCINELLA|MAGO|STREGHETTA|CAVALIERE|VICHINGO|SAMURAI|FARAONE|MUMMIA|SCHELETRO|ZUCCA|PUPAZZO|BABBO NATALE|PAGLIACCIO|GIULLARE|SUPEREROE|ALIENO|SQUALO|POLPO|FARFALLA|TARTARUGA|DINO|ANGELO|DEMONE|FATA|FENICE|RE DRAGO|LUPO MANNARO|YETI|KRAKEN|PILOTA MECH|UFO|RONIN|REGINA GELO|GOLEM LAVA|COSMOGATTO|PALADINO|PILOTA NEON|NINJA OMBRA|GOLEM GEMMA|TUONO|PEGASO|SIRENETTA|MIETITORE|PALOMBARO|MECCANICO|NUVOLETTA|ORSETTO|GLITCH|ASTROLOGO|GENTILUOMO|CAVALIERE DI FUOCO|JASON|LEONE|ROBOPANDA|BUCO NERO|DJ|APE REGINA|STREGATTO|ANUBI|SPIRITO DEL BOSCO|GENIO|GORGONE|ARTISTA|PESCATORE|GIARDINIERE|MARINAIO|CALCIATORE|ROCKER|DETECTIVE|ELFO ARCIERE|GLADIATORE|BALLERINA|ALCHIMISTA|CAPITANO|CYBER SAMURAI|VALCHIRIA|NEGROMANTE|CUSTODE DEL TEMPO|KITSUNE|MINOTAURO|RE FUNGO|POSEIDONE|POSTINO|NUOTATORE|TENNISTA|MURATORE|PILOTA|PRESTIGIATORE|GUARDIA REALE|MAESTRO DI KUNG FU|DRAGO DI GHIACCIO|PIRATA FANTASMA|LUPO STELLARE|DIO DEL SOLE|TURISTA|BATTERISTA|APICOLTORE|SKATER|MOSCHETTIERE|FOLLETTO|ESCHIMESE|PUGILE|RE SCIMMIA|CAVALIERE OSCURO|STREGA LUNARE|ROBODRAGO|CUPCAKE|CIAMBELLA|MARSHMALLOW|WAFFLE|OMINO DI PAN ZENZERO|GELATO|LECCA-LECCA|ORSETTO GOMMOSO|RE DEI DOLCI|FATA ZUCCHERINA|BANANA|DORMIGLIONE|CONTADINO|SCIATORE|GAMER|CHEF SUSHI|GOMMA DA MASTICARE|BAGNINO|COSTUME DA DINO|FORZUTO|SCERIFFO|LEOPARDO DELLE NEVI|LADRUNCOLO|POP STAR|ROBOGATTO|GRIFONE|IMPERATORE SPAZIALE|ALICORNO|DRAGO DI LAVA|NINJA DORATO|PIZZAIOLO|VIOLINISTA|FOTOGRAFO|MOZZO|SURFISTA|OMBRELLO|PRINCIPE RANOCCHIO|MAGO ACQUATICO|MECCANICO|MAGO DEL FUOCO|PANDA SAMURAI|CAVALIERE STELLARE|ENT ANTICO|REGINA DEL VUOTO|PLASMOIDE|INFERMIERA|SCIENZIATO|CAMPEGGIATORE|LOTTATORE|CHEERLEADER|GOLFISTA|BATTITORE|CESTISTA|BIBLIOTECARIO|BOSCAIOLO|SCOUT|IDRAULICO|SECCHIONE|HIPPIE|MIMO|AZTECO|STEAMPUNK|CACCIATORE DI TESORI|BARDO|MONACO|DRUIDO|DIRETTORE DEL CIRCO|SPAVENTAPASSERI|GNOMO|CADETTO SPAZIALE|ORSO VICHINGO|SULTANO|CONIGLIO CAVALIERE|GUFO MAGO|RANA NINJA|ARCANGELO|SIGNORE DEI DEMONI|DRAGO DELLA TEMPESTA|SIGNORE DEL COSMO|SHOGUN|DEMONE ONI|GIGANTE DI GHIACCIO|CAVALIERE FANTASMA|UCCELLO DEL TUONO|CYBER NINJA|LEVIATANO|RE UNICORNO|TITANO MECHA|CONTE VAMPIRO|RE ZUCCA|DRAGO ARCOBALENO|PIRATA SPAZIALE|ARCIMAGO|DRAGO DORATO|OLOGRAMMA|SIGNORE OSCURO|CAVALIERE DI LUCE|GUERRIERO SPARTANO|EROE RAGNO|EROE DI FERRO|BRUTO VERDE|GIOVANE MAGO|PILOTA DI GHIACCIO|PILOTA DA CORSA|CACCIATORE DI FANTASMI|CAPITANO SCUDO|GUARDIANO NOTTURNO|ROBOT NINJA',
     ui2: 'NEGOZIO|RUOTA|OFFERTE|PREMIO GIORNALIERO|GIORNO|PRENDI|TORNA DOMANI|SKIN DEL GIORNO|SCONTO|MEGA SCONTO!|NUOVE TRA|GIRA|GRATIS|PREMIUM|GLI ACQUISTI REALI FUNZIONERANNO|NELLA VERSIONE DELLO STORE|IL TUO PREMIO!|PACCHETTO INIZIALE|FORZIERE LEGGENDARIO|COLLEZIONE|OK|CRISTALLI',
     packs: 'MANCIATA|SACCO|FORZIERE|MONTAGNA',
     zones2: 'GIARDINO SAKURA|RADURA DEI FUNGHI|PALUDE NEBBIOSA|VECCHIO CASTELLO|BOSCO STREGATO|CITTÀ NEON|CIELO ARCOBALENO|VALLE DEL TRAMONTO|NUBI DI TEMPESTA|ISOLE VOLANTI|FESTA DELLE LANTERNE|ABISSO MARINO|CITTÀ DISCO|MONDO DIGITALE|AURORA BOREALE|PIOGGIA DI METEORE|BUCO NERO|BAIA DEI PIRATI|PIRAMIDI EGIZIE|CITTÀ DEL FUTURO|FABBRICA MECCANICA|VECCHIO CIMITERO|FORESTA INCANTATA|FABBRICA DI CIOCCOLATO|CASCATA ARCOBALENO|BASE LUNARE|TEMPIO DELLA GIUNGLA|MONGOLFIERE|MONTAGNE DI FUOCO|BALENE DEL CIELO|CASTELLO DI GHIACCIO|LUNA PARK|BARRIERA CORALLINA|TEMPESTA DI SAKURA|MINIERA ABBANDONATA|CASTELLO DEL VAMPIRO|STAZIONE SPAZIALE|NOTTE DELLE ZUCCHE|VILLAGGIO INVERNALE|ATLANTIDE|OASI NEL DESERTO|PORTE DEL CIELO|VALLE DEI DINOSAURI|CITTÀ STEAMPUNK|POLO NORD|CAMPO DI GIRASOLI|VECCHIO FILM|REGNO DEI DOLCI|BOSCHETTO DI BAMBÙ|GROTTA DI CRISTALLO|PAESE DEI GIOCATTOLI|SAVANA AL TRAMONTO|NOTTE DELLE LUCCIOLE|BIBLIOTECA MAGICA',
     ach2: 'FORTUNATO|7 GIORNI DI FILA|COLLEZIONISTA',
-    ui3: 'TENDA|POTERI|TENDA ALCHIMISTA|ENTRA, AMICO!|TOCCA PER COMPRARE|CALAMITA|TELETRASPORTO|PETARDO|JETPACK|CLONE|ATTIRA MONETE E GEMME|SU UN PALO SICURO IN ALTO|5 SECONDI IN SU|TIENI A SINISTRA O DESTRA|UN NPC PRO SALE CON TE|CARBURANTE|SCUDO|MONETE X2|RALLENTATORE|MEGA SALTO|BOMBA|FANTASMA|REGGE UN COLPO|20 SECONDI DI MONETE DOPPIE|IL TEMPO RALLENTA|12 SECONDI DI SALTI ALTI|ESPLOSIONE DISTRUGGE NEMICI|8 SECONDI SENZA PERICOLI|ORA SEI IL CLONE!|GELO|PIOGGIA DI MONETE|VITA EXTRA|NEMICI CONGELATI 8 S|MONETE DAL CIELO|TI RIANIMA UNA VOLTA|PIUMA|GEMME X2|STELLA|ALI|CADUTA LENTA 10 S|GEMME DOPPIE 30 S|8 S INVINCIBILE, ABBATTI NEMICI|SALTI INFINITI 10 S|ORO PER CRISTALLI',
+    ui3: 'TENDA|POTERI|TENDA ALCHIMISTA|ENTRA, AMICO!|TOCCA PER COMPRARE|CALAMITA|TELETRASPORTO|PETARDO|JETPACK|CLONE|ATTIRA MONETE E GEMME|SU UN PALO SICURO IN ALTO|5 SECONDI IN SU|TIENI A SINISTRA O DESTRA|UN NPC PRO SALE CON TE|CARBURANTE|SCUDO|MONETE X2|RALLENTATORE|MEGA SALTO|BOMBA|FANTASMA|REGGE UN COLPO|20 SECONDI DI MONETE DOPPIE|IL TEMPO RALLENTA|12 SECONDI DI SALTI ALTI|ESPLOSIONE DISTRUGGE NEMICI|8 SECONDI SENZA PERICOLI|ORA SEI IL CLONE!|GELO|PIOGGIA DI MONETE|VITA EXTRA|NEMICI CONGELATI 8 S|MONETE DAL CIELO|TI RIANIMA UNA VOLTA|PIUMA|GEMME X2|STELLA|ALI|CADUTA LENTA 10 S|GEMME DOPPIE 30 S|8 S INVINCIBILE, ABBATTI NEMICI|SALTI INFINITI 10 S|ORO PER CRISTALLI|ALLEATI|KEDDY|MAESTRO DI KARATE CINTURA NERA|SALE CON TE E PRENDE A CALCI I NEMICI|PORTA CON TE|IN CORSA|ALTRI ALLEATI PRESTO|CIAO!|CRAC!|BAM!|HIYAH!|KIAI!|ABBONAMENTO SENZA PUBBLICITÀ|NIENTE PUBBLICITÀ, SOLO GIOCO|/MESE|SARÒ FELICE SE COMPRI QUALCOSA!|SONO UNO SVILUPPATORE INDIE E VOGLIO|CONTINUARE A CREARE GIOCHI. SE PUOI,|COMPRA QUALCOSA, PER FAVORE :)|CON AMORE, ELDAR STUDIOS',
   },
   tr: {
     ui: 'DOKUN —|DUVARDAN ZIPLA|KAHRAMANLAR|ÖDÜLLER|AYARLAR|GERİ İÇİN DIŞARI DOKUN|GERİ İÇİN DOKUN|UZUN ZIPLAMA İÇİN BASILI TUT|HAVADA DOKUN —|TAKLA VE DÖNÜŞ!|DURAKLATILDI|OYNAMAK İÇİN DOKUN|REKOR|YENİ REKOR!|EYVAH!|SEKME|TAKLA|TEKRAR İÇİN DOKUN|MIKNATIS|SEÇİLDİ|AL|SANDIK|ŞANS|AÇILIYOR...|TEKRAR|YENİ KAHRAMAN!|KAPATMAK İÇİN DOKUN|YÜKLENİYOR|İPUCU:|MÜZİK|SESLER|SARSINTI|EFEKTLER|TİTREŞİM|İPUÇLARI|DİL|İLERLEMEYİ SIFIRLA|EMİN MİSİN? TEKRAR DOKUN|AÇIK|KAPALI|TÜRKÇE|M',
@@ -681,12 +149,12 @@ const LANG_DATA = {
     zones: 'YEŞİL ORMAN|SONBAHAR ORMANI|CANGIL|KARLI DAĞLAR|ÇÖL|TROPİK PLAJ|KRİSTAL MAĞARA|SU ALTI DÜNYASI|ŞEKER DİYARI|ATEŞ YANARDAĞI|BULUT KRALLIĞI|YILDIZLI GECE|UZAY',
     ach: 'İLK TAKLA|ZIPLAYICI|100 METRE|250 METRE|500 METRE|1000 METRE|KUMBARA|AKROBAT|FIRILDAK|ÇEVİK AYAK|KORUNAKLI|GEZGİN|BOİNG!|DEFİNE AVCISI|EFSANE|IŞINLANDI',
     tips: 'DAHA YÜKSEK İÇİN BASILI TUT|HAVADA DOKUN: TAKLA|JÖLE SENİ İTER|SAYACI İZLE|BAL KAYDIRMAZ|SANDIKLARDA EFSANELER VAR|ASANSÖR YUKARI TAŞIR|ELEKTRİĞE DİKKAT!',
-    skins: 'HAMSTER|ÇİKO|KARTOPU|PEMBE|NANE|GECE|LİMON|BÖĞÜRTLEN|PANDA|TİLKİ|KURBAĞA|KEDİCİK|PENGUEN|RAKUN|TAVŞAN|AYI|MAYMUN|KOALA|BAYKUŞ|ARI|KAPLAN|TEK BOYNUZ|ROBOT|EJDERHA|HAYALET|VAMPİR|ZOMBİ|NİNJA|SİBORG|YENGEÇ|KORSAN|ASTRONOT|KRAL|ALEV|GÖKKUŞAĞI|BUZCUK|AŞÇI|KOVBOY|İTFAİYECİ|POLİS|DOKTOR|MADENCİ|DOMUZCUK|MEZUN|PERVANE|DOĞUM GÜNÜ|KUZU|İNEK|CİVCİV|FARE|KİRPİ|UĞUR BÖCEĞİ|BÜYÜCÜ|CADI|ŞÖVALYE|VİKİNG|SAMURAY|FİRAVUN|MUMYA|İSKELET|BALKABAĞI|KARDAN ADAM|NOEL BABA|PALYAÇO|SOYTARI|SÜPER ÇOCUK|UZAYLI|KÖPEKBALIĞI|AHTAPOT|KELEBEK|KAPLUMBAĞA|DİNO|MELEK|İBLİS|PERİ|ANKA|EJDER KRAL|KURT ADAM|YETİ|KRAKEN|MEKA PİLOT|UFO|RONİN|KAR KRALİÇE|LAV GOLEMİ|UZAY KEDİSİ|PALADİN|NEON YARIŞÇI|GÖLGE NİNJA|MÜCEVHER|YILDIRIM|PEGASUS|DENİZKIZI|AZRAİL|DALGIÇ|KURMALI|BULUTÇUK|JELİBON|GLİTCH|YILDIZCI|CENTİLMEN|ATEŞ SÜRÜCÜSÜ|JASON|ASLAN|ROBOPANDA|KARA DELİK|DJ|KRALİÇE ARI|CHESHIRE KEDİSİ|ANUBİS|ORMAN RUHU|CİN|GORGON|RESSAM|BALIKÇI|BAHÇIVAN|DENİZCİ|FUTBOLCU|ROKÇU|DEDEKTİF|ELF OKÇU|GLADYATÖR|BALERİN|SİMYACI|KAPTAN|SİBER SAMURAY|VALKİRİ|NEKROMANSER|ZAMAN BEKÇİSİ|KITSUNE|MİNOTOR|MANTAR KRAL|POSEYDON|POSTACI|YÜZÜCÜ|TENİSÇİ|İNŞAATÇI|PİLOT|SİHİRBAZ|KRALİYET MUHAFIZI|KUNG FU USTASI|BUZ EJDERHASI|HAYALET KORSAN|YILDIZ KURDU|GÜNEŞ TANRISI|TURİST|DAVULCU|ARICI|KAYKAYCI|SİLAHŞOR|CÜCE|ESKİMO|BOKSÖR|MAYMUN KRAL|KARA ŞÖVALYE|AY CADISI|ROBOT EJDER|KEKÇİK|DONUT|MARŞMALLOV|WAFFLE|ZENCEFİLLİ KURABİYE|DONDURMA|LOLİPOP|JELİBON AYI|ŞEKER KRAL|ŞEKER PERİSİ|MUZ|UYKUCU|ÇİFTÇİ|KAYAKÇI|OYUNCU|SUŞİ ŞEFİ|SAKIZ|CANKURTARAN|DİNO KOSTÜMÜ|GÜÇLÜ ADAM|ŞERİF|KAR LEOPARI|KÜÇÜK HIRSIZ|POP YILDIZI|ROBOKEDİ|GRİFON|UZAY İMPARATORU|ALİKORN|LAV EJDERHASI|ALTIN NİNJA|PİZZACI|KEMANCI|FOTOĞRAFÇI|MİÇO|SÖRFÇÜ|ŞEMSİYE|KURBAĞA PRENS|SU BÜYÜCÜSÜ|TAMİRCİ|ATEŞ BÜYÜCÜSÜ|SAMURAY PANDA|YILDIZ ŞÖVALYESİ|KADİM ENT|BOŞLUK KRALİÇESİ|PLAZMOİD|HEMŞİRE|BİLİM İNSANI|KAMPÇI|GÜREŞÇİ|AMİGO|GOLFÇÜ|BEYZBOLCU|BASKETBOLCU|KÜTÜPHANECİ|ODUNCU|İZCİ|TESİSATÇI|İNEK ÖĞRENCİ|HİPPİ|PANDOMİMCİ|AZTEK|STEAMPUNK|HAZİNE AVCISI|OZAN|KEŞİŞ|DRUİD|SİRK SUNUCUSU|KORKULUK|CÜCE|UZAY ÖĞRENCİSİ|VİKİNG AYI|SULTAN|ŞÖVALYE TAVŞAN|BÜYÜCÜ BAYKUŞ|NİNJA KURBAĞA|BAŞMELEK|İBLİS LORDU|FIRTINA EJDERİ|KOZMOS EFENDİSİ|ŞOGUN|ONİ İBLİSİ|BUZ DEVİ|HAYALET ŞÖVALYE|ŞİMŞEK KUŞU|SİBER NİNJA|LEVİATAN|TEK BOYNUZ KRALI|MEKA TİTAN|VAMPİR KONT|BALKABAĞI KRALI|GÖKKUŞAĞI EJDERİ|UZAY KORSANI|BAŞBÜYÜCÜ|ALTIN EJDER|HOLOGRAM',
+    skins: 'HAMSTER|ÇİKO|KARTOPU|PEMBE|NANE|GECE|LİMON|BÖĞÜRTLEN|PANDA|TİLKİ|KURBAĞA|KEDİCİK|PENGUEN|RAKUN|TAVŞAN|AYI|MAYMUN|KOALA|BAYKUŞ|ARI|KAPLAN|TEK BOYNUZ|ROBOT|EJDERHA|HAYALET|VAMPİR|ZOMBİ|NİNJA|SİBORG|YENGEÇ|KORSAN|ASTRONOT|KRAL|ALEV|GÖKKUŞAĞI|BUZCUK|AŞÇI|KOVBOY|İTFAİYECİ|POLİS|DOKTOR|MADENCİ|DOMUZCUK|MEZUN|PERVANE|DOĞUM GÜNÜ|KUZU|İNEK|CİVCİV|FARE|KİRPİ|UĞUR BÖCEĞİ|BÜYÜCÜ|CADI|ŞÖVALYE|VİKİNG|SAMURAY|FİRAVUN|MUMYA|İSKELET|BALKABAĞI|KARDAN ADAM|NOEL BABA|PALYAÇO|SOYTARI|SÜPER ÇOCUK|UZAYLI|KÖPEKBALIĞI|AHTAPOT|KELEBEK|KAPLUMBAĞA|DİNO|MELEK|İBLİS|PERİ|ANKA|EJDER KRAL|KURT ADAM|YETİ|KRAKEN|MEKA PİLOT|UFO|RONİN|KAR KRALİÇE|LAV GOLEMİ|UZAY KEDİSİ|PALADİN|NEON YARIŞÇI|GÖLGE NİNJA|MÜCEVHER|YILDIRIM|PEGASUS|DENİZKIZI|AZRAİL|DALGIÇ|KURMALI|BULUTÇUK|JELİBON|GLİTCH|YILDIZCI|CENTİLMEN|ATEŞ SÜRÜCÜSÜ|JASON|ASLAN|ROBOPANDA|KARA DELİK|DJ|KRALİÇE ARI|CHESHIRE KEDİSİ|ANUBİS|ORMAN RUHU|CİN|GORGON|RESSAM|BALIKÇI|BAHÇIVAN|DENİZCİ|FUTBOLCU|ROKÇU|DEDEKTİF|ELF OKÇU|GLADYATÖR|BALERİN|SİMYACI|KAPTAN|SİBER SAMURAY|VALKİRİ|NEKROMANSER|ZAMAN BEKÇİSİ|KITSUNE|MİNOTOR|MANTAR KRAL|POSEYDON|POSTACI|YÜZÜCÜ|TENİSÇİ|İNŞAATÇI|PİLOT|SİHİRBAZ|KRALİYET MUHAFIZI|KUNG FU USTASI|BUZ EJDERHASI|HAYALET KORSAN|YILDIZ KURDU|GÜNEŞ TANRISI|TURİST|DAVULCU|ARICI|KAYKAYCI|SİLAHŞOR|CÜCE|ESKİMO|BOKSÖR|MAYMUN KRAL|KARA ŞÖVALYE|AY CADISI|ROBOT EJDER|KEKÇİK|DONUT|MARŞMALLOV|WAFFLE|ZENCEFİLLİ KURABİYE|DONDURMA|LOLİPOP|JELİBON AYI|ŞEKER KRAL|ŞEKER PERİSİ|MUZ|UYKUCU|ÇİFTÇİ|KAYAKÇI|OYUNCU|SUŞİ ŞEFİ|SAKIZ|CANKURTARAN|DİNO KOSTÜMÜ|GÜÇLÜ ADAM|ŞERİF|KAR LEOPARI|KÜÇÜK HIRSIZ|POP YILDIZI|ROBOKEDİ|GRİFON|UZAY İMPARATORU|ALİKORN|LAV EJDERHASI|ALTIN NİNJA|PİZZACI|KEMANCI|FOTOĞRAFÇI|MİÇO|SÖRFÇÜ|ŞEMSİYE|KURBAĞA PRENS|SU BÜYÜCÜSÜ|TAMİRCİ|ATEŞ BÜYÜCÜSÜ|SAMURAY PANDA|YILDIZ ŞÖVALYESİ|KADİM ENT|BOŞLUK KRALİÇESİ|PLAZMOİD|HEMŞİRE|BİLİM İNSANI|KAMPÇI|GÜREŞÇİ|AMİGO|GOLFÇÜ|BEYZBOLCU|BASKETBOLCU|KÜTÜPHANECİ|ODUNCU|İZCİ|TESİSATÇI|İNEK ÖĞRENCİ|HİPPİ|PANDOMİMCİ|AZTEK|STEAMPUNK|HAZİNE AVCISI|OZAN|KEŞİŞ|DRUİD|SİRK SUNUCUSU|KORKULUK|CÜCE|UZAY ÖĞRENCİSİ|VİKİNG AYI|SULTAN|ŞÖVALYE TAVŞAN|BÜYÜCÜ BAYKUŞ|NİNJA KURBAĞA|BAŞMELEK|İBLİS LORDU|FIRTINA EJDERİ|KOZMOS EFENDİSİ|ŞOGUN|ONİ İBLİSİ|BUZ DEVİ|HAYALET ŞÖVALYE|ŞİMŞEK KUŞU|SİBER NİNJA|LEVİATAN|TEK BOYNUZ KRALI|MEKA TİTAN|VAMPİR KONT|BALKABAĞI KRALI|GÖKKUŞAĞI EJDERİ|UZAY KORSANI|BAŞBÜYÜCÜ|ALTIN EJDER|HOLOGRAM|KARANLIK LORD|IŞIK ŞÖVALYESİ|SPARTALI SAVAŞÇI|ÖRÜMCEK KAHRAMAN|DEMİR KAHRAMAN|YEŞİL DEV|GENÇ BÜYÜCÜ|BUZ SÜRÜCÜSÜ|YARIŞ PİLOTU|HAYALET AVCISI|KALKAN KAPTAN|GECE BEKÇİSİ|NİNJA ROBOT',
     ui2: 'MAĞAZA|ÇARK|FIRSATLAR|GÜNLÜK ÖDÜL|GÜN|AL|YARIN GEL|GÜNÜN KOSTÜMLERİ|İNDİRİM|MEGA İNDİRİM!|YENİLER|ÇEVİR|ÜCRETSİZ|PREMİUM|GERÇEK PARA ALIMLARI|UYGULAMA MAĞAZASI SÜRÜMÜNDE ÇALIŞACAK|ÖDÜLÜN!|BAŞLANGIÇ PAKETİ|EFSANE SANDIK|TOPLANAN|TAMAM|KRİSTALLER',
     packs: 'AVUÇ|KESE|SANDIK|DAĞ',
     zones2: 'SAKURA BAHÇESİ|MANTAR AÇIKLIĞI|SİSLİ BATAKLIK|ESKİ KALE|LANETLİ ORMAN|NEON ŞEHİR|GÖKKUŞAĞI GÖĞÜ|GÜN BATIMI VADİSİ|FIRTINA BULUTLARI|UÇAN ADALAR|FENER ŞENLİĞİ|OKYANUS DERİNLİĞİ|DİSKO ŞEHRİ|DİJİTAL DÜNYA|KUZEY IŞIKLARI|METEOR YAĞMURU|KARA DELİK|KORSAN KOYU|MISIR PİRAMİTLERİ|GELECEĞİN ŞEHRİ|MEKANİK FABRİKA|ESKİ MEZARLIK|BÜYÜLÜ ORMAN|ÇİKOLATA FABRİKASI|GÖKKUŞAĞI ŞELALESİ|AY ÜSSÜ|ORMAN TAPINAĞI|SICAK HAVA BALONLARI|ATEŞ DAĞLARI|GÖK BALİNALARI|BUZ ŞATOSU|LUNAPARK|MERCAN RESİFİ|SAKURA FIRTINASI|TERK EDİLMİŞ MADEN|VAMPİR ŞATOSU|UZAY İSTASYONU|BALKABAĞI GECESİ|KIŞ KÖYÜ|ATLANTİS|ÇÖL VAHASI|CENNET KAPILARI|DİNOZOR VADİSİ|STEAMPUNK ŞEHRİ|KUZEY KUTBU|AYÇİÇEĞİ TARLASI|ESKİ FİLM|ŞEKER KRALLIĞI|BAMBU KORUSU|KRİSTAL MAĞARA|OYUNCAK DİYARI|GÜN BATIMINDA SAVANA|ATEŞBÖCEĞİ GECESİ|SİHİRLİ KÜTÜPHANE',
     ach2: 'ŞANSLI|7 GÜN ÜST ÜSTE|KOLEKSİYONCU',
-    ui3: 'ÇADIR|GÜÇLER|SİMYACI ÇADIRI|GEL, DOSTUM!|SATIN ALMAK İÇİN DOKUN|MIKNATIS|IŞINLANMA|MAYTAP|JETPACK|KLON|PARA VE ELMAS ÇEKER|YUKARIDA GÜVENLİ DİREĞE|5 SANİYE YUKARI|SOLA YA DA SAĞA BAS|PRO NPC SENİNLE TIRMANIR|YAKIT|KALKAN|PARA X2|AĞIR ÇEKİM|MEGA ZIPLAMA|BOMBA|HAYALET|BİR DARBEYİ KORUR|20 SANİYE ÇİFT PARA|ZAMAN YAVAŞLAR|12 SANİYE YÜKSEK ZIPLAMA|PATLAMA DÜŞMANLARI YOK EDER|8 SANİYE TEHLİKE YOK|ARTIK KLON SENSİN!|DONDURMA|ALTIN YAĞMURU|EKSTRA CAN|DÜŞMANLAR 8 SN DONAR|GÖKTEN ALTIN YAĞAR|SENİ BİR KEZ DİRİLTİR|TÜY|ELMAS X2|YILDIZ|KANATLAR|10 SN YAVAŞ DÜŞÜŞ|30 SN ÇİFT ELMAS|8 SN YENİLMEZ, DÜŞMANI EZ|10 SN SINIRSIZ TAKLA|KRİSTALE ALTIN',
+    ui3: 'ÇADIR|GÜÇLER|SİMYACI ÇADIRI|GEL, DOSTUM!|SATIN ALMAK İÇİN DOKUN|MIKNATIS|IŞINLANMA|MAYTAP|JETPACK|KLON|PARA VE ELMAS ÇEKER|YUKARIDA GÜVENLİ DİREĞE|5 SANİYE YUKARI|SOLA YA DA SAĞA BAS|PRO NPC SENİNLE TIRMANIR|YAKIT|KALKAN|PARA X2|AĞIR ÇEKİM|MEGA ZIPLAMA|BOMBA|HAYALET|BİR DARBEYİ KORUR|20 SANİYE ÇİFT PARA|ZAMAN YAVAŞLAR|12 SANİYE YÜKSEK ZIPLAMA|PATLAMA DÜŞMANLARI YOK EDER|8 SANİYE TEHLİKE YOK|ARTIK KLON SENSİN!|DONDURMA|ALTIN YAĞMURU|EKSTRA CAN|DÜŞMANLAR 8 SN DONAR|GÖKTEN ALTIN YAĞAR|SENİ BİR KEZ DİRİLTİR|TÜY|ELMAS X2|YILDIZ|KANATLAR|10 SN YAVAŞ DÜŞÜŞ|30 SN ÇİFT ELMAS|8 SN YENİLMEZ, DÜŞMANI EZ|10 SN SINIRSIZ TAKLA|KRİSTALE ALTIN|MÜTTEFİKLER|KEDDY|SİYAH KUŞAK KARATE USTASI|SENİNLE TIRMANIR VE DÜŞMANLARI TEKMELER|YANINA AL|KOŞUDA|YAKINDA YENİ MÜTTEFİKLER|HOŞÇA KAL!|KÜT!|BAM!|HİYAH!|KİAİ!|REKLAMSIZ ABONELİK|REKLAM YOK, SADECE OYUN|/AY|BİR ŞEY ALIRSANIZ ÇOK SEVİNİRİM!|BEN BAĞIMSIZ BİR OYUN GELİŞTİRİCİSİYİM|VE OYUN YAPMAYA DEVAM ETMEK İSTİYORUM.|ZOR DEĞİLSE BİR ŞEY ALIN LÜTFEN :)|SEVGİYLE, ELDAR STUDIOS',
   },
   uk: {
     ui: "НАТИСНИ —|СТРИБОК ВІД СТІНИ|ГЕРОЇ|НАГОРОДИ|НАЛАШТУВАННЯ|НАТИСНИ ПОРУЧ — НАЗАД|НАТИСНИ — НАЗАД|ТРИМАЙ — ДОВГИЙ СТРИБОК|ТИСНИ В ПОВІТРІ —|САЛЬТО І РОЗВОРОТ!|ПАУЗА|НАТИСНИ, ЩОБ ГРАТИ|РЕКОРД|НОВИЙ РЕКОРД!|ОЙ-ОЙ!|ВІДСКОКІВ|САЛЬТО|НАТИСНИ, ЩОБ ЩЕ|МАГНІТ|ОБРАНО|ВЗЯТИ|СКРИНЯ|ШАНС|ВІДКРИВАЄМО...|ПОВТОР|НОВИЙ ГЕРОЙ!|НАТИСНИ, ЩОБ ЗАКРИТИ|ЗАВАНТАЖЕННЯ|ПОРАДА:|МУЗИКА|ЗВУКИ|ТРЯСІННЯ|ЕФЕКТИ|ВІБРАЦІЯ|ПІДКАЗКИ|МОВА|СКИНУТИ ПРОГРЕС|ТОЧНО? НАТИСНИ ЩЕ|УВІМК|ВИМК|УКРАЇНСЬКА|М",
@@ -694,12 +162,12 @@ const LANG_DATA = {
     zones: 'ЗЕЛЕНИЙ ЛІС|ОСІННІЙ ЛІС|ДЖУНГЛІ|СНІЖНІ ГОРИ|ПУСТЕЛЯ|ТРОПІЧНИЙ ПЛЯЖ|КРИШТАЛЕВА ПЕЧЕРА|ПІДВОДНИЙ СВІТ|ЦУКЕРКОВА КРАЇНА|ВОГНЯНИЙ ВУЛКАН|ХМАРНЕ ЦАРСТВО|ЗОРЯНА НІЧ|ВІДКРИТИЙ КОСМОС',
     ach: 'ПЕРШЕ САЛЬТО|СТРИБУН|100 МЕТРІВ|250 МЕТРІВ|500 МЕТРІВ|1000 МЕТРІВ|СКАРБНИЧКА|АКРОБАТ|КРУТИЛКА|ПРУДКИЙ|ПІД ЗАХИСТОМ|МАНДРІВНИК|СТРИБ-СКОК|ШУКАЧ СКАРБІВ|ЛЕГЕНДА|ТЕЛЕПОРТ',
     tips: "ТРИМАЙ — СТРИБОК ВИЩЕ|У ПОВІТРІ ТИСНИ — САЛЬТО|ЖЕЛЕ ВІДШТОВХУЄ|СТЕЖ ЗА ТАЙМЕРОМ|МЕД НЕ ДАЄ З'ЇХАТИ|У СКРИНІ Є ЛЕГЕНДИ|ЛІФТ ВЕЗЕ НАГОРУ|ОБЕРЕЖНО, СТРУМ!",
-    skins: "ХОМ'ЯК|ШОКО|СНІЖОК|РОЖЕВИЙ|М'ЯТНИЙ|НІЧНИЙ|ЛИМОН|ЯГІДКА|ПАНДА|ЛИС|ЖАБКА|КОТИК|ПІНГВІН|ЄНОТ|ЗАЙЧИК|ВЕДМЕДИК|МАВПОЧКА|КОАЛА|СОВА|БДЖІЛКА|ТИГР|ЄДИНОРІГ|РОБОТ|ДРАКОША|ПРИВИД|ВАМПІР|ЗОМБІ|НІНДЗЯ|КІБОРГ|КРАБ|ПІРАТ|КОСМОНАВТ|КОРОЛЬ|ВОГНИК|ВЕСЕЛКА|КРИЖАНИК|КУХАР|КОВБОЙ|ПОЖЕЖНИК|ПОЛІЦЕЙСЬКИЙ|ЛІКАР|ШАХТАР|ПОРОСЯ|ВІДМІННИК|ГВИНТИК|ІМЕНИННИК|БАРАНЧИК|КОРІВКА|КУРЧА|МИШЕНЯ|ЇЖАЧОК|СОНЕЧКО|ЧАРІВНИК|ВІДЬМОЧКА|ЛИЦАР|ВІКІНГ|САМУРАЙ|ФАРАОН|МУМІЯ|СКЕЛЕТ|ГАРБУЗ|СНІГОВИК|САНТА|КЛОУН|БЛАЗЕНЬ|СУПЕРГЕРОЙ|ПРИБУЛЕЦЬ|АКУЛЕНЯ|ВОСЬМИНІЖКА|МЕТЕЛИК|ЧЕРЕПАШКА|ДИНОЗАВРИК|АНГЕЛ|ДЕМОН|ФЕЯ|ФЕНІКС|ДРАКОН-ЦАР|ПЕРЕВЕРТЕНЬ|ЄТІ|КРАКЕН|МЕХ-ПІЛОТ|НЛО|ДУХ РОНІНА|СНІГУРОНЬКА|ЛАВОГОЛЕМ|КОСМОКІТ|ПАЛАДІН|НЕОН-ГОНЩИК|ТІНЬ-НІНДЗЯ|САМОЦВІТ|ГРОМОВЕРЖЕЦЬ|ПЕГАС|РУСАЛОНЬКА|ЖНЕЦЬ|ВОДОЛАЗ|ЗАВОДНИЙ|ХМАРИНКА|МАРМЕЛАДКА|ГЛІТЧ|ЗОРЕЧЕТ|ДЖЕНТЛЬМЕН|ВОГНЯНИЙ ГОНЩИК|ДЖЕЙСОН|ЛЕВ|РОБОПАНДА|ЧОРНА ДІРА|ДІДЖЕЙ|БДЖОЛИНА КОРОЛЕВА|ЧЕШИРСЬКИЙ КІТ|АНУБІС|ЛІСОВИЙ ДУХ|ДЖИН|ГОРГОНА|ХУДОЖНИК|РИБАЛКА|САДІВНИК|МАТРОСИК|ФУТБОЛІСТ|РОКЕР|ДЕТЕКТИВ|ЕЛЬФ-ЛУЧНИК|ГЛАДІАТОР|БАЛЕРИНА|АЛХІМІК|КАПІТАН|КІБЕР-САМУРАЙ|ВАЛЬКІРІЯ|НЕКРОМАНТ|ХРАНИТЕЛЬ ЧАСУ|КІЦУНЕ|МІНОТАВР|ГРИБНИЙ КОРОЛЬ|ПОСЕЙДОН|ЛИСТОНОША|ПЛАВЕЦЬ|ТЕНІСИСТ|БУДІВЕЛЬНИК|ЛЬОТЧИК|ФОКУСНИК|КОРОЛІВСЬКИЙ ВАРТОВИЙ|МАЙСТЕР КУНГ-ФУ|КРИЖАНИЙ ДРАКОН|ПРИВИД-ПІРАТ|ЗОРЯНИЙ ВОВК|БОГ СОНЦЯ|ТУРИСТ|БАРАБАНЩИК|ПАСІЧНИК|СКЕЙТЕР|МУШКЕТЕР|ЛЕПРЕКОН|ЕСКІМОС|БОКСЕР|КОРОЛЬ МАВП|ТЕМНИЙ ЛИЦАР|МІСЯЧНА ВІДЬМА|РОБО-ДРАКОН|КАПКЕЙК|ПОНЧИК|ЗЕФІРКА|ВАФЕЛЬКА|ПРЯНИК|МОРОЗИВКО|ЛЬОДЯНИК|МАРМЕЛАДНИЙ ВЕДМЕДИК|ЦУКЕРКОВИЙ КОРОЛЬ|ЦУКРОВА ФЕЯ|БАНАН|СОНЬКО|ФЕРМЕР|ЛИЖНИК|ГЕЙМЕР|СУШІ-КУХАР|ЖУЙКА|РЯТУВАЛЬНИК|ДИНО-КОСТЮМ|СИЛАЧ|ШЕРИФ|СНІГОВИЙ БАРС|ЗЛОДІЙЧИК|ПОП-ЗІРКА|РОБОКІТ|ГРИФОН|КОСМО-ІМПЕРАТОР|АЛІКОРН|ЛАВОВИЙ ДРАКОН|ЗОЛОТИЙ НІНДЗЯ|ПІЦАЙОЛО|СКРИПАЛЬ|ФОТОГРАФ|ЮНГА|СЕРФЕР|ПАРАСОЛЬКА|ПРИНЦ-ЖАБА|МАГ ВОДИ|МЕХАНІК|МАГ ВОГНЮ|ПАНДА-САМУРАЙ|ЗОРЯНИЙ ЛИЦАР|ДАВНІЙ ЕНТ|КОРОЛЕВА ТЕМРЯВИ|ПЛАЗМОЇД|МЕДСЕСТРА|НАУКОВЕЦЬ|ТУРИСТ|РЕСЛЕР|ЧИРЛІДЕРКА|ГОЛЬФІСТ|БЕЙСБОЛІСТ|БАСКЕТБОЛІСТ|БІБЛІОТЕКАР|ЛІСОРУБ|СКАУТ|САНТЕХНІК|БОТАНІК|ХІПІ|МІМ|АЦТЕК|СТІМПАНК|ШУКАЧ СКАРБІВ|БАРД|ЧЕРНЕЦЬ|ДРУЇД|ВЕДУЧИЙ ЦИРКУ|ОПУДАЛО|ГНОМ|КОСМОКУРСАНТ|ВЕДМІДЬ-ВІКІНГ|СУЛТАН|КРОЛИК-ЛИЦАР|СОВА-МАГ|ЖАБА-НІНДЗЯ|АРХАНГЕЛ|ВОЛОДАР ДЕМОНІВ|ГРОЗОВИЙ ДРАКОН|ВЛАДИКА КОСМОСУ|СЬОГУН|ДЕМОН ОНІ|КРИЖАНИЙ ВЕЛЕТЕНЬ|ПРИВИДНИЙ ЛИЦАР|ГРОМОВИЙ ПТАХ|КІБЕР-НІНДЗЯ|ЛЕВІАФАН|КОРОЛЬ ЄДИНОРОГІВ|МЕХ-ТИТАН|ГРАФ ВАМПІРІВ|ГАРБУЗОВИЙ КОРОЛЬ|ВЕСЕЛКОВИЙ ДРАКОН|КОСМІЧНИЙ ПІРАТ|ВЕРХОВНИЙ МАГ|ЗОЛОТИЙ ДРАКОН|ГОЛОГРАМА",
+    skins: "ХОМ'ЯК|ШОКО|СНІЖОК|РОЖЕВИЙ|М'ЯТНИЙ|НІЧНИЙ|ЛИМОН|ЯГІДКА|ПАНДА|ЛИС|ЖАБКА|КОТИК|ПІНГВІН|ЄНОТ|ЗАЙЧИК|ВЕДМЕДИК|МАВПОЧКА|КОАЛА|СОВА|БДЖІЛКА|ТИГР|ЄДИНОРІГ|РОБОТ|ДРАКОША|ПРИВИД|ВАМПІР|ЗОМБІ|НІНДЗЯ|КІБОРГ|КРАБ|ПІРАТ|КОСМОНАВТ|КОРОЛЬ|ВОГНИК|ВЕСЕЛКА|КРИЖАНИК|КУХАР|КОВБОЙ|ПОЖЕЖНИК|ПОЛІЦЕЙСЬКИЙ|ЛІКАР|ШАХТАР|ПОРОСЯ|ВІДМІННИК|ГВИНТИК|ІМЕНИННИК|БАРАНЧИК|КОРІВКА|КУРЧА|МИШЕНЯ|ЇЖАЧОК|СОНЕЧКО|ЧАРІВНИК|ВІДЬМОЧКА|ЛИЦАР|ВІКІНГ|САМУРАЙ|ФАРАОН|МУМІЯ|СКЕЛЕТ|ГАРБУЗ|СНІГОВИК|САНТА|КЛОУН|БЛАЗЕНЬ|СУПЕРГЕРОЙ|ПРИБУЛЕЦЬ|АКУЛЕНЯ|ВОСЬМИНІЖКА|МЕТЕЛИК|ЧЕРЕПАШКА|ДИНОЗАВРИК|АНГЕЛ|ДЕМОН|ФЕЯ|ФЕНІКС|ДРАКОН-ЦАР|ПЕРЕВЕРТЕНЬ|ЄТІ|КРАКЕН|МЕХ-ПІЛОТ|НЛО|ДУХ РОНІНА|СНІГУРОНЬКА|ЛАВОГОЛЕМ|КОСМОКІТ|ПАЛАДІН|НЕОН-ГОНЩИК|ТІНЬ-НІНДЗЯ|САМОЦВІТ|ГРОМОВЕРЖЕЦЬ|ПЕГАС|РУСАЛОНЬКА|ЖНЕЦЬ|ВОДОЛАЗ|ЗАВОДНИЙ|ХМАРИНКА|МАРМЕЛАДКА|ГЛІТЧ|ЗОРЕЧЕТ|ДЖЕНТЛЬМЕН|ВОГНЯНИЙ ГОНЩИК|ДЖЕЙСОН|ЛЕВ|РОБОПАНДА|ЧОРНА ДІРА|ДІДЖЕЙ|БДЖОЛИНА КОРОЛЕВА|ЧЕШИРСЬКИЙ КІТ|АНУБІС|ЛІСОВИЙ ДУХ|ДЖИН|ГОРГОНА|ХУДОЖНИК|РИБАЛКА|САДІВНИК|МАТРОСИК|ФУТБОЛІСТ|РОКЕР|ДЕТЕКТИВ|ЕЛЬФ-ЛУЧНИК|ГЛАДІАТОР|БАЛЕРИНА|АЛХІМІК|КАПІТАН|КІБЕР-САМУРАЙ|ВАЛЬКІРІЯ|НЕКРОМАНТ|ХРАНИТЕЛЬ ЧАСУ|КІЦУНЕ|МІНОТАВР|ГРИБНИЙ КОРОЛЬ|ПОСЕЙДОН|ЛИСТОНОША|ПЛАВЕЦЬ|ТЕНІСИСТ|БУДІВЕЛЬНИК|ЛЬОТЧИК|ФОКУСНИК|КОРОЛІВСЬКИЙ ВАРТОВИЙ|МАЙСТЕР КУНГ-ФУ|КРИЖАНИЙ ДРАКОН|ПРИВИД-ПІРАТ|ЗОРЯНИЙ ВОВК|БОГ СОНЦЯ|ТУРИСТ|БАРАБАНЩИК|ПАСІЧНИК|СКЕЙТЕР|МУШКЕТЕР|ЛЕПРЕКОН|ЕСКІМОС|БОКСЕР|КОРОЛЬ МАВП|ТЕМНИЙ ЛИЦАР|МІСЯЧНА ВІДЬМА|РОБО-ДРАКОН|КАПКЕЙК|ПОНЧИК|ЗЕФІРКА|ВАФЕЛЬКА|ПРЯНИК|МОРОЗИВКО|ЛЬОДЯНИК|МАРМЕЛАДНИЙ ВЕДМЕДИК|ЦУКЕРКОВИЙ КОРОЛЬ|ЦУКРОВА ФЕЯ|БАНАН|СОНЬКО|ФЕРМЕР|ЛИЖНИК|ГЕЙМЕР|СУШІ-КУХАР|ЖУЙКА|РЯТУВАЛЬНИК|ДИНО-КОСТЮМ|СИЛАЧ|ШЕРИФ|СНІГОВИЙ БАРС|ЗЛОДІЙЧИК|ПОП-ЗІРКА|РОБОКІТ|ГРИФОН|КОСМО-ІМПЕРАТОР|АЛІКОРН|ЛАВОВИЙ ДРАКОН|ЗОЛОТИЙ НІНДЗЯ|ПІЦАЙОЛО|СКРИПАЛЬ|ФОТОГРАФ|ЮНГА|СЕРФЕР|ПАРАСОЛЬКА|ПРИНЦ-ЖАБА|МАГ ВОДИ|МЕХАНІК|МАГ ВОГНЮ|ПАНДА-САМУРАЙ|ЗОРЯНИЙ ЛИЦАР|ДАВНІЙ ЕНТ|КОРОЛЕВА ТЕМРЯВИ|ПЛАЗМОЇД|МЕДСЕСТРА|НАУКОВЕЦЬ|ТУРИСТ|РЕСЛЕР|ЧИРЛІДЕРКА|ГОЛЬФІСТ|БЕЙСБОЛІСТ|БАСКЕТБОЛІСТ|БІБЛІОТЕКАР|ЛІСОРУБ|СКАУТ|САНТЕХНІК|БОТАНІК|ХІПІ|МІМ|АЦТЕК|СТІМПАНК|ШУКАЧ СКАРБІВ|БАРД|ЧЕРНЕЦЬ|ДРУЇД|ВЕДУЧИЙ ЦИРКУ|ОПУДАЛО|ГНОМ|КОСМОКУРСАНТ|ВЕДМІДЬ-ВІКІНГ|СУЛТАН|КРОЛИК-ЛИЦАР|СОВА-МАГ|ЖАБА-НІНДЗЯ|АРХАНГЕЛ|ВОЛОДАР ДЕМОНІВ|ГРОЗОВИЙ ДРАКОН|ВЛАДИКА КОСМОСУ|СЬОГУН|ДЕМОН ОНІ|КРИЖАНИЙ ВЕЛЕТЕНЬ|ПРИВИДНИЙ ЛИЦАР|ГРОМОВИЙ ПТАХ|КІБЕР-НІНДЗЯ|ЛЕВІАФАН|КОРОЛЬ ЄДИНОРОГІВ|МЕХ-ТИТАН|ГРАФ ВАМПІРІВ|ГАРБУЗОВИЙ КОРОЛЬ|ВЕСЕЛКОВИЙ ДРАКОН|КОСМІЧНИЙ ПІРАТ|ВЕРХОВНИЙ МАГ|ЗОЛОТИЙ ДРАКОН|ГОЛОГРАМА|ТЕМНИЙ ЛОРД|ЛИЦАР СВІТЛА|ВОЇН-СПАРТАНЕЦЬ|ПАВУЧИЙ ГЕРОЙ|ЗАЛІЗНИЙ ГЕРОЙ|ЗЕЛЕНИЙ ГРОМИЛО|ЮНИЙ ЧАРІВНИК|КРИЖАНИЙ ГОНЩИК|ГОНЩИК БОЛІДА|МИСЛИВЕЦЬ НА ПРИВИДІВ|КАПІТАН ЩИТ|НІЧНИЙ ВАРТОВИЙ|НІНДЗЯ-РОБОТ",
     ui2: 'МАГАЗИН|КОЛЕСО|СКІНИ ДНЯ|НАГОРОДА ЗА ВХІД|ДЕНЬ|ЗАБРАТИ|ПРИХОДЬ ЗАВТРА|СКІНИ ДНЯ|ЗНИЖКА|МЕГА-ЗНИЖКА!|НОВІ ЧЕРЕЗ|КРУТИТИ|БЕЗКОШТОВНО|ПРЕМІУМ|ПОКУПКИ ЗА ГРОШІ ЗАПРАЦЮЮТЬ|У ВЕРСІЇ ДЛЯ МАГАЗИНУ ЗАСТОСУНКІВ|ТВІЙ ПРИЗ!|НАБІР НОВАЧКА|ЛЕГЕНД. СКРИНЯ|ЗІБРАНО|ОК|КРИСТАЛИ',
     packs: 'ЖМЕНЯ|МІШОК|СКРИНЯ|ГОРА',
     zones2: 'САКУРОВИЙ САД|ГРИБНА ГАЛЯВИНА|ТУМАННЕ БОЛОТО|СТАРИЙ ЗАМОК|ПРИВИДНИЙ ЛІС|НЕОНОВЕ МІСТО|ВЕСЕЛКОВЕ НЕБО|ДОЛИНА ЗАХОДУ|ГРОЗОВІ ХМАРИ|ЛІТАЮЧІ ОСТРОВИ|СВЯТО ЛІХТАРИКІВ|МОРСЬКА БЕЗОДНЯ|ДИСКО-МІСТО|ЦИФРОВИЙ СВІТ|ПІВНІЧНЕ СЯЙВО|МЕТЕОРНИЙ ДОЩ|ЧОРНА ДІРА|ПІРАТСЬКА БУХТА|ЄГИПЕТСЬКІ ПІРАМІДИ|МІСТО МАЙБУТНЬОГО|МЕХАНІЧНИЙ ЗАВОД|СТАРИЙ ЦВИНТАР|ЧАРІВНИЙ ЛІС|ШОКОЛАДНА ФАБРИКА|ВЕСЕЛКОВИЙ ВОДОСПАД|МІСЯЧНА БАЗА|ХРАМ У ДЖУНГЛЯХ|ПОВІТРЯНІ КУЛІ|ВОГНЯНІ ГОРИ|НЕБЕСНІ КИТИ|КРИЖАНИЙ ЗАМОК|ВЕСЕЛИЙ ЯРМАРОК|КОРАЛОВИЙ РИФ|САКУРОВА БУРЯ|ПОКИНУТА ШАХТА|ЗАМОК ВАМПІРА|КОСМІЧНА СТАНЦІЯ|ГАРБУЗОВА НІЧ|ЗИМОВЕ СЕЛО|АТЛАНТИДА|ПУСТЕЛЬНА ОАЗА|НЕБЕСНІ ВРАТА|ДОЛИНА ДИНОЗАВРІВ|МІСТО-СТІМПАНК|ПІВНІЧНИЙ ПОЛЮС|ПОЛЕ СОНЯШНИКІВ|СТАРЕ КІНО|СОЛОДКЕ КОРОЛІВСТВО|БАМБУКОВИЙ ГАЙ|КРИШТАЛЕВА ПЕЧЕРА|КРАЇНА ІГРАШОК|САВАНА НА ЗАХОДІ|НІЧ СВІТЛЯЧКІВ|ЧАРІВНА БІБЛІОТЕКА',
     ach2: 'ЩАСЛИВЧИК|ТИЖДЕНЬ ПОСПІЛЬ|КОЛЕКЦІОНЕР',
-    ui3: 'НАМЕТ|СИЛИ|НАМЕТ АЛХІМІКА|ЗАХОДЬ, ДРУЖЕ!|НАТИСНИ НА ТОВАР — КУПИТИ|МАГНІТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯГНЕ МОНЕТИ Й АЛМАЗИ|НА БЕЗПЕЧНИЙ СТОВП ВИЩЕ|5 СЕКУНД УГОРУ|ТРИМАЙ ЛІВОРУЧ АБО ПРАВОРУЧ|NPC-ПРОФІ ЛІЗЕ З ТОБОЮ|ПАЛИВО|ЩИТ|МОНЕТИ X2|УПОВІЛЬНЕННЯ|МЕГА-СТРИБОК|БОМБА|ПРИВИД|ВИТРИМАЄ ОДИН УДАР|20 СЕКУНД ПОДВІЙНІ МОНЕТИ|ЧАС ІДЕ ПОВІЛЬНІШЕ|12 СЕКУНД СТРИБКИ ВИЩЕ|ВИБУХ ЗНИЩУЄ ВОРОГІВ|8 СЕКУНД НІЧОГО НЕ СТРАШНО|ТЕПЕР ТИ — КЛОН!|ЗАМОРОЗКА|ДОЩ МОНЕТ|ДРУГЕ ЖИТТЯ|ВОРОГИ ЗАМИРАЮТЬ НА 8 СЕКУНД|З НЕБА СИПЛЯТЬСЯ МОНЕТИ|ВОСКРЕШАЄ ОДИН РАЗ|ПІРЕЧКО|АЛМАЗИ X2|ЗІРКА|КРИЛА|10 СЕКУНД ПОВІЛЬНО ПАДАЄШ|30 СЕКУНД АЛМАЗИ ВДВІЧІ|8 СЕКУНД НЕВРАЗЛИВИЙ І ТРОЩИШ ВОРОГІВ|10 СЕКУНД САЛЬТО БЕЗ ОБМЕЖЕНЬ|ЗОЛОТО ЗА КРИСТАЛИ',
+    ui3: 'НАМЕТ|СИЛИ|НАМЕТ АЛХІМІКА|ЗАХОДЬ, ДРУЖЕ!|НАТИСНИ НА ТОВАР — КУПИТИ|МАГНІТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯГНЕ МОНЕТИ Й АЛМАЗИ|НА БЕЗПЕЧНИЙ СТОВП ВИЩЕ|5 СЕКУНД УГОРУ|ТРИМАЙ ЛІВОРУЧ АБО ПРАВОРУЧ|NPC-ПРОФІ ЛІЗЕ З ТОБОЮ|ПАЛИВО|ЩИТ|МОНЕТИ X2|УПОВІЛЬНЕННЯ|МЕГА-СТРИБОК|БОМБА|ПРИВИД|ВИТРИМАЄ ОДИН УДАР|20 СЕКУНД ПОДВІЙНІ МОНЕТИ|ЧАС ІДЕ ПОВІЛЬНІШЕ|12 СЕКУНД СТРИБКИ ВИЩЕ|ВИБУХ ЗНИЩУЄ ВОРОГІВ|8 СЕКУНД НІЧОГО НЕ СТРАШНО|ТЕПЕР ТИ — КЛОН!|ЗАМОРОЗКА|ДОЩ МОНЕТ|ДРУГЕ ЖИТТЯ|ВОРОГИ ЗАМИРАЮТЬ НА 8 СЕКУНД|З НЕБА СИПЛЯТЬСЯ МОНЕТИ|ВОСКРЕШАЄ ОДИН РАЗ|ПІРЕЧКО|АЛМАЗИ X2|ЗІРКА|КРИЛА|10 СЕКУНД ПОВІЛЬНО ПАДАЄШ|30 СЕКУНД АЛМАЗИ ВДВІЧІ|8 СЕКУНД НЕВРАЗЛИВИЙ І ТРОЩИШ ВОРОГІВ|10 СЕКУНД САЛЬТО БЕЗ ОБМЕЖЕНЬ|ЗОЛОТО ЗА КРИСТАЛИ|СОЮЗНИКИ|КЕДДІ|КАРАТИСТ З ЧОРНИМ ПОЯСОМ|ЛІЗЕ ВГОРУ З ТОБОЮ ТА БИЄ ВОРОГІВ НОГАМИ|ВЗЯТИ В ЗАБІГ|У ЗАБІГУ|НОВІ СОЮЗНИКИ СКОРО|БУВАЙ!|ХРУСЬ!|БАМ!|ХІ-Я!|КІЯ!|ПІДПИСКА БЕЗ РЕКЛАМИ|ЖОДНОЇ РЕКЛАМИ, ЛИШЕ ГРА|/МІС|БУДУ РАДИЙ, ЯКЩО ВИ ЩОСЬ КУПИТЕ!|Я ІНДІ-РОЗРОБНИК ІГОР І ХОЧУ|ПРОДОВЖУВАТИ РОБИТИ ІГРИ. ЯКЩО НЕ ВАЖКО,|КУПІТЬ ЩОСЬ, БУДЬ ЛАСКА :)|ЩИРО, ELDAR STUDIOS',
   },
   pl: {
     ui: 'STUKNIJ —|ABY ODBIĆ SIĘ OD ŚCIANY|BOHATEROWIE|NAGRODY|USTAWIENIA|STUKNIJ OBOK: WSTECZ|STUKNIJ: WSTECZ|TRZYMAJ: DŁUGI SKOK|STUKNIJ W POWIETRZU —|SALTO I ZAWRÓT!|PAUZA|STUKNIJ, ABY GRAĆ|REKORD|NOWY REKORD!|OJEJ!|ODBICIA|SALTA|STUKNIJ, ABY ZNÓW|MAGNES|WYBRANY|WEŹ|SKRZYNIA|SZANSA|OTWIERANIE...|DUPLIKAT|NOWY BOHATER!|STUKNIJ, ABY ZAMKNĄĆ|ŁADOWANIE|RADA:|MUZYKA|DŹWIĘKI|WSTRZĄSY|EFEKTY|WIBRACJE|PODPOWIEDZI|JĘZYK|USUŃ POSTĘP|NA PEWNO? STUKNIJ ZNÓW|WŁ|WYŁ|POLSKI|M',
@@ -707,12 +175,12 @@ const LANG_DATA = {
     zones: 'ZIELONY LAS|JESIENNY LAS|DŻUNGLA|ŚNIEŻNE SZCZYTY|PUSTYNIA|TROPIKALNA PLAŻA|KRYSZTAŁOWA JASKINIA|PODWODNY ŚWIAT|KRAINA SŁODYCZY|OGNISTY WULKAN|KRÓLESTWO CHMUR|GWIAŹDZISTA NOC|KOSMOS',
     ach: 'PIERWSZE SALTO|SKOCZEK|100 METRÓW|250 METRÓW|500 METRÓW|1000 METRÓW|SKARBONKA|AKROBATA|BĄCZEK|SZYBKIE NOGI|POD OSŁONĄ|PODRÓŻNIK|BOING!|POSZUKIWACZ SKARBÓW|LEGENDA|TELEPORT',
     tips: 'TRZYMAJ — WYŻSZY SKOK|W POWIETRZU STUKNIJ: SALTO|GALARETKA ODBIJA|PATRZ NA ZEGAR|MIÓD NIE ŚLIZGA|W SKRZYNI SĄ LEGENDY|WINDA WIEZIE W GÓRĘ|UWAGA NA PRĄD!',
-    skins: 'CHOMIK|CZEKO|ŚNIEŻEK|RÓŻOWY|MIĘTOWY|NOCNY|CYTRYNA|JAGODA|PANDA|LIS|ŻABA|KOTEK|PINGWIN|SZOP|KRÓLICZEK|MIŚ|MAŁPKA|KOALA|SOWA|PSZCZÓŁKA|TYGRYS|JEDNOROŻEC|ROBOT|SMOK|DUCH|WAMPIR|ZOMBIE|NINJA|CYBORG|KRAB|PIRAT|ASTRONAUTA|KRÓL|OGNIK|TĘCZA|LODZIK|KUCHARZ|KOWBOJ|STRAŻAK|POLICJANT|DOKTOR|GÓRNIK|ŚWINKA|ABSOLWENT|ŚMIGIEŁKO|SOLENIZANT|OWIECZKA|KRÓWKA|KURCZĄTKO|MYSZKA|JEŻYK|BIEDRONKA|CZARODZIEJ|CZAROWNICA|RYCERZ|WIKING|SAMURAJ|FARAON|MUMIA|SZKIELET|DYNIA|BAŁWANEK|MIKOŁAJ|KLAUN|BŁAZEN|SUPERBOHATER|KOSMITA|REKIN|OŚMIORNICA|MOTYL|ŻÓŁWIK|DINUŚ|ANIOŁ|DEMON|WRÓŻKA|FENIKS|SMOCZY KRÓL|WILKOŁAK|YETI|KRAKEN|PILOT MECHA|UFO|DUCH RONINA|KRÓLOWA LODU|GOLEM LAWY|KOSMOKOT|PALADYN|NEONOWY AS|NINJA CIENIA|KLEJNOT|GROMOWŁADCA|PEGAZ|SYRENKA|ŻNIWIARZ|NURKEK|NAKRĘCANY|CHMURKA|ŻELKA|GLITCH|GWIEZDNIK|DŻENTELMEN|OGNISTY JEŹDZIEC|JASON|LEW|ROBOPANDA|CZARNA DZIURA|DJ|KRÓLOWA PSZCZÓŁ|KOT Z CHESHIRE|ANUBIS|DUCH LASU|DŻIN|GORGONA|ARTYSTA|RYBAK|OGRODNIK|MARYNARZ|PIŁKARZ|ROCKMAN|DETEKTYW|ELF ŁUCZNIK|GLADIATOR|BALETNICA|ALCHEMIK|KAPITAN|CYBER SAMURAJ|WALKIRIA|NEKROMANTA|STRAŻNIK CZASU|KITSUNE|MINOTAUR|KRÓL GRZYBÓW|POSEJDON|LISTONOSZ|PŁYWAK|TENISISTA|BUDOWLANIEC|PILOT|MAGIK|STRAŻ KRÓLEWSKA|MISTRZ KUNG FU|LODOWY SMOK|PIRAT WIDMO|GWIEZDNY WILK|BÓG SŁOŃCA|TURYSTA|PERKUSISTA|PSZCZELARZ|SKATER|MUSZKIETER|LEPRECHAUN|ESKIMOS|BOKSER|MAŁPI KRÓL|MROCZNY RYCERZ|KSIĘŻYCOWA WIEDŹMA|ROBOSMOK|BABECZKA|PĄCZEK|PIANKA|GOFR|PIERNIK|LODZIK|LIZAK|ŻELKOWY MIŚ|CUKIERKOWY KRÓL|CUKROWA WRÓŻKA|BANAN|ŚPIOCH|FARMER|NARCIARZ|GRACZ|KUCHARZ SUSHI|GUMA BALONOWA|RATOWNIK|STRÓJ DINO|SIŁACZ|SZERYF|IRBIS|ZŁODZIEJASZEK|GWIAZDA POP|ROBOKOT|GRYF|KOSMICZNY CESARZ|ALIKORN|LAWOWY SMOK|ZŁOTY NINJA|PIZZERMAN|SKRZYPEK|FOTOGRAF|MAJTEK|SURFER|PARASOLKA|ŻABI KSIĄŻĘ|MAG WODY|MECHANIK|MAG OGNIA|PANDA SAMURAJ|GWIEZDNY RYCERZ|PRADAWNY ENT|KRÓLOWA PUSTKI|PLAZMOID|PIELĘGNIARKA|NAUKOWIEC|OBOZOWICZ|ZAPAŚNIK|CHEERLEADERKA|GOLFISTA|PAŁKARZ|KOSZYKARZ|BIBLIOTEKARZ|DRWAL|HARCERZ|HYDRAULIK|KUJON|HIPIS|MIM|AZTEK|STEAMPUNK|ŁOWCA SKARBÓW|BARD|MNICH|DRUID|DYREKTOR CYRKU|STRACH NA WRÓBLE|KRASNAL|KADET KOSMOSU|NIEDŹWIEDŹ WIKING|SUŁTAN|KRÓLIK RYCERZ|SOWA MAG|ŻABA NINJA|ARCHANIOŁ|WŁADCA DEMONÓW|SMOK BURZY|PAN KOSMOSU|SZOGUN|DEMON ONI|LODOWY OLBRZYM|RYCERZ WIDMO|PTAK GROMU|CYBERNINJA|LEWIATAN|KRÓL JEDNOROŻCÓW|MECHA TYTAN|HRABIA WAMPIR|KRÓL DYŃ|TĘCZOWY SMOK|KOSMICZNY PIRAT|ARCYMAG|ZŁOTY SMOK|HOLOGRAM',
+    skins: 'CHOMIK|CZEKO|ŚNIEŻEK|RÓŻOWY|MIĘTOWY|NOCNY|CYTRYNA|JAGODA|PANDA|LIS|ŻABA|KOTEK|PINGWIN|SZOP|KRÓLICZEK|MIŚ|MAŁPKA|KOALA|SOWA|PSZCZÓŁKA|TYGRYS|JEDNOROŻEC|ROBOT|SMOK|DUCH|WAMPIR|ZOMBIE|NINJA|CYBORG|KRAB|PIRAT|ASTRONAUTA|KRÓL|OGNIK|TĘCZA|LODZIK|KUCHARZ|KOWBOJ|STRAŻAK|POLICJANT|DOKTOR|GÓRNIK|ŚWINKA|ABSOLWENT|ŚMIGIEŁKO|SOLENIZANT|OWIECZKA|KRÓWKA|KURCZĄTKO|MYSZKA|JEŻYK|BIEDRONKA|CZARODZIEJ|CZAROWNICA|RYCERZ|WIKING|SAMURAJ|FARAON|MUMIA|SZKIELET|DYNIA|BAŁWANEK|MIKOŁAJ|KLAUN|BŁAZEN|SUPERBOHATER|KOSMITA|REKIN|OŚMIORNICA|MOTYL|ŻÓŁWIK|DINUŚ|ANIOŁ|DEMON|WRÓŻKA|FENIKS|SMOCZY KRÓL|WILKOŁAK|YETI|KRAKEN|PILOT MECHA|UFO|DUCH RONINA|KRÓLOWA LODU|GOLEM LAWY|KOSMOKOT|PALADYN|NEONOWY AS|NINJA CIENIA|KLEJNOT|GROMOWŁADCA|PEGAZ|SYRENKA|ŻNIWIARZ|NURKEK|NAKRĘCANY|CHMURKA|ŻELKA|GLITCH|GWIEZDNIK|DŻENTELMEN|OGNISTY JEŹDZIEC|JASON|LEW|ROBOPANDA|CZARNA DZIURA|DJ|KRÓLOWA PSZCZÓŁ|KOT Z CHESHIRE|ANUBIS|DUCH LASU|DŻIN|GORGONA|ARTYSTA|RYBAK|OGRODNIK|MARYNARZ|PIŁKARZ|ROCKMAN|DETEKTYW|ELF ŁUCZNIK|GLADIATOR|BALETNICA|ALCHEMIK|KAPITAN|CYBER SAMURAJ|WALKIRIA|NEKROMANTA|STRAŻNIK CZASU|KITSUNE|MINOTAUR|KRÓL GRZYBÓW|POSEJDON|LISTONOSZ|PŁYWAK|TENISISTA|BUDOWLANIEC|PILOT|MAGIK|STRAŻ KRÓLEWSKA|MISTRZ KUNG FU|LODOWY SMOK|PIRAT WIDMO|GWIEZDNY WILK|BÓG SŁOŃCA|TURYSTA|PERKUSISTA|PSZCZELARZ|SKATER|MUSZKIETER|LEPRECHAUN|ESKIMOS|BOKSER|MAŁPI KRÓL|MROCZNY RYCERZ|KSIĘŻYCOWA WIEDŹMA|ROBOSMOK|BABECZKA|PĄCZEK|PIANKA|GOFR|PIERNIK|LODZIK|LIZAK|ŻELKOWY MIŚ|CUKIERKOWY KRÓL|CUKROWA WRÓŻKA|BANAN|ŚPIOCH|FARMER|NARCIARZ|GRACZ|KUCHARZ SUSHI|GUMA BALONOWA|RATOWNIK|STRÓJ DINO|SIŁACZ|SZERYF|IRBIS|ZŁODZIEJASZEK|GWIAZDA POP|ROBOKOT|GRYF|KOSMICZNY CESARZ|ALIKORN|LAWOWY SMOK|ZŁOTY NINJA|PIZZERMAN|SKRZYPEK|FOTOGRAF|MAJTEK|SURFER|PARASOLKA|ŻABI KSIĄŻĘ|MAG WODY|MECHANIK|MAG OGNIA|PANDA SAMURAJ|GWIEZDNY RYCERZ|PRADAWNY ENT|KRÓLOWA PUSTKI|PLAZMOID|PIELĘGNIARKA|NAUKOWIEC|OBOZOWICZ|ZAPAŚNIK|CHEERLEADERKA|GOLFISTA|PAŁKARZ|KOSZYKARZ|BIBLIOTEKARZ|DRWAL|HARCERZ|HYDRAULIK|KUJON|HIPIS|MIM|AZTEK|STEAMPUNK|ŁOWCA SKARBÓW|BARD|MNICH|DRUID|DYREKTOR CYRKU|STRACH NA WRÓBLE|KRASNAL|KADET KOSMOSU|NIEDŹWIEDŹ WIKING|SUŁTAN|KRÓLIK RYCERZ|SOWA MAG|ŻABA NINJA|ARCHANIOŁ|WŁADCA DEMONÓW|SMOK BURZY|PAN KOSMOSU|SZOGUN|DEMON ONI|LODOWY OLBRZYM|RYCERZ WIDMO|PTAK GROMU|CYBERNINJA|LEWIATAN|KRÓL JEDNOROŻCÓW|MECHA TYTAN|HRABIA WAMPIR|KRÓL DYŃ|TĘCZOWY SMOK|KOSMICZNY PIRAT|ARCYMAG|ZŁOTY SMOK|HOLOGRAM|MROCZNY LORD|RYCERZ ŚWIATŁA|WOJOWNIK SPARTAŃSKI|PAJĘCZY BOHATER|ŻELAZNY BOHATER|ZIELONY OSIŁEK|MŁODY CZARODZIEJ|LODOWY JEŹDZIEC|KIEROWCA BOLIDU|ŁOWCA DUCHÓW|KAPITAN TARCZA|NOCNY STRAŻNIK|NINJA ROBOT',
     ui2: 'SKLEP|KOŁO|OFERTY|NAGRODA DZIENNA|DZIEŃ|ODBIERZ|WRÓĆ JUTRO|SKINY DNIA|ZNIŻKA|MEGA ZNIŻKA!|NOWE ZA|ZAKRĘĆ|ZA DARMO|PREMIUM|ZAKUPY ZA PIENIĄDZE ZADZIAŁAJĄ|W WERSJI ZE SKLEPU Z APLIKACJAMI|TWOJA NAGRODA!|ZESTAW STARTOWY|SKRZYNIA LEGEND|ZEBRANE|OK|KRYSZTAŁY',
     packs: 'GARŚĆ|WOREK|SKRZYNIA|GÓRA',
     zones2: 'OGRÓD SAKURY|GRZYBOWA POLANA|MGLISTE BAGNO|STARY ZAMEK|NAWIEDZONY LAS|NEONOWE MIASTO|TĘCZOWE NIEBO|DOLINA ZACHODU|BURZOWE CHMURY|LATAJĄCE WYSPY|ŚWIĘTO LAMPIONÓW|OTCHŁAŃ OCEANU|MIASTO DISCO|CYFROWY ŚWIAT|ZORZA POLARNA|DESZCZ METEORÓW|CZARNA DZIURA|ZATOKA PIRATÓW|PIRAMIDY EGIPTU|MIASTO PRZYSZŁOŚCI|MECHANICZNA FABRYKA|STARY CMENTARZ|ZACZAROWANY LAS|FABRYKA CZEKOLADY|TĘCZOWY WODOSPAD|BAZA KSIĘŻYCOWA|ŚWIĄTYNIA W DŻUNGLI|BALONY|OGNISTE GÓRY|NIEBIAŃSKIE WIELORYBY|LODOWY ZAMEK|WESOŁE MIASTECZKO|RAFA KORALOWA|BURZA SAKURY|OPUSZCZONA KOPALNIA|ZAMEK WAMPIRA|STACJA KOSMICZNA|DYNIOWA NOC|ZIMOWA WIOSKA|ATLANTYDA|OAZA NA PUSTYNI|NIEBIAŃSKIE WROTA|DOLINA DINOZAURÓW|MIASTO STEAMPUNK|BIEGUN PÓŁNOCNY|POLE SŁONECZNIKÓW|STARE KINO|SŁODKIE KRÓLESTWO|BAMBUSOWY GAJ|KRYSZTAŁOWA JASKINIA|KRAINA ZABAWEK|SAWANNA O ZACHODZIE|NOC ŚWIETLIKÓW|MAGICZNA BIBLIOTEKA',
     ach2: 'SZCZĘŚCIARZ|7 DNI Z RZĘDU|KOLEKCJONER',
-    ui3: 'NAMIOT|MOCE|NAMIOT ALCHEMIKA|WEJDŹ, PRZYJACIELU!|DOTKNIJ, BY KUPIĆ|MAGNES|TELEPORT|PETARDA|JETPACK|KLON|PRZYCIĄGA MONETY I KLEJNOTY|NA BEZPIECZNY SŁUP WYŻEJ|5 SEKUND W GÓRĘ|TRZYMAJ LEWO LUB PRAWO|PRO NPC WSPINA SIĘ Z TOBĄ|PALIWO|TARCZA|MONETY X2|SPOWOLNIENIE|MEGASKOK|BOMBA|DUCH|WYTRZYMA JEDEN CIOS|20 SEKUND PODWÓJNYCH MONET|CZAS PŁYNIE WOLNIEJ|12 SEKUND WYŻSZYCH SKOKÓW|WYBUCH NISZCZY WROGÓW|8 SEKUND BEZ STRACHU|TERAZ TY JESTEŚ KLONEM!|ZAMROŻENIE|DESZCZ MONET|DODATKOWE ŻYCIE|WROGOWIE ZAMARZAJĄ NA 8 S|MONETY SPADAJĄ Z NIEBA|WSKRZESZA CIĘ RAZ|PIÓRKO|KLEJNOTY X2|GWIAZDA|SKRZYDŁA|WOLNE SPADANIE 10 S|PODWÓJNE KLEJNOTY 30 S|8 S NIEZNISZCZALNY, MIAŻDŻ WROGÓW|SALTA BEZ LIMITU 10 S|ZŁOTO ZA KRYSZTAŁY',
+    ui3: 'NAMIOT|MOCE|NAMIOT ALCHEMIKA|WEJDŹ, PRZYJACIELU!|DOTKNIJ, BY KUPIĆ|MAGNES|TELEPORT|PETARDA|JETPACK|KLON|PRZYCIĄGA MONETY I KLEJNOTY|NA BEZPIECZNY SŁUP WYŻEJ|5 SEKUND W GÓRĘ|TRZYMAJ LEWO LUB PRAWO|PRO NPC WSPINA SIĘ Z TOBĄ|PALIWO|TARCZA|MONETY X2|SPOWOLNIENIE|MEGASKOK|BOMBA|DUCH|WYTRZYMA JEDEN CIOS|20 SEKUND PODWÓJNYCH MONET|CZAS PŁYNIE WOLNIEJ|12 SEKUND WYŻSZYCH SKOKÓW|WYBUCH NISZCZY WROGÓW|8 SEKUND BEZ STRACHU|TERAZ TY JESTEŚ KLONEM!|ZAMROŻENIE|DESZCZ MONET|DODATKOWE ŻYCIE|WROGOWIE ZAMARZAJĄ NA 8 S|MONETY SPADAJĄ Z NIEBA|WSKRZESZA CIĘ RAZ|PIÓRKO|KLEJNOTY X2|GWIAZDA|SKRZYDŁA|WOLNE SPADANIE 10 S|PODWÓJNE KLEJNOTY 30 S|8 S NIEZNISZCZALNY, MIAŻDŻ WROGÓW|SALTA BEZ LIMITU 10 S|ZŁOTO ZA KRYSZTAŁY|SOJUSZNICY|KEDDY|MISTRZ KARATE Z CZARNYM PASEM|WSPINA SIĘ Z TOBĄ I KOPIE WROGÓW|WEŹ NA BIEG|W BIEGU|WKRÓTCE NOWI SOJUSZNICY|PA!|CHRUP!|BAM!|HIYAH!|KIAI!|SUBSKRYPCJA BEZ REKLAM|BEZ REKLAM, TYLKO GRA|/MIES|UCIESZĘ SIĘ, JEŚLI COŚ KUPICIE!|JESTEM NIEZALEŻNYM TWÓRCĄ GIER I CHCĘ|DALEJ TWORZYĆ GRY. JEŚLI TO NIE KŁOPOT,|KUPCIE COŚ, PROSZĘ :)|Z MIŁOŚCIĄ, ELDAR STUDIOS',
   },
 };
 const L = {};
@@ -1331,6 +799,23 @@ const MORE_SKINS6 = [
   { id: 'hologram', r: 3, gems: 135, body: '#3af0ff', dark: '#1a8ab0', light: '#c8ffff', ear: '#3af0ff', ol: '#0a3a4a', ears: 'cat', alpha: 0.7, glitch: true, scarf: '#ff3af0', scarfD: '#3af0ff', parts: ['scanline', 'pixelNoise'], trail: { kind: 'spark', cols: ['#3af0ff', '#ff3af0'] }, sfx: 'cyborg', fx: 'cyborg', vanish: true },
 ];
 SKINS.push(...MORE_SKINS6);
+const MORE_SKINS7 = [
+  // киногерои
+  { id: 'darklord', r: 3, gems: 150, body: '#14141e', head: '#14141e', dark: '#05050a', light: '#3a3a4a', ear: '#14141e', ol: '#000000', ears: 'none', noEyes: true, noMuzzle: true, cape: true, scarf: '#14141e', scarfD: '#05050a', saber: '#ff2a2a', parts: ['darkHelmet', 'chestPanel', 'saber'], trail: { kind: 'smoke', cols: ['#e8261a', '#1a1a24'] }, sfx: 'fire', fx: 'galaxy', vanish: true },
+  { id: 'lightknight', r: 2, cost: 900, body: '#e8d8b0', head: '#ffd8b8', dark: '#a89870', light: '#fff8e0', ear: '#ffd8b8', ol: '#3a2a10', ears: 'none', saber: '#3ab0ff', noScarf: true, parts: ['jediRobe', 'saber'], trail: { kind: 'dot', cols: ['#3ab0ff', '#ffffff'] } },
+  { id: 'wargod', r: 3, gems: 150, body: '#c8c8c0', dark: '#7a7a70', light: '#f0f0e8', ear: '#c8c8c0', ol: '#1a1a14', ears: 'none', beard: '#3a2a1a', noScarf: true, parts: ['redTattoo', 'beard', 'bladeChains', 'axe'], trail: { kind: 'ember', cols: ['#c01a1a', '#ffd23a'] }, sfx: 'fire', fx: 'lava' },
+  { id: 'spiderhero', r: 3, gems: 145, body: '#c81a1a', dark: '#7a0a0a', light: '#ff5a5a', ear: '#c81a1a', ol: '#1a0404', ears: 'none', noEyes: true, noMuzzle: true, noScarf: true, parts: ['webSuit', 'spiderMask', 'webShot'], trail: { kind: 'dot', cols: ['#ffffff', '#c81a1a'] }, sfx: 'pirate', fx: 'cyborg' },
+  { id: 'ironhero', r: 3, gems: 155, body: '#b01a1a', dark: '#6a0a0a', light: '#e85a3a', ear: '#b01a1a', ol: '#1a0404', ears: 'none', noEyes: true, noMuzzle: true, noScarf: true, parts: ['ironMask', 'arcReactor', 'goldPlates'], trail: { kind: 'spark', cols: ['#7af0ff', '#ffd23a'] }, sfx: 'cyborg', fx: 'gold' },
+  { id: 'greengiant', r: 2, cost: 900, body: '#5ab03a', dark: '#2a6a1a', light: '#a8e07a', ear: '#5ab03a', ol: '#0a2a04', ears: 'none', noScarf: true, parts: ['purpleShorts', 'angryBrow'], trail: { kind: 'dot', cols: ['#5ab03a', '#7a3ab0'] } },
+  { id: 'youngwizard', r: 2, cost: 900, body: '#3a3a4a', head: '#ffd8b8', dark: '#1a1a24', light: '#6a6a7a', ear: '#ffd8b8', ol: '#14141e', ears: 'none', acc: 'glasses', scarf: '#a01a1a', scarfD: '#ffd23a', parts: ['slickHair', 'boltScar', 'wand'], trail: { kind: 'star', cols: ['#ffd23a', '#ffffff'] } },
+  { id: 'iceracer', r: 3, gems: 130, body: '#1a2a3a', head: '#f4f8ff', dark: '#0a1420', light: '#3a5a7a', ear: '#f4f8ff', ol: '#05080a', ears: 'none', noEyes: true, noMuzzle: true, noScarf: true, eye: '#7ad8ff', fireC: ['#ffffff', '#bfe8ff', '#7ad8ff', '#2a5aff'], parts: ['skullFireBack', 'jacket', 'chain', 'skullFace', 'skullFire'], trail: { kind: 'ember', cols: ['#ffffff', '#7ad8ff', '#3a8aff'] }, sfx: 'ice', fx: 'ice', vanish: true, fireWheel: true },
+  { id: 'f1racer', r: 3, gems: 140, body: '#e8261a', dark: '#a01008', light: '#ff8a6a', ear: '#e8261a', ol: '#2a0404', ears: 'none', metal: '#e8261a', visor: '#1a1a24', noEyes: true, noMuzzle: true, noScarf: true, parts: ['racingSuit', 'helmetRound', 'racingStripe', 'visor'], trail: { kind: 'smoke', cols: ['#c8c8c8', '#8a8a8a'] }, sfx: 'cyborg', fx: 'fire' },
+  { id: 'ghosthunter', r: 2, cost: 900, ...HAM, noScarf: true, parts: ['jumpsuit', 'protonPack', 'protonBeam'], trail: { kind: 'spark', cols: ['#ff8a1e', '#7ad8ff'] } },
+  { id: 'shieldcaptain', r: 2, cost: 900, body: '#2a5ad8', head: '#ffd8b8', dark: '#1a3a8a', light: '#8ab0ff', ear: '#ffd8b8', ol: '#0a1430', ears: 'none', noScarf: true, parts: ['starChest', 'capHelmet', 'starShield'], trail: { kind: 'star', cols: ['#ffffff', '#e8261a', '#2a5ad8'] } },
+  { id: 'nightguard', r: 3, gems: 150, body: '#3a3a4a', dark: '#1a1a24', light: '#6a6a7a', ear: '#14141e', ol: '#05050a', ears: 'none', cape: true, scarf: '#14141e', scarfD: '#05050a', parts: ['batCowl', 'batEmblem'], trail: { kind: 'shadow' }, sfx: 'shadow', fx: 'galaxy', vanish: true },
+  { id: 'ninjabot', r: 3, gems: 135, body: '#5a6070', dark: '#3a3e4a', light: '#a8b0c0', ear: '#5a6070', ol: '#0a0e1a', ears: 'none', noEyes: true, noMuzzle: true, scarf: '#e8261a', scarfD: '#c01a1a', parts: ['botPlates', 'botVisor', 'katanaBack'], trail: { kind: 'spark', cols: ['#ff2a2a', '#c8d0e0'] }, sfx: 'cyborg', fx: 'cyborg' },
+];
+SKINS.push(...MORE_SKINS7);
 // цена зависит только от редкости: редкие 200–450, эпики 700–1300 (дорогие — только легенды)
 for (const k of SKINS) {
   const h = [...k.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
@@ -1363,6 +848,8 @@ const CARD_FX = {
   ghostrider: ['moto', '#ff8a1e'], jason: ['slash', '#e8261a'], lion: ['roar', '#ffd23a'], robopanda: ['bamboo', '#5ad05a'],
   void: ['void', '#a06ae0'], dj: ['eq', '#ff3af0'], beequeen: ['honey', '#ffb21a'], cheshire: ['grin', '#c06ae0'],
   anubis: ['sand', '#e8c87a'], forestspirit: ['leaves', '#9af07a'], genie: ['lamp', '#c8a0ff'], gorgon: ['stone', '#5ac04a'],
+  darklord: ['smoke', '#e8261a'], wargod: ['flames', '#c01a1a', '#ffd23a'], spiderhero: ['neon', '#c81a1a', '#1a3ab0'], ironhero: ['scan', '#ffd23a'],
+  iceracer: ['moto'], f1racer: ['neon', '#e8261a', '#ffffff'], nightguard: ['moon', '#ffd23a'], ninjabot: ['rain', '#ff2a2a'],
   archangel: ['holy', '#fff6a0'], demonlord: ['hellfire', '#e8261a', '#ff8a1e'], stormdragon: ['lightning', '#ffe03a'], cosmos: ['planets', '#a06ae0'],
   shogun: ['petals', '#ffb0d8'], oni: ['flames', '#ff5a1a', '#ffd23a'], frostgiant: ['blizzard', '#ffffff'], phantom: ['souls', '#8ac8e8'],
   thunderbird: ['lightning', '#ffffff'], cyberninja: ['rain', '#3af0ff'], leviathan: ['waves', '#1a6a8a', 'tent'], unicornking: ['rainbow'],
@@ -1424,7 +911,9 @@ async function pushCloud() {
   if (cloud.busy) { cloud.again = true; return; }
   cloud.busy = true; cloud.status = 'saving';
   try {
-    await cloud.db.doc(cloudPath()).set({ v: 1, t: +(localStorage.getItem('wk3__savedAt') || Date.now()), data: localSave() });
+    const doc = { v: 1, t: +(localStorage.getItem('wk3__savedAt') || Date.now()), data: localSave() };
+    if (JSON.stringify(doc).length > 9e5) throw new Error('save too big');   // не шлём в облако огромные данные
+    await cloud.db.doc(cloudPath()).set(doc);
     cloud.status = 'on';
   } catch (e) { cloud.status = 'error'; }
   cloud.busy = false;
@@ -1439,23 +928,27 @@ async function pushCloud() {
     cloud.db = db; cloud.uid = uid; cloud.status = 'on';
     const snap = await db.doc(cloudPath()).get();
     const localT = +(localStorage.getItem('wk3__savedAt') || 0), d = snap.exists ? snap.data() : null;
-    if (d && d.t > localT && sessionStorage.getItem('wk3_cloudT') !== String(d.t)) {
-      // в облаке свежее (другое устройство) — забираем и перезапускаемся с ним
+    const valid = d && typeof d === 'object' && Number.isFinite(d.t) && d.t > 0 && d.t < Date.now() + 864e5 && d.data && typeof d.data === 'object';
+    if (valid && d.t > localT && sessionStorage.getItem('wk3_cloudT') !== String(d.t)) {
+      // в облаке свежее (другое устройство) — забираем и перезапускаемся с ним; чужие ключи и мусор не берём
       sessionStorage.setItem('wk3_cloudT', String(d.t));
-      for (const k in d.data) localStorage.setItem(k, d.data[k]);
+      for (const k of Object.keys(d.data)) if (/^wk3_[A-Za-z0-9]\w{0,39}$/.test(k) && typeof d.data[k] === 'string' && d.data[k].length < 2e5) localStorage.setItem(k, d.data[k]);
       localStorage.setItem('wk3__savedAt', String(d.t));
       location.reload();
-    } else if (!d || localT > d.t) pushCloud();
+    } else if (!valid || localT > d.t) pushCloud();
     store.onSet = markDirty;   // дальше каждое сохранение уходит и в облако
   } catch (e) { cloud.status = 'error'; }
 })();
-let best = store.get('best', 0);
-let bank = store.get('coins', 0);
-let gems = store.get('gems', 0);   // кристаллы
+// всё, что читается из сохранения, проверяется: повреждённые или подделанные данные не ломают игру
+const nat = v => Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), 1e9) : 0;
+const strList = v => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.length <= 40).slice(0, 2000) : null;
+let best = nat(store.get('best', 0));
+let bank = nat(store.get('coins', 0));
+let gems = nat(store.get('gems', 0));   // кристаллы
 const OLD_ORDER = ['hamster', 'panda', 'fox', 'frog', 'cat', 'penguin', 'raccoon', 'bunny', 'bee', 'tiger', 'unicorn', 'robot', 'dragon', 'ghost'];
-let owned = store.get('ownedIds', null);
+let owned = strList(store.get('ownedIds', null));
 if (!owned) {
-  owned = store.get('owned', [0]).map(i => OLD_ORDER[i]).filter(Boolean);
+  owned = (Array.isArray(store.get('owned', null)) ? store.get('owned', null) : [0]).map(i => OLD_ORDER[i]).filter(Boolean);
   if (!owned.includes('hamster')) owned.push('hamster');
   store.set('ownedIds', owned);
 }
@@ -1472,10 +965,11 @@ let skinId = store.get('skinId', OLD_ORDER[store.get('skin', 0)] || 'hamster');
 }
 if (!SKINS.some(k => k.id === skinId)) skinId = 'hamster';
 const curSkin = () => SKINS.find(k => k.id === skinId) || SKINS[0];
-let muted = store.get('muted', false);
-let tutDone = store.get('tut', false);
-let achieved = store.get('ach', []);
-const SET = Object.assign({ music: true, sfx: true, shake: true, fx: true, vibe: true, hints: true }, store.get('set', {}));
+let muted = store.get('muted', false) === true;
+let tutDone = store.get('tut', false) === true;
+let achieved = strList(store.get('ach', [])) || [];
+const SET = { music: true, sfx: true, shake: true, fx: true, vibe: true, hints: true };
+{ const sv = store.get('set', {}); if (sv && typeof sv === 'object') for (const k of [...Object.keys(SET), 'inf']) if (typeof sv[k] === 'boolean') SET[k] = sv[k]; }
 function guessLang() {
   const n = ((navigator.language || 'ru') + '').slice(0, 2).toLowerCase();
   return LANGS.includes(n) ? n : 'en';
@@ -1541,7 +1035,7 @@ const GLYPH_SRC = {
   ',': '.....|.....|.....|.....|..##.|...#.|..#..', '.': '.....|.....|.....|.....|.....|..##.|..##.',
   '-': '.....|.....|.....|.###.|.....|.....|.....', '—': '.....|.....|.....|#####|.....|.....|.....',
   '+': '.....|..#..|..#..|#####|..#..|..#..|.....', ':': '.....|..#..|.....|.....|.....|..#..|.....',
-  '?': '.###.|#...#|....#|...#.|..#..|.....|..#..', '/': '....#|...#.|...#.|..#..|.#...|.#...|#....',
+  '?': '.###.|#...#|....#|...#.|..#..|.....|..#..', '(': '...#.|..#..|.#...|.#...|.#...|..#..|...#.', ')': '.#...|..#..|...#.|...#.|...#.|..#..|.#...', '/': '....#|...#.|...#.|..#..|.#...|.#...|#....',
   '%': '##..#|##.#.|...#.|..#..|.#...|.#.##|#..##', "'": '..#..|..#..|.....|.....|.....|.....|.....',
 };
 const GLYPH_ALIAS = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X', '×': 'X', 'І': 'I', 'Ј': 'J' };
@@ -1866,6 +1360,14 @@ const LEG_SND = {
  archmage: { j: arp([880, 1109, 1319, 1760], 0.04, 0.3, 's', 0.035), d: [[1760, 220, 1.2, 's', 0.06], ...arp([1319, 1109, 880, 659], 0.15, 0.4, 't', 0.035, 0.3)] },
  golddragon: { j: [[784, 784, 0.08, 't', 0.05], [1175, 1175, 0.12, 't', 0.05, 0.06], ['n', 0.15, 0.05, 0, 900]], d: [['n', 1.2, 0.2, 0, 700], [110, 40, 1.2, 'w', 0.08], ...arp([1568, 1319, 1047], 0.15, 0.3, 't', 0.04, 0.3)] },
  hologram: { j: [[1800, 900, 0.06, 'q', 0.03], [900, 1800, 0.06, 'q', 0.03, 0.05]], d: [...[0, 0.08, 0.16, 0.24, 0.32].map((d, i) => [2000 - i * 300, 2000 - i * 300, 0.05, 'q', 0.04, d]), ['n', 0.6, 0.1, 3000, 0, 0.35]] },
+ darklord: { j: [['n', 0.35, 0.07, 0, 600], [90, 96, 0.3, 'w', 0.04]], d: [[140, 40, 0.9, 'w', 0.06], ['n', 1, 0.08, 0, 500], ['n', 0.6, 0.06, 0, 400, 0.6]] },
+ wargod: { j: [[110, 70, 0.15, 'w', 0.07], ['n', 0.1, 0.1, 0, 800]], d: [[80, 30, 1, 'w', 0.1], ['n', 0.8, 0.2, 0, 600], [200, 100, 0.5, 's', 0.08, 0.3]] },
+ spiderhero: { j: [['n', 0.08, 0.1, 3000], [1200, 1900, 0.06, 's', 0.03]], d: [[800, 200, 0.6, 't', 0.05], ['n', 0.3, 0.06, 2000]] },
+ ironhero: { j: [[200, 900, 0.2, 'w', 0.04], ['n', 0.25, 0.08, 0, 2000]], d: [[900, 80, 1, 'w', 0.06], ['n', 0.8, 0.25, 0, 900]] },
+ iceracer: { j: [['n', 0.2, 0.12, 0, 700], [100, 160, 0.2, 'w', 0.06], [2000, 2600, 0.1, 's', 0.02]], d: [['n', 1, 0.2, 0, 800], [160, 40, 1, 'w', 0.08], ...arp([2637, 2093, 1568], 0.1, 0.3, 's', 0.03, 0.2)] },
+ f1racer: { j: [[300, 900, 0.25, 'w', 0.05], [305, 905, 0.25, 'q', 0.03]], d: [[900, 100, 0.8, 'w', 0.06], ['n', 0.6, 0.25, 0, 1200, 0.1]] },
+ nightguard: { j: [['n', 0.15, 0.08, 0, 1500], [200, 150, 0.15, 't', 0.06]], d: [[220, 110, 0.8, 'w', 0.06], ['n', 0.6, 0.1, 0, 700]] },
+ ninjabot: { j: [[1500, 600, 0.06, 'q', 0.03], ['n', 0.05, 0.08, 5000]], d: [[1200, 60, 0.8, 'q', 0.05], ...[0.1, 0.2, 0.3].map(d => ['n', 0.05, 0.15, 3000, 0, d])] },
   gorgon: { j: [['n', 0.25, 0.07, 5000]], d: [['n', 0.6, 0.1, 5000], ['n', 0.5, 0.2, 0, 500, 0.4], [90, 40, 0.6, 's', 0.2, 0.4]] },
 };
 function playSnd(list) {
@@ -1922,7 +1424,7 @@ function scheduleStep(s, t) {
   if (s % 8 === 4) noiseAt(t, 0.1, 0.05, musicGain, 1500);
 }
 setInterval(() => {
-  if (!ac || !musicOn || ac.state !== 'running' || window.__introOn) return;
+  if (!ac || !musicOn || ac.state !== 'running') return;
   if (mTime < ac.currentTime) mTime = ac.currentTime + 0.05;
   while (mTime < ac.currentTime + 0.25) { scheduleStep(mStep, mTime); mTime += STEP; mStep = (mStep + 1) % 64; }
 }, 40);
@@ -2237,10 +1739,11 @@ function drawAcc(c, sk, t, Hd, ex1, ex2, ey) {
   }
 }
 // детали особых героев: шляпы, шлемы, крылья, панцири, щупальца…
+const FIRE_C = ['#fff27a', '#ffb21a', '#ff5a1a', '#c01a0a'];   // цвета огня: от ядра к краю
 const BACK_PARTS = new Set(['wingsAngel', 'wingsBat', 'wingsFairy', 'wingsButterfly', 'wingsFire', 'shell', 'spikes', 'windKey', 'jetpack', 'mermaidHair',
   'katanaBack', 'roundShield', 'heroCapeLong', 'frostAura', 'tailFeathers', 'shoulderCannon', 'speedLines', 'smokeWisps', 'lionMane', 'tailTuft',
   'accretionBack', 'wingsBee', 'jackalEars', 'smokeTail', 'skullFireBack',
-  'quiver', 'gladShield', 'helmWheel', 'nineTails', 'waterAura', 'braids', 'mailBag', 'longScarf', 'sunHalo', 'starMane', 'backpack', 'darkAura', 'goldWings', 'lootSack', 'cottonPuffs', 'surfboard', 'branchArm', 'warBanner']);
+  'quiver', 'gladShield', 'helmWheel', 'nineTails', 'waterAura', 'braids', 'mailBag', 'longScarf', 'sunHalo', 'starMane', 'backpack', 'darkAura', 'goldWings', 'lootSack', 'cottonPuffs', 'surfboard', 'branchArm', 'warBanner', 'protonPack']);
 function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
   const r = Math.round, ol = sk.ol, hx = r(Hd.x), hy = r(Hd.y), bx = r(B.x), by = r(B.y);
   const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(r(x), r(y), w, h); };
@@ -2915,8 +2418,57 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
       case 'batsAround': for (let k = 0; k < 3; k++) { const an = t * 2 + k * 2.1, x = bx + Math.cos(an) * 13, y = hy - 4 + Math.sin(an * 1.3) * 7, w = Math.sin(t * 20 + k) > 0 ? 1 : 0; R(x - 1, y, 3, 1, '#1a0a20'); R(x - 3, y - w, 2, 1, '#1a0a20'); R(x + 2, y - w, 2, 1, '#1a0a20'); R(x, y, 1, 1, '#ff2a2a'); } break;
       case 'pumpkinFlame': for (let k = 0; k < 3; k++) { const x = hx - 3 + k * 3, fh = 3 + r((Math.sin(t * 13 + k * 2) + 1) * 1.5); stri(c, x, hy - 9 - fh, fh, '#7a3aff'); stri(c, x, hy - 8 - fh, fh - 1, '#c8a0ff'); } break;
       case 'eyepatch': R(hx - 6, hy - 6, 14, 1, ol); R(ex2 - 1, ey - 1, 4, 4, ol); break;
+      // --- союзник и киногерои ---
+      case 'abs': R(bx - 2, by - 5, 5, 6, sk.head); R(bx - 1, by - 3, 1, 1, '#c8905a'); R(bx + 1, by - 3, 1, 1, '#c8905a'); R(bx - 1, by - 1, 1, 1, '#c8905a'); R(bx + 1, by - 1, 1, 1, '#c8905a'); break;
+      case 'tornSleeves': O(A1.x + 1, A1.y - 1, 2.4, 2.6, sk.head); R(A1.x - 1, A1.y - 4, 1, 1, '#ffffff'); R(A1.x + 1, A1.y - 4, 1, 1, '#ffffff'); R(A1.x + 3, A1.y - 3, 1, 1, '#ffffff'); O(bx - 7, by - 1, 2, 2.4, sk.head); break;
+      case 'kHeadband': R(hx - 7, hy - 6, 15, 2, '#e8261a'); R(hx - 9, hy - 5 + (Math.sin(t * 10) > 0 ? 1 : 0), 2, 4, '#e8261a'); R(hx - 11, hy - 3 + (Math.sin(t * 10 + 1) > 0 ? 1 : 0), 2, 3, '#c01a10'); break;
+      case 'darkHelmet':
+        c.save(); c.beginPath(); c.rect(0, -8, 32, hy + 5); c.clip(); E(Hd.x, Hd.y - 0.5, Hd.rx + 1, Hd.ry + 1, '#05050a'); E(Hd.x, Hd.y - 0.5, Hd.rx, Hd.ry, '#14141e'); c.restore();
+        R(hx - 9, hy + 2, 5, 3, '#14141e'); R(hx - 4, hy - 7, 6, 1, '#3a3a4a');
+        R(ex1 - 1, ey - 1, 3, 2, '#2a2a3a'); R(ex2 - 1, ey - 1, 4, 2, '#2a2a3a'); R(ex2, ey - 1, 1, 1, '#8a8aa0');
+        R(hx + 2, hy + 1, 5, 3, '#3a3a4a'); for (let i = 0; i < 3; i++) R(hx + 3 + i * 1.5, hy + 2, 1, 2, '#05050a'); break;
+      case 'chestPanel': R(bx - 2, by - 3, 6, 4, '#3a3a4a'); R(bx - 1, by - 2, 1, 1, Math.sin(t * 4) > 0 ? '#e8261a' : '#601010'); R(bx + 1, by - 2, 1, 1, '#3ce06a'); R(bx + 2, by, 1, 1, Math.sin(t * 3 + 1) > 0 ? '#3ab0ff' : '#1a3a6a'); break;
+      case 'saber': {
+        const sx = r(A1.x + 1), sy = r(A1.y), col = sk.saber || '#e8261a', L = 13;
+        c.globalAlpha = 0.35 + Math.sin(t * 9) * 0.1; R(sx - 2, sy - L - 2, 5, L + 1, col); c.globalAlpha = 1;
+        R(sx - 1, sy - L, 3, L - 1, col); R(sx, sy - L + 1, 1, L - 3, '#ffffff'); R(sx - 1, sy - 2, 3, 4, '#a8b0c0'); R(sx - 1, sy, 3, 1, '#2a2a3a'); break;
+      }
+      case 'jediRobe': c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, 40); c.clip(); E(B.x, B.y, B.rx, B.ry, '#8a5a2a'); c.restore(); R(bx - 1, by - 5, 3, 6, '#e8d8b0'); R(bx - 5, by, 11, 2, '#3a2010'); break;
+      case 'redTattoo': R(hx - 1, hy - 8, 2, 7, '#c01a1a'); R(hx + 1, hy - 1, 1, 3, '#c01a1a'); R(bx - 1, by - 5, 2, 10, '#c01a1a'); R(bx + 1, by - 2, 1, 4, '#c01a1a'); break;
+      case 'bladeChains': for (let i = 0; i < 6; i++) R(A1.x - 2 + i, A1.y + 1 + (i % 2), 1, 1, i % 2 ? '#8a90a8' : '#c8d0e0'); for (let i = 0; i < 5; i++) R(bx - 6 + (i % 2), by - 4 + i * 2, 1, 1, '#8a90a8'); break;
+      case 'spiderMask':
+        c.save(); c.beginPath(); c.rect(0, -8, 32, hy + 6); c.clip(); E(Hd.x, Hd.y, Hd.rx, Hd.ry, '#c81a1a'); c.restore();
+        for (let k = 0; k < 6; k++) { const an = k * Math.PI / 3; for (let d = 2; d < 8; d += 2) R(hx + 2 + Math.cos(an) * d, hy + Math.sin(an) * d * 0.8, 1, 1, '#5a0a0a'); }
+        for (const ex of [ex1, ex2]) { R(ex - 2, ey - 2, 4, 4, ol); R(ex - 1, ey - 1, 3, 2, '#ffffff'); R(ex, ey + 1, 1, 1, '#ffffff'); } break;
+      case 'webSuit':
+        c.save(); c.beginPath(); c.rect(0, by - 1, 32, 40); c.clip(); E(B.x, B.y, B.rx, B.ry, '#1a3ab0'); c.restore();
+        R(bx - 1, by - 3, 2, 3, ol); for (const [dx, dy] of [[-3, -4], [2, -4], [-3, -1], [2, -1]]) R(bx + dx, by + dy, 2, 1, ol); break;
+      case 'webShot': if (flying) { for (let i = 0; i < 12; i++) R(A1.x + 1 + i, A1.y - 2 - i * 1.4, 1, 1, '#ffffff'); } break;
+      case 'ironMask':
+        c.save(); c.beginPath(); c.rect(0, -8, 32, hy + 6); c.clip(); E(Hd.x, Hd.y, Hd.rx, Hd.ry, '#b01a1a'); c.restore();
+        O(hx + 2, hy + 1, 4.2, 4.6, '#ffd23a'); R(ex1, ey, 3, 1, '#bff4ff'); R(ex2, ey, 3, 1, '#bff4ff'); R(hx + 1, hy + 4, 4, 1, '#c89a10'); break;
+      case 'arcReactor': c.globalAlpha = 0.4 + Math.sin(t * 6) * 0.2; E(bx, by - 2, 3, 3, '#bff4ff'); c.globalAlpha = 1; O(bx, by - 2, 1.6, 1.6, '#e8faff'); if (flying) { R(bx - 3, by + 9, 2, 3, '#7af0ff'); R(bx + 2, by + 9, 2, 3, '#7af0ff'); } break;
+      case 'goldPlates': R(bx - 5, by + 1, 11, 1, '#ffd23a'); R(bx - 4, by - 5, 2, 2, '#ffd23a'); R(bx + 3, by - 5, 2, 2, '#ffd23a'); break;
+      case 'purpleShorts': R(bx - 6, by + 2, 13, 4, '#7a3ab0'); for (let i = 0; i < 6; i++) R(bx - 6 + i * 2, by + 6, 1, 1, '#7a3ab0'); R(bx - 6, by + 2, 13, 1, '#5a1a8a'); break;
+      case 'angryBrow': R(ex1 - 1, ey - 2, 3, 1, ol); R(ex1 + 1, ey - 1, 1, 1, ol); R(ex2, ey - 2, 3, 1, ol); R(ex2, ey - 1, 1, 1, ol); R(hx + 3, hy + 3, 4, 1, ol); break;
+      case 'boltScar': R(hx + 1, hy - 7, 1, 1, '#c01a1a'); R(hx + 2, hy - 6, 1, 1, '#c01a1a'); R(hx + 1, hy - 5, 1, 1, '#c01a1a'); R(hx + 2, hy - 4, 1, 1, '#c01a1a'); break;
+      case 'racingSuit': c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, 40); c.clip(); E(B.x, B.y, B.rx, B.ry, '#e8261a'); c.restore(); R(bx - 6, by - 1, 13, 1, '#ffffff'); R(bx - 3, by - 4, 4, 2, '#ffffff'); R(bx + 2, by + 2, 3, 2, '#ffd23a'); R(bx - 4, by + 3, 2, 1, '#1a1a24'); break;
+      case 'protonPack': R(bx - 12, by - 8, 7, 12, ol); R(bx - 11, by - 7, 5, 10, '#5a5a6a'); R(bx - 10, by - 5, 3, 1, Math.sin(t * 8) > 0 ? '#e8261a' : '#ffd23a'); R(bx - 10, by - 2, 3, 1, '#3ab0ff'); for (let i = 0; i < 5; i++) R(bx - 7 + i * 2, by + 3 - (i % 2), 1, 1, '#3a3a4a'); break;
+      case 'protonBeam': if (Math.sin(t * 1.7) > 0.2) { for (let i = 0; i < 14; i++) { const y = A1.y - 2 + Math.sin(t * 40 + i) * 1.5; R(A1.x + 3 + i, y, 1, 1, i % 3 ? '#ff8a1e' : '#7ad8ff'); } } R(A1.x, A1.y - 3, 4, 2, '#3a3a4a'); break;
+      case 'jumpsuit': c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, 40); c.clip(); E(B.x, B.y, B.rx, B.ry, '#c8b890'); c.restore(); R(bx + 2, by - 4, 3, 2, '#ffffff'); R(bx + 3, by - 4, 1, 2, '#e8261a'); R(bx - 5, by + 1, 11, 1, '#8a7a5a'); break;
+      case 'starShield': { const x = A1.x + 3, y = A1.y - 1; O(x, y, 4.6, 4.6, '#e8261a'); E(x, y, 3.4, 3.4, '#ffffff'); E(x, y, 2.4, 2.4, '#e8261a'); E(x, y, 1.6, 1.6, '#2a5ad8'); R(x, y - 1, 1, 3, '#ffffff'); R(x - 1, y, 3, 1, '#ffffff'); break; }
+      case 'starChest': c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, 40); c.clip(); E(B.x, B.y, B.rx, B.ry, '#2a5ad8'); c.restore(); R(bx - 1, by - 4, 3, 3, '#ffffff'); R(bx, by - 5, 1, 5, '#ffffff'); for (let i = 0; i < 3; i++) R(bx - 5, by + 1 + i * 2, 11, 1, i % 2 ? '#ffffff' : '#e8261a'); break;
+      case 'capHelmet': c.save(); c.beginPath(); c.rect(0, -8, 32, hy - 1); c.clip(); E(Hd.x, Hd.y, Hd.rx, Hd.ry, '#2a5ad8'); c.restore(); R(hx - 1, hy - 8, 2, 2, '#ffffff'); R(hx - 7, hy - 4, 3, 1, '#ffffff'); R(hx - 8, hy - 5, 2, 1, '#ffffff'); break;
+      case 'batCowl':
+        c.save(); c.beginPath(); c.rect(0, -8, 32, hy + 1); c.clip(); E(Hd.x, Hd.y, Hd.rx, Hd.ry, '#14141e'); c.restore();
+        for (const dx of [-4, 3]) { stri(c, hx + dx, hy - 13, 6, ol, 1); stri(c, hx + dx, hy - 13, 6, '#14141e'); }
+        R(ex1, ey, 2, 1, '#ffffff'); R(ex2, ey, 2, 1, '#ffffff'); break;
+      case 'batEmblem': O(bx, by - 2, 3.2, 1.8, '#ffd23a'); R(bx - 2, by - 2, 5, 1, ol); R(bx, by - 3, 1, 2, ol); R(bx - 3, by - 3, 1, 1, ol); R(bx + 3, by - 3, 1, 1, ol); break;
+      case 'botVisor': R(hx - 2, ey - 1, 11, 4, '#14141e'); R(hx - 1, ey, 9, 2, Math.sin(t * 6) > -0.5 ? '#ff2a2a' : '#801010'); R(hx + 4 + r((Math.sin(t * 2) + 1) * 2), ey, 2, 1, '#ffffff'); break;
+      case 'botPlates': R(bx - 4, by - 3, 9, 1, '#8a90a8'); R(bx - 1, by + 1, 3, 2, '#ff2a2a'); R(bx - 4, by + 4, 9, 1, '#8a90a8'); break;
       case 'skullFireBack': {   // голова целиком в огне: языки пламени вокруг черепа
-        c.globalAlpha = 0.35 + Math.sin(t * 9) * 0.1; E(hx, hy - 3, 12, 11, '#ff6a1a'); c.globalAlpha = 1;
+        const FC = sk.fireC || FIRE_C;
+        c.globalAlpha = 0.35 + Math.sin(t * 9) * 0.1; E(hx, hy - 3, 12, 11, FC[2]); c.globalAlpha = 1;
         for (let a = 0; a < 15; a++) {
           const ang = Math.PI / 2 + 0.75 + a / 14 * (Math.PI * 2 - 1.5);
           let dx = Math.cos(ang), dy = Math.sin(ang) - 0.9; const dl = Math.hypot(dx, dy); dx /= dl; dy /= dl;
@@ -2924,19 +2476,21 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
           const L = 4 + Math.max(0, -Math.sin(ang)) * 5 + (Math.sin(t * 15 + a * 2.3) + 1) * 2;
           for (let i = 0; i < L; i++) {
             const q = i / L, w2 = Math.max(1, Math.round(3.4 * (1 - q))), wob = Math.sin(t * 20 + a + i * 0.8) * q * 1.2;
-            R(bx2 + dx * i + wob - w2 / 2, by2 + dy * i, w2, 1, q < 0.25 ? '#fff27a' : q < 0.5 ? '#ffb21a' : q < 0.8 ? '#ff5a1a' : '#c01a0a');
+            R(bx2 + dx * i + wob - w2 / 2, by2 + dy * i, w2, 1, q < 0.25 ? FC[0] : q < 0.5 ? FC[1] : q < 0.8 ? FC[2] : FC[3]);
           }
         }
         break;
       }
-      case 'skullFire':
+      case 'skullFire': {
+        const FC = sk.fireC || FIRE_C;
         for (let i = 0; i < 4; i++) {   // огонь лижет макушку и рвётся из глазниц
           const fh = 2 + r((Math.sin(t * 17 + i * 2.1) + 1) * 1.5), fx = hx - 4 + i * 3, top = hy - 6 - fh;
-          stri(c, fx, top, fh + 1, '#ff5a1a'); stri(c, fx, top + 1, Math.max(1, fh - 1), '#ffd23a');
+          stri(c, fx, top, fh + 1, FC[2]); stri(c, fx, top + 1, Math.max(1, fh - 1), FC[1]);
         }
-        for (const ex of [ex1, ex2 + 1]) { const fh = 2 + r((Math.sin(t * 19 + ex) + 1) * 1.2); R(ex, ey - fh, 1, fh, '#ff8a1e'); R(ex, ey - fh, 1, 1, '#fff27a'); }
-        if (Math.random() < 0.5) R(hx + r(rand(-9, 9)), hy - 12 - r(rand(0, 6)), 1, 1, Math.random() < 0.5 ? '#ffd23a' : '#ff5a1a');
+        for (const ex of [ex1, ex2 + 1]) { const fh = 2 + r((Math.sin(t * 19 + ex) + 1) * 1.2); R(ex, ey - fh, 1, fh, FC[1]); R(ex, ey - fh, 1, 1, FC[0]); }
+        if (Math.random() < 0.5) R(hx + r(rand(-9, 9)), hy - 12 - r(rand(0, 6)), 1, 1, Math.random() < 0.5 ? FC[1] : FC[2]);
         break;
+      }
       case 'hockeyMask':
         E(hx + 2, hy, 6, 6, ol); E(hx + 2, hy, 5.2, 5.4, '#f4f0e8');
         for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) R(hx + i * 2, hy + 2 + j * 2, 1, 1, '#5a5a5a');
@@ -3161,7 +2715,7 @@ function reset() {
     x: first.x1 + PW / 2, y: -PH / 2, vx: 0, vy: 0, state: 'wall', side: -1, face: 1, dj: true, pole: first, stand: null,
     spin: 0, rot: 0, trail: [], squash: 0, shield: 0, jet: 0, rocket: 0, x2: 0, slow: 0, mega: 0, ghost: 0, freeze: 0, feather: 0, gem2: 0, star: 0, wings: 0, revive: false, shieldPop: 0, zapT: 0, dk: null, jT: 0, magnet: 0, inv: 0, stick: 0, holdT: 0, kicksAir: 0, noGrab: 0,
   };
-  birds = []; ents = []; parts = []; leaves = []; clone = null; pmenu = false;
+  birds = []; ents = []; parts = []; leaves = []; clone = null; pmenu = false; ally = null; ninjaT = 14;
   camY = -H + 150; camR = even(camY);
   minY = p.y;
   coinsRun = 0; gemsRun = 0; kicks = 0; flips = 0; combo = 0; comboT = 0;
@@ -4002,7 +3556,7 @@ function press() {
   if (state === 'load') { audio(); if (loadReady) finishLoad(); return; }
   audio(); startMusic();
   held = true;
-  if (state === 'menu') { state = 'play'; doJump(); return; }
+  if (state === 'menu') { state = 'play'; doJump(); spawnAlly(); return; }
   if (state === 'over') { if (deadT > 1.3) { reset(); state = 'menu'; } return; }
   if (state !== 'play' || paused || pmenu) return;
   if (p.jet > 0 || p.rocket > 0) return;   // на джетпаке держим, а не прыгаем
@@ -4048,6 +3602,10 @@ const LEG_JUMP = {
  griffin: ['feathers', ['#ffd23a', '#ffffff'], 'stretch'], emperor: ['stars', ['#ffd23a', '#a64aff', '#ffffff'], 'flash'],
  alicorn: ['rainbow', [], 'float'], lavadragon: ['lava', ['#ff5a1a', '#ffd23a', '#3a1a1a'], 'stretch'], goldninja: ['crystals', ['#ffd23a', '#ffffff'], 'ghost'],
   gorgon: ['dust', ['#8a8a98', '#5ac04a'], 'flash'],
+  darklord: ['smoke', ['#e8261a', '#1a1a24'], 'ghost'], wargod: ['lava', ['#c01a1a', '#ffd23a', '#3a3a4a'], 'stretch'],
+  spiderhero: ['dust', ['#ffffff', '#c81a1a'], 'spin'], ironhero: ['jet', ['#7af0ff', '#ffffff', '#ffd23a'], 'stretch'],
+  iceracer: ['fire', ['#ffffff', '#7ad8ff', '#3a8aff'], 'flash'], f1racer: ['smoke', ['#c8c8c8', '#8a8a8a'], 'stretch'],
+  nightguard: ['smoke', ['#14141e', '#ffd23a'], 'ghost'], ninjabot: ['sparks', ['#ff2a2a', '#c8d0e0'], 'ghost'],
   archangel: ['feathers', ['#ffffff', '#fff6a0'], 'float'], demonlord: ['fire', ['#a01008', '#ff5a1a', '#ffd23a'], 'flash'],
   stormdragon: ['bolts', ['#ffe03a', '#ffffff', '#8ac8ff'], 'stretch'], cosmos: ['stars', ['#ffffff', '#a06ae0', '#3ab0ff'], 'spin'],
   shogun: ['petals', ['#ffb0d8', '#ffffff'], 'flash'], oni: ['lava', ['#ff5a1a', '#ffd23a', '#2a0404'], 'stretch'],
@@ -4149,7 +3707,7 @@ window.addEventListener('keydown', e => {
     if (e.repeat) return;
     if (modal) { modal = null; return; }
     if (chest) { chestTap(); return; }
-    if (state === 'shop' || state === 'ach' || state === 'set' || state === 'tent') { if (!wheel.spinning) state = 'menu'; return; }
+    if (state === 'shop' || state === 'ach' || state === 'set' || state === 'tent' || state === 'allies') { if (!wheel.spinning) state = 'menu'; return; }
     if (pmenu) { pmenu = false; return; }
     press();
   }
@@ -4174,7 +3732,8 @@ const BTN = {
   store: { x: 186, y: 282, w: 150, h: 40 },
   wheel: { x: 24, y: 334, w: 150, h: 40 },
   ach:   { x: 186, y: 334, w: 150, h: 40 },
-  tent:  { x: 105, y: 386, w: 150, h: 40 },
+  tent:  { x: 24, y: 386, w: 150, h: 40 },
+  allies: { x: 186, y: 386, w: 150, h: 40 },
 };
 const inRect = (pt, r) => pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
 function uiClick(pt) {
@@ -4186,6 +3745,7 @@ function uiClick(pt) {
   if (state === 'set') { setClick(pt); return true; }
   if (state !== 'play' && state !== 'dead' && inRect(pt, BTN.mute)) { audio(); toggleMute(); sfx.click(); return true; }
   if (state === 'tent') { tentClick(pt); return true; }
+  if (state === 'allies') { alliesClick(pt); return true; }
   if (state === 'play' && pmenu) { powerMenuClick(pt); return true; }
   if (state === 'play' && !paused) {
     if (pwSel && pw[pwSel] > 0 && inRect(pt, PW_ADD)) { openPm(); return true; }
@@ -4200,6 +3760,7 @@ function uiClick(pt) {
     if (inRect(pt, BTN.wheel)) return open(2);
     if (inRect(pt, BTN.ach)) { audio(); startMusic(); state = 'ach'; sfx.click(); return true; }
     if (inRect(pt, BTN.tent)) { audio(); startMusic(); state = 'tent'; sfx.click(); return true; }
+    if (inRect(pt, BTN.allies)) { audio(); startMusic(); state = 'allies'; allyScene.last = -1; sfx.click(); return true; }
     if (inRect(pt, BTN.gear)) { audio(); startMusic(); state = 'set'; resetArm = -10; sfx.click(); return true; }
   }
   return false;
@@ -4224,10 +3785,10 @@ const dealRect = i => ({ x: 14 + i * 114, y: 150, w: 104, h: 180 });
 const dayBox = (i, y) => ({ x: 28 + i * 44, y, w: 40, h: 66 });
 const CLAIM_BTN = { x: W / 2 - 80, y: 452, w: 160, h: 38 };
 const SPIN_BTN = { x: W / 2 - 90, y: 470, w: 180, h: 50 };
-const STARTER = { x: 16, y: 106, w: W - 32, h: 100 };
-const packRect = i => ({ x: 16 + (i % 2) * 172, y: 216 + Math.floor(i / 2) * 130, w: 156, h: 120 });
+const STARTER = { x: 16, y: 104, w: W - 32, h: 62 }, SUB_BTN = { x: 16, y: 174, w: W - 32, h: 44 }, DEV_MSG = { x: 14, y: 418, w: W - 28, h: 94 };
+const packRect = i => ({ x: 16 + (i % 2) * 172, y: 226 + Math.floor(i / 2) * 96, w: 156, h: 88 });
 const GOLD = [{ c: 500, g: 5 }, { c: 1500, g: 12 }, { c: 4000, g: 28 }, { c: 10000, g: 60 }];
-const goldRect = i => ({ x: 14 + i * 84, y: 540, w: 78, h: 64 });
+const goldRect = i => ({ x: 14 + i * 84, y: 552, w: 78, h: 58 });
 function buyGold(i) {
   const G2 = GOLD[i];
   if (gems < G2.g) { sfx.no(); return; }
@@ -4249,7 +3810,7 @@ const dayNum = () => { const d = new Date(); return Math.floor((d.getTime() - d.
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function pickIdx(ws) { const s = ws.reduce((a, b) => a + b, 0); let r = Math.random() * s; for (let i = 0; i < ws.length; i++) if ((r -= ws[i]) <= 0) return i; return ws.length - 1; }
 const freeSpin = () => store.get('wheelDay', -1) !== dayNum();
-const dailyState = () => store.get('daily', { last: -1, streak: 0 });
+const dailyState = () => { const d = store.get('daily', null); return d && Number.isFinite(d.last) && Number.isFinite(d.streak) ? { last: d.last, streak: clamp(Math.floor(d.streak), 0, 7) } : { last: -1, streak: 0 }; };
 const canClaim = () => dailyState().last !== dayNum();
 const nextStreak = () => { const d = dailyState(), t = dayNum(); return d.last === t ? d.streak : d.last === t - 1 ? d.streak % 7 + 1 : 1; };
 function timeToMidnight() {
@@ -4323,6 +3884,7 @@ function drawReel(c) {
   const idx = Math.round(off / REEL_W);   // щелчок на каждой проехавшей карточке
   if (idx !== c.tick) { c.tick = idx; tone(1500 - q * 600, 1500 - q * 600, 0.025, 'square', 0.035); }
   text(T('opening'), W / 2, top - 30, 2, '#ffffff');
+  ctx.globalAlpha = 0.3 + Math.sin(time * 6) * 0.1; ctx.fillStyle = c.gold ? '#e8b0ff' : '#fff2a0'; ctx.fillRect(W / 2 - 14, cy + 70, 28, 50); ctx.globalAlpha = 1;   // свет из открытого сундука
   chestIcon(W / 2, cy + 120, true, 0, c.gold);
 }
 // скины дня: одинаковые для всех в этот день и всегда со скидкой
@@ -4402,7 +3964,7 @@ function shopClick(pt) {
     if (inRect(pt, SPIN_BTN)) spinWheel();
   } else if (GOLD.some((G2, i) => inRect(pt, goldRect(i)))) {
     buyGold(GOLD.findIndex((G2, i) => inRect(pt, goldRect(i))));
-  } else if (inRect(pt, STARTER) || [0, 1, 2, 3].some(i => inRect(pt, packRect(i)))) {
+  } else if (inRect(pt, STARTER) || inRect(pt, SUB_BTN) || [0, 1, 2, 3].some(i => inRect(pt, packRect(i)))) {
     modal = { kind: 'note', t: 0 }; sfx.click();
   }
 }
@@ -4716,7 +4278,21 @@ function updateEnts(dt) {
   const hb = { x0: p.x - PW / 2 + 3, x1: p.x + PW / 2 - 3, y0: p.y - PH / 2 + 4, y1: p.y + PH / 2 - 2 };
   for (let i = ents.length - 1; i >= 0; i--) {
     const e = ents[i];
+    if (e.kicked) {   // враг, отброшенный ударом Кедди, улетает за экран
+      e.x += e.kicked.vx * dt; e.y += e.kicked.vy * dt; e.kicked.vy += 700 * dt; e.t += dt * 3;
+      if (e.x < -60 || e.x > W + 60 || e.y > camY + H + 80) ents.splice(i, 1);
+      continue;
+    }
     if (p.freeze > 0 && !LOOT.has(e.type)) { e.frozen = true; continue; }   // заморозка: враги стоят и не опасны
+    if (e.type === 'ninjabot') {   // прыжками гонится за героем
+      e.t += dt; e.life -= dt; e.vy += 1300 * dt;
+      e.vx = clamp(e.vx + Math.sign(p.x - e.x) * 520 * dt, -230, 230); e.face = Math.sign(e.vx) || 1;
+      e.x = clamp(e.x + e.vx * dt, 14, W - 14); e.y += e.vy * dt;
+      if (e.vy > 150 && e.y > p.y + 30 && e.hops < 7 && e.life > 0) { e.vy = -rand(820, 980); e.hops++; burst(e.x, e.y + 12, 6, '#c8d0e0', 80, 0.3, 3, 0); }
+      const hitBy = ents.find(o => o !== e && !LOOT.has(o.type) && o.type !== 'ninjabot' && !o.kicked && activeEnemy(o) && Math.hypot(o.x - e.x, o.y - e.y) < (o.r || 10) + e.r);
+      if (hitBy) { burst(e.x, e.y, 18, '#c8d0e0', 220, 0.6, 4, 300); burst(e.x, e.y, 8, '#ff2a2a', 160, 0.5, 3, 0, 'star'); noise(0.2, 0.08, 1500); ents.splice(i, 1); continue; }
+      if (e.y > camY + H + 200 && (e.hops >= 7 || e.life <= 0)) { ents.splice(i, 1); continue; }
+    }
     e.frozen = false;
     e.t += dt;
     if (e.type === 'bee') {
@@ -4807,7 +4383,7 @@ function updateEnts(dt) {
     } else if (p.star > 0) {   // звезда: враги разлетаются
       burst(e.x, e.y, 14, hsl(time * 400), 220, 0.5, 4, 0, 'star'); ents.splice(i, 1); coinsRun += 2; sfx.bonk();
     } else if (!(p.inv > 0) && !(p.rocket > 0) && !(p.ghost > 0)) {
-      if (e.type === 'bee' || e.type === 'bat' || e.type === 'ghost' || e.type === 'piranha' || e.type === 'bullet') { burst(e.x, e.y, 10, '#ffffff', 150, 0.5, 4); ents.splice(i, 1); }
+      if (e.type === 'bee' || e.type === 'bat' || e.type === 'ghost' || e.type === 'piranha' || e.type === 'bullet' || e.type === 'ninjabot') { burst(e.x, e.y, 10, '#ffffff', 150, 0.5, 4); ents.splice(i, 1); }
       die(e.type);
     }
   }
@@ -4914,9 +4490,10 @@ function finishLoad() {
 }
 const LOAD_MIN = 2.4;
 const loadProgress = () => Math.min(loadStep / LOAD_STEPS.length, loadT / LOAD_MIN);
+let loadYay = false;
 function updateLoad(dt) {
-  if (window.__introOn) return;   // загрузка начинается после заставки ELDAR STUDIOS
   loadT += dt;
+  if (!loadYay && loadProgress() >= 1) { loadYay = true; [784, 988, 1319].forEach((f, i) => tone(f, f * 1.2, 0.12, 'square', 0.04, i * 0.08)); }
   if (loadStep < LOAD_STEPS.length) LOAD_STEPS[loadStep++]();
   if (loadProgress() >= 1 && loadT > LOAD_MIN + 0.3 && !loadReady) {
     if (ac && ac.state === 'running') finishLoad();   // звук уже разрешён — сразу в меню со звоном
@@ -4939,8 +4516,8 @@ function update(dt) {
   updateParts(dt);
   updateBirds(dt);
   updatePoles(dt);
-  if (state === 'menu' || state === 'shop' || state === 'ach' || state === 'set' || state === 'tent') return;
-  if (state === 'play') { updatePlayer(dt); updateClone(dt); powerTick(dt); }
+  if (state === 'menu' || state === 'shop' || state === 'ach' || state === 'set' || state === 'tent' || state === 'allies') return;
+  if (state === 'play') { updatePlayer(dt); updateClone(dt); updateAlly(dt); ninjaTick(dt); powerTick(dt); }
   else {
     deadT += dt;
     if (p.zapT > 0) {   // героя трясёт током
@@ -5171,6 +4748,7 @@ function drawEnts() {
     if ((e.type === 'cone' && e.st !== 'fall') || (e.type === 'hawk' && e.st !== 'fly') || (e.type === 'ghost' && e.st !== 'chase')) continue;
     if ((e.type === 'meteor' && e.st !== 'fall') || (e.type === 'piranha' && e.st !== 'jump')) continue;
     if (e.type !== 'cloud' && (e.y < camY - 40 || e.y > camY + H + 40)) continue;
+    if (e.type === 'ninjabot') { drawNinjabot(e); continue; }
     if (e.type === 'cloud' && (e.y > camY + H + 40 || e.y + 280 < camY)) continue;
     const x = e.x, y = e.y;
     if (e.type === 'meteor' || e.type === 'cloud' || e.type === 'piranha' || e.type === 'orbit') { drawNewEnt(e, x, y); continue; }
@@ -5717,7 +5295,7 @@ function drawHero() {
   }
   if (sk.fireWheel && p.spin > 0 && !dead) {   // огненное колесо в сальто
     ctx.save(); ctx.translate(p.x, p.y - 2); ctx.rotate(time * 18 * p.face);
-    for (let k = 0; k < 16; k++) { const an = k / 16 * Math.PI * 2; prect(ctx, Math.cos(an) * 26 - 3, Math.sin(an) * 26 - 3, 6, 6, k % 2 ? '#ff5a1a' : '#ffd23a'); }
+    for (let k = 0; k < 16; k++) { const an = k / 16 * Math.PI * 2; prect(ctx, Math.cos(an) * 26 - 3, Math.sin(an) * 26 - 3, 6, 6, k % 2 ? (sk.fireC || FIRE_C)[2] : (sk.fireC || FIRE_C)[1]); }
     for (let k = 0; k < 3; k++) { const an = k / 3 * Math.PI * 2; for (let d = 6; d < 24; d += 4) prect(ctx, Math.cos(an) * d - 1, Math.sin(an) * d - 1, 2, 2, '#c8d0e0'); }
     ctx.restore();
   }
@@ -5775,6 +5353,7 @@ function drawWorld() {
   drawSuperFx();
   drawHero();
   drawClone();
+  drawAlly();
   for (const q of parts) drawParticle(q);
   ctx.globalAlpha = 1;
 }
@@ -5941,6 +5520,7 @@ function drawMenu() {
   if (canClaim()) badge(BTN.store.x + BTN.store.w - 4, BTN.store.y + 2);
   if (freeSpin()) badge(BTN.wheel.x + BTN.wheel.w - 4, BTN.wheel.y + 2);
   button(BTN.tent, T('tent'), '#a64aff', '#6a1ac0');
+  button(BTN.allies, T('allies'), '#e8261a', '#a01008');
   drawMuteBtn();
   drawGearBtn();
   text(T('tap1'), W / 2 + 40, 456, 2, '#ffffff');
@@ -5987,16 +5567,16 @@ function drawSkinCard(r, k) {
 }
 // ---------- Рамка легендарного героя: у каждого своя анимация ----------
 // sp — где нарисован спрайт: левый верх и масштаб пикселя
-function drawBike(x, y, s, t) {
+function drawBike(x, y, s, t, FC = FIRE_C) {
   const P = (dx, dy, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x + dx * s, y + dy * s, w * s, h * s); };
-  for (let i = 0; i < 7; i++) { const fl = (t * 9 + i * 0.37) % 1; ctx.globalAlpha = 1 - fl; P(-14 - fl * 10, -1 - fl * 4 + (i % 3) - 1, 3 - fl * 2, 2, fl < 0.3 ? '#fff27a' : fl < 0.6 ? '#ff8a1e' : '#ff3a1a'); }
+  for (let i = 0; i < 7; i++) { const fl = (t * 9 + i * 0.37) % 1; ctx.globalAlpha = 1 - fl; P(-14 - fl * 10, -1 - fl * 4 + (i % 3) - 1, 3 - fl * 2, 2, fl < 0.3 ? FC[0] : fl < 0.6 ? FC[1] : FC[2]); }
   ctx.globalAlpha = 1;
   P(-11, -1, 7, 1, '#c8d0e0'); P(-8, -5, 16, 2, '#1a1a24'); P(-7, -7, 7, 2, '#3a3a4a'); P(0, -7, 6, 3, '#2a2a3a'); P(1, -7, 3, 1, '#ff5a1a');
   P(-3, -3, 6, 3, '#8a90a8'); P(-2, -2, 2, 1, '#e8eef8'); P(6, -9, 1, 9, '#c8d0e0'); P(4, -10, 4, 1, '#c8d0e0'); P(8, -7, 2, 2, '#fff6a0');
   ctx.globalAlpha = 0.25; P(10, -8, 6, 4, '#fff6a0'); ctx.globalAlpha = 1;
   for (const wx of [-8, 8]) {
     pell(ctx, x + wx * s, y, 5 * s, 5 * s, '#0a0a10'); pell(ctx, x + wx * s, y, 3.4 * s, 3.4 * s, '#3a3a4a'); pell(ctx, x + wx * s, y, 1.2 * s, 1.2 * s, '#c8d0e0');
-    for (let k = 0; k < 12; k++) { const an = k / 12 * Math.PI * 2 + t * 12; ctx.fillStyle = k % 2 ? '#ff5a1a' : '#ffd23a'; ctx.fillRect(x + wx * s + Math.cos(an) * 5.5 * s - s * 0.6, y + Math.sin(an) * 5.5 * s - s * 0.6, s * 1.2, s * 1.2); }
+    for (let k = 0; k < 12; k++) { const an = k / 12 * Math.PI * 2 + t * 12; ctx.fillStyle = k % 2 ? FC[2] : FC[1]; ctx.fillRect(x + wx * s + Math.cos(an) * 5.5 * s - s * 0.6, y + Math.sin(an) * 5.5 * s - s * 0.6, s * 1.2, s * 1.2); }
     for (let k = 0; k < 3; k++) { const an = k / 3 * Math.PI * 2 + t * 12; ctx.fillStyle = '#c8d0e0'; ctx.fillRect(x + wx * s + Math.cos(an) * 2.3 * s - s / 2, y + Math.sin(an) * 2.3 * s - s / 2, s, s); }
   }
 }
@@ -6214,8 +5794,9 @@ function cardFx(k, r, t, sp, front) {
       ctx.globalAlpha = 0.25; for (let y = y0; y < y0 + h; y += 3) P(x0, y, w, 1, '#000000');
       break;
     case 'moto': {
-      for (let i = 0; i * 5 < w + 5; i++) { const fh = 5 + Math.sin(t * 9 + i * 1.3) * 2 + rnd(i) * 3, x = x0 + i * 5; ctx.globalAlpha = 0.7; P(x, y0 + h - fh, 5, fh, '#ff3a1a'); P(x + 1, y0 + h - fh * 0.6, 3, fh * 0.6, '#ffd23a'); }
-      for (let i = 0; i < 6; i++) { const ph = loop(i, 0.8, 1); ctx.globalAlpha = 1 - ph; P(x0 + rnd(i) * w, y0 + h - ph * h, 2, 2, '#ff8a1e'); }
+      const FC = k.fireC || FIRE_C;
+      for (let i = 0; i * 5 < w + 5; i++) { const fh = 5 + Math.sin(t * 9 + i * 1.3) * 2 + rnd(i) * 3, x = x0 + i * 5; ctx.globalAlpha = 0.7; P(x, y0 + h - fh, 5, fh, FC[3]); P(x + 1, y0 + h - fh * 0.6, 3, fh * 0.6, FC[1]); }
+      for (let i = 0; i < 6; i++) { const ph = loop(i, 0.8, 1); ctx.globalAlpha = 1 - ph; P(x0 + rnd(i) * w, y0 + h - ph * h, 2, 2, FC[2]); }
       break;
     }
     case 'roar':
@@ -6522,7 +6103,7 @@ function cardHero(k, r, t, sp) {
     case 'ghostrider': {   // встаёт на дыбы на горящем мотоцикле
       ctx.save(); ctx.translate(X(8), Y(36)); ctx.rotate(-0.35 * bump); ctx.translate(-X(8), -Y(36));
       hero('sit', { dy: -3 });
-      drawBike(X(16), Y(36), s * 0.85, t);
+      drawBike(X(16), Y(36), s * 0.85, t, k.fireC || FIRE_C);
       ctx.restore();
       for (let i = 0; i < 6; i++) { A(bump); flame(-2 + i * 2, 38, 3 + bump * 6 + Math.sin(t * 15 + i) * 2); } A(1);
       break;
@@ -6890,6 +6471,60 @@ function cardHero(k, r, t, sp) {
       for (let i = 0; i < 5; i++) { A(fio * 0.5); Q(rr(i + Math.floor(t * 8)) * 30, 40 - q * 40 + rr(i) * 6, 3, 1, i % 2 ? '#ff3af0' : '#3af0ff'); }
       A(1); break;
     }
+    case 'darklord': {   // во тьме зажигается красный меч, тяжёлое дыхание
+      A(fio * 0.5); ctx.fillStyle = '#05050a'; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4);
+      A(fio * (0.25 + Math.sin(t * 3) * 0.1)); C(24, 22, 12, 14, '#ff2a2a');
+      A(1); hero(act > 0.3 ? 'raise' : 'idle');
+      break;
+    }
+    case 'wargod': {   // бросает топор — он прилетает обратно
+      const q = act < 0 ? 0 : clamp((act - 0.2) / 0.6, 0, 1), ax = 22 + Math.sin(q * Math.PI) * 9, ay = 16 - Math.sin(q * Math.PI) * 10;
+      hero(q > 0 && q < 1 ? 'raise' : 'idle');
+      if (q > 0 && q < 1) { ctx.save(); ctx.translate(X(ax), Y(ay)); ctx.rotate(t * 20); A(1); ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-0.5 * s, -4 * s, s, 8 * s); ctx.fillStyle = '#c8d0e0'; ctx.fillRect(0.5 * s, -4 * s, 3 * s, 4 * s); ctx.restore(); }
+      for (let i = 0; i < 6; i++) { const z = (t * 0.5 + i / 6) % 1; A(fio * (1 - z)); Q(rr(i) * 30, 40 - z * 40, 1, 1, '#c01a1a'); }
+      A(1); break;
+    }
+    case 'spiderhero': {   // висит вниз головой на паутине и раскачивается
+      const sw = Math.sin(t * 2) * 4, hang = act < 0.6;
+      if (hang) { A(1); for (let y = 0; y < 12; y += 1) Q(16 + sw * y / 12, y, 0.6, 1, '#ffffff'); hero('idle', { rot: Math.PI, dy: -12, dx: sw }); }
+      else { hero('jump', { dy: -bump * 6 }); for (let i = 0; i < 6; i++) { A(fio); Q(22 + i * 1.6, 18 - i * 3, 1, 1, '#ffffff'); } }
+      A(1); break;
+    }
+    case 'ironhero': {   // взлетает на реактивных ботинках и стреляет из ладони
+      hero(act > 0.5 ? 'raise' : 'jump', { dy: -bump * 8 });
+      for (let i = 0; i < 2; i++) { A(0.9); Q(13 + i * 4, 37 - bump * 8, 2, 2 + bump * 6 + Math.sin(t * 25 + i), '#7af0ff'); }
+      if (act > 0.55 && act < 0.8) { A(1); C(24, 14 - bump * 8, 3, 3, '#bff4ff'); A(0.7); Q(24, 13 - bump * 8, 10, 2, '#e8faff'); }
+      A(1); break;
+    }
+    case 'iceracer': {   // встаёт на дыбы на ледяном мотоцикле
+      const IC = ['#ffffff', '#bfe8ff', '#7ad8ff', '#2a5aff'];
+      ctx.save(); ctx.translate(X(8), Y(36)); ctx.rotate(-0.35 * bump); ctx.translate(-X(8), -Y(36));
+      hero('sit', { dy: -3 }); drawBike(X(16), Y(36), s * 0.85, t, IC);
+      ctx.restore();
+      for (let i = 0; i < 8; i++) { A(bump * 0.9); Q(1 + i * 4, 38 - bump * 6 - rr(i) * 4, 2, 2, i % 2 ? '#ffffff' : '#bfe8ff'); } A(1);
+      break;
+    }
+    case 'f1racer': {   // проносится на болиде
+      const x = act < 0 ? 0 : -24 + act * 48;
+      hero('sit', { dx: x, dy: -2 });
+      A(1); Q(4 + x, 33, 24, 4, '#e8261a'); Q(2 + x, 31, 6, 2, '#1a1a24'); Q(24 + x, 34, 6, 2, '#1a1a24'); Q(10 + x, 32, 8, 1, '#ffffff');
+      for (const wx of [8, 22]) { C(wx + x, 37, 2.6, 2.6, '#1a1a24'); C(wx + x, 37, 1, 1, '#a8b0c0'); }
+      for (let i = 0; i < 4; i++) { A(fio * 0.6); Q(-4 + x - i * 4, 34 + (i % 2), 3, 1, '#c8c8c8'); }
+      A(1); break;
+    }
+    case 'nightguard': {   // в небе сигнал, страж планирует с плащом
+      A(fio * 0.5); ctx.fillStyle = '#0a0a1a'; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4);
+      A(fio * 0.7); C(24, 7, 5, 4, '#ffd23a'); A(fio); Q(21, 6, 6, 1, '#14141e'); Q(23.5, 5, 1, 2, '#14141e');
+      A(1); hero(act > 0.2 && act < 0.7 ? 'jump' : 'idle', { dy: act > 0.2 && act < 0.7 ? -6 + (act - 0.2) * 12 : 0 });
+      break;
+    }
+    case 'ninjabot': {   // телепортируется и рассекает воздух
+      const ph2 = act < 0 ? 0 : Math.floor(act * 4);
+      for (let i = 0; i < 3; i++) { A(fio * 0.25 * (3 - i) / 3); hero('jump', { dx: (ph2 - i - 1.5) * 6, tint: '#ff2a2a', ta: 0.5 }); }
+      A(1); hero(act > 0 ? 'jump' : 'idle', { dx: act > 0 ? (ph2 - 1.5) * 6 : 0 });
+      if (act > 0.7) { A((1 - act) * 3); ctx.strokeStyle = '#ff2a2a'; ctx.lineWidth = s; ctx.beginPath(); ctx.moveTo(X(2), Y(10)); ctx.lineTo(X(30), Y(30)); ctx.stroke(); }
+      A(1); break;
+    }
     case 'gorgon': {   // взгляд горгоны обращает всё в камень
       hero('raise');
       if (act > 0.3) { const q = clamp((act - 0.3) / 0.4, 0, 1) * fio; A(q * 0.5); ctx.fillStyle = '#8a8a98'; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4); A(1);
@@ -6898,6 +6533,28 @@ function cardHero(k, r, t, sp) {
     }
     default: hero('idle');
   }
+}
+// ниндзя-роботы: появляются сверху или снизу и прыжками гонятся за героем; другие враги их ломают
+let ninjaT = 14;
+function ninjaTick(dt) {
+  ninjaT -= dt;
+  if (ninjaT > 0) return;
+  ninjaT = rand(14, 24);
+  if (heightM() < 120) return;
+  const top = Math.random() < 0.5;
+  ents.push({ type: 'ninjabot', x: rand(40, W - 40), y: top ? camY - 30 : camY + H + 20, vx: 0, vy: top ? 100 : -1050, r: 11, t: 0, hops: 0, face: 1, life: 14 });
+  sfx.warn();
+}
+function drawNinjabot(e) {
+  const f = e.face || 1, P = (x, y, w, h, c) => prect(ctx, x, y, w, h, c);
+  ctx.save(); ctx.translate(e.x, e.y); ctx.scale(f, 1); if (e.vy < 0) ctx.rotate(Math.sin(e.t * 20) * 0.1);
+  for (let i = 0; i < 4; i++) P(-10 - i * 4, -10 + Math.sin(e.t * 14 + i) * 2, 4, 3, i % 2 ? '#c01a1a' : '#e8261a');   // развевающийся шарф
+  for (let i = 0; i < 10; i++) P(-6 + i * 1.6, 4 - i * 2.2, 2, 2, i < 3 ? '#3a2a1a' : '#c8d0e0');   // катана за спиной
+  pell(ctx, 0, 6, 10, 9, OL); pell(ctx, 0, 6, 8, 7, '#3a3e4a'); P(-4, 4, 8, 2, '#5a6070'); P(-2, 8, 4, 2, '#ff2a2a');
+  pell(ctx, 1, -6, 9, 8, OL); pell(ctx, 1, -6, 7.5, 6.5, '#5a6070');
+  P(-6, -11, 16, 3, '#e8261a'); P(-2, -7, 11, 4, '#14141e'); P(0, -6, 9, 2, Math.sin(e.t * 10) > -0.6 ? '#ff2a2a' : '#801010');
+  P(-7, 13, 6, 4, OL); P(3, 13, 6, 4, OL);
+  ctx.restore();
 }
 // ---------- Силы: магнит, телепорт, петарда, джетпак, клон ----------
 // чем круче сила — тем дороже
@@ -6921,7 +6578,7 @@ const POWERS = [
   { id: 'ghost', price: { gems: 35 }, name: 'pGhost', desc: 'pGhostD' },
   { id: 'revive', price: { gems: 40 }, name: 'pRevive', desc: 'pReviveD' },
 ];
-let swapT = 0, swapK = 'cloneSwap', pw = store.get('pw', {}), pwSel = store.get('pwSel', null), pmenu = false, clone = null, touchX = W / 2, tentFx = [];
+let swapT = 0, swapK = 'cloneSwap', pw = (o => { const r = {}; if (o && typeof o === 'object') for (const P of POWERS) if (nat(o[P.id])) r[P.id] = Math.min(nat(o[P.id]), 999); return r; })(store.get('pw', {})), pwSel = (v => POWERS.some(P => P.id === v) ? v : null)(store.get('pwSel', null)), pmenu = false, clone = null, touchX = W / 2, tentFx = [];
 const savePw = () => { store.set('pw', pw); store.set('pwSel', pwSel); };
 const PW_BTN = { x: W - 66, y: H - 196, w: 52, h: 52 }, PW_ADD = { x: W - 30, y: H - 206, w: 24, h: 24 };
 const PM_PANEL = { x: 18, y: 96, w: W - 36, h: 470 }, PM_CLOSE = { x: W - 62, y: 104, w: 36, h: 36 };
@@ -7160,6 +6817,225 @@ function drawClone() {
   ctx.restore(); ctx.globalAlpha = 1;
   text('PRO', c.x, c.y - 42, 1, '#7ad8ff', 'center', OL);
 }
+// ---------- Союзники: Кедди-каратист лезет вверх вместе с тобой и бьёт врагов ногами ----------
+const KEDDY = { id: 'keddy', body: '#f4f4f8', head: '#f0c090', dark: '#c8c8d8', light: '#ffffff', ear: '#f0c090', ol: '#2a1408', ears: 'none', beard: '#5a3018', noScarf: true, parts: ['gi', 'abs', 'tornSleeves', 'blackBelt', 'beard', 'kHeadband'] };
+const ALLIES = [{ id: 'keddy', price: { gems: 60 }, sk: KEDDY, hp: 3 }];
+const ALLY_BTN = { x: 60, y: 432, w: W - 120, h: 44 };
+let allyOwned = (a => Array.isArray(a) ? a.filter(id => ALLIES.some(A => A.id === id)) : [])(store.get('allies', []));
+let allySel = (v => allyOwned.includes(v) ? v : null)(store.get('allySel', null));
+let ally = null, allyScene = { last: -1 };
+const VOWEL = { a: [800, 1150, 2900], e: [530, 1840, 2480], i: [270, 2290, 3010], u: [300, 870, 2240], o: [500, 700, 2400] };
+// голосовой выкрик: пила через три формантных фильтра — «ХУЭЙ!», «КИЯ!», «ХА!»
+function shout(kind) {
+  if (!audio()) return;
+  const t = ac.currentTime + 0.01, V = { huey: ['x', [[0, 'u'], [0.1, 'e'], [0.28, 'i']], [200, 330, 250], 0.42], kiya: ['k', [[0, 'i'], [0.14, 'a']], [260, 360, 210], 0.38], ha: ['x', [[0, 'a']], [240, 200, 170], 0.26] }[kind];
+  const [cons, vow, pitch, dur] = V;
+  if (cons === 'x') noiseAt(t, 0.09, 0.16, sfxBus, 1400, 6000); else noiseAt(t, 0.03, 0.3, sfxBus, 2000, 0);
+  const t0 = t + (cons === 'x' ? 0.06 : 0.025), o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(pitch[0], t0); o.frequency.linearRampToValueAtTime(pitch[1], t0 + dur * 0.35); o.frequency.linearRampToValueAtTime(pitch[2], t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.03); g.gain.setValueAtTime(0.5, t0 + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  for (let f = 0; f < 3; f++) {
+    const bp = ac.createBiquadFilter(), fg = ac.createGain();
+    bp.type = 'bandpass'; bp.Q.value = 6 + f * 3; fg.gain.value = [1, 0.55, 0.25][f];
+    for (const [at, v] of vow) bp.frequency.linearRampToValueAtTime(VOWEL[v][f], t0 + at);
+    bp.frequency.setValueAtTime(VOWEL[vow[0][1]][f], t0);
+    o.connect(bp); bp.connect(fg); fg.connect(g);
+  }
+  g.connect(sfxBus); o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function kickSound(big) { noise(0.12, big ? 0.3 : 0.2, 0, 900); tone(160, 50, 0.15, 'sine', big ? 0.3 : 0.2); }
+const ALLY_SKIP = new Set(['coin', 'gem', 'shield', 'magnet', 'cloud']);
+const activeEnemy = e => !ALLY_SKIP.has(e.type) && !e.kicked && !e.frozen && !((e.type === 'cone' && e.st !== 'fall') || (e.type === 'hawk' && e.st !== 'fly') || (e.type === 'ghost' && e.st !== 'chase') || (e.type === 'meteor' && e.st !== 'fall') || (e.type === 'piranha' && e.st !== 'jump'));
+const kickKind = type => ['snail', 'turret', 'cone'].includes(type) ? 'stomp' : ['spiky', 'orbit', 'pendulum', 'bouncer', 'meteor'].includes(type) ? 'spin' : 'fly';
+function spawnAlly() {
+  ally = null;
+  const A = ALLIES.find(a => a.id === allySel); if (!A) return;
+  ally = { def: A, x: clamp(p.x + 46, 20, W - 20), y: p.y, st: 'ground', t: 0, face: -1, hp: A.hp, inv: 0, cd: 0.5, kick: null, rot: 0, pops: [] };
+  burst(ally.x, ally.y, 24, '#ffffff', 200, 0.6, 5, 0, 'star'); parts.push({ x: ally.x, y: ally.y + 16, vx: 0, vy: 0, life: 0.5, max: 0.5, color: '#ffd23a', size: 50, grav: 0, shape: 'wave' });
+  shout('ha');
+}
+function allyJumpTo(q) {
+  const a = ally, side = q.cx > a.x ? 1 : -1;
+  a.st = 'jump'; a.t = 0; a.dur = 0.5; a.fx = a.x; a.fy = a.y; a.to = q; a.side = side;
+  a.tx = side > 0 ? q.x0 - PW / 2 : q.x1 + PW / 2;
+  a.ty = clamp(Math.min(a.y - 90, p.y + 30), q.y0 + PH / 2 + 4, q.y1 - PH / 2 - 2);
+  a.face = a.tx > a.x ? 1 : -1;
+  // красивый подъём: пыль и золотая волна от толчка
+  burst(a.x, a.y + 14, 8, '#ffffff', 120, 0.4, 4, 0);
+  parts.push({ x: a.x, y: a.y + 10, vx: 0, vy: 0, life: 0.35, max: 0.35, color: '#ffd23a', size: 28, grav: 0, shape: 'wave' });
+}
+function allyTarget() {
+  const a = ally;
+  let n = a.pole && poles.includes(a.pole) ? a.pole.next : null;
+  if (n && n.kind === 'portal' && n.next) n = n.next;
+  if (n && poles.includes(n) && n.solid) return n;
+  let best = null, bd = 1e9;
+  for (const q of poles) {
+    if (q === a.pole || !q.solid || q.thorn || q.y1 > a.y + 20 || q.y1 < a.y - 360) continue;
+    const d = Math.abs(q.cx - a.x) + Math.abs(q.y1 - a.y);
+    if (d < bd) { bd = d; best = q; }
+  }
+  return best;
+}
+function allyHurt() {
+  const a = ally;
+  a.hp--; a.inv = 1.4; tone(300, 120, 0.25, 'square', 0.05); burst(a.x, a.y, 12, '#ff3a5a', 160, 0.5, 4, 0, 'heart');
+  if (a.hp <= 0) { burst(a.x, a.y, 30, '#ffffff', 240, 0.7, 6, 0, 'star'); a.pops.push({ s: T('allyBye'), t: 0, x: a.x, y: a.y - 40 }); allyPopsLeft = a.pops; ally = null; }
+}
+let allyPopsLeft = null;
+function allyHit(e, kind) {
+  const a = ally;
+  if (kind === 'stomp') {   // улитку и прочих наземных — пяткой сверху
+    burst(e.x, e.y, 18, '#8a5a3a', 200, 0.6, 4, 400); burst(e.x, e.y, 8, '#ffffff', 120, 0.4, 3, 0, 'star');
+    parts.push({ x: e.x, y: e.y + 4, vx: 0, vy: 0, life: 0.4, max: 0.4, color: '#ffffff', size: 30, grav: 0, shape: 'wave' });
+    ents.splice(ents.indexOf(e), 1); a.pops.push({ s: T('popCrunch'), t: 0, x: e.x, y: e.y - 20 });
+  } else if (kind === 'spin') {   // вертушкой — враг разлетается на куски
+    burst(e.x, e.y, 26, '#c8d0e0', 260, 0.7, 4, 300); burst(e.x, e.y, 10, '#ffd23a', 200, 0.5, 4, 0, 'star');
+    ents.splice(ents.indexOf(e), 1); a.pops.push({ s: T('popBam'), t: 0, x: e.x, y: e.y - 20 });
+  } else {   // летающих — ногой с разворота, враг улетает за экран
+    e.kicked = { vx: a.face * 520, vy: -380 }; burst(e.x, e.y, 12, '#ffffff', 180, 0.4, 4, 0, 'star');
+    a.pops.push({ s: T('popHuey'), t: 0, x: e.x, y: e.y - 20 });
+  }
+  kickSound(kind !== 'fly'); if (SET.shake) shake = Math.max(shake, 0.15);
+}
+function updateAlly(dt) {
+  const a = ally; if (!a) return;
+  a.t += dt; a.cd -= dt; if (a.inv > 0) a.inv -= dt;
+  for (const q of a.pops) q.t += dt; a.pops = a.pops.filter(q => q.t < 0.9);
+  if (a.kick) {   // удар: рывок к врагу и обратно
+    const k = a.kick; k.t += dt;
+    const q = Math.min(1, k.t / k.dur), out = q < 0.5 ? q * 2 : (1 - q) * 2;
+    a.x = lerp(k.ox, k.tx, out); a.y = lerp(k.oy, k.ty, out) - (k.kind === 'stomp' ? Math.sin(out * Math.PI) * 30 : 0);
+    a.rot = k.kind === 'spin' ? q * Math.PI * 2 * a.face : k.kind === 'fly' ? -0.6 * a.face * out : 0;
+    if (!k.hit && q >= 0.45) { k.hit = true; if (ents.includes(k.e) && !k.e.kicked) allyHit(k.e, k.kind); }
+    if (q >= 1) { a.kick = null; a.rot = 0; a.x = k.ox; a.y = k.oy; a.cd = 0.45; }
+    return;
+  }
+  if (a.cd <= 0) {
+    let tg = null, td = 80;
+    for (const e of ents) { if (!activeEnemy(e)) continue; const d = Math.hypot(e.x - a.x, e.y - a.y); if (d < td) { td = d; tg = e; } }
+    if (tg) {
+      const kind = kickKind(tg.type);
+      a.face = tg.x > a.x ? 1 : -1;
+      a.kick = { e: tg, kind, t: 0, dur: kind === 'spin' ? 0.42 : 0.34, ox: a.x, oy: a.y, tx: tg.x - a.face * 14, ty: kind === 'stomp' ? tg.y - 16 : tg.y, hit: false };
+      shout(kind === 'fly' ? 'huey' : kind === 'spin' ? 'kiya' : 'ha');
+      return;
+    }
+  }
+  if (a.st === 'jump') {
+    const q = Math.min(1, a.t / a.dur);
+    a.x = lerp(a.fx, a.tx, q); a.y = lerp(a.fy, a.ty, q) - Math.sin(q * Math.PI) * 44;
+    if (SET.fx && Math.random() < dt * 30) parts.push({ x: a.x + rand(-6, 6), y: a.y + 10, vx: 0, vy: 30, life: 0.3, max: 0.3, color: '#ffd23a', size: 3, grav: 0 });
+    if (q >= 1) {
+      if (!poles.includes(a.to) || !a.to.solid) { a.st = 'fall'; a.vy = 0; }
+      else { a.st = 'wall'; a.pole = a.to; a.t = 0; a.face = -a.side; }
+    }
+  } else if (a.st === 'wall' || a.st === 'ground') {
+    if (a.st === 'wall' && (!poles.includes(a.pole) || !a.pole.solid || thornHits(a.pole, a.side) || (a.pole.kind === 'electric' && a.pole.zap))) { a.st = 'fall'; a.vy = 0; }
+    else {
+      if (a.st === 'wall' && a.pole.kind === 'move') a.x = a.side > 0 ? a.pole.x0 - PW / 2 : a.pole.x1 + PW / 2;
+      if (a.t > 0.3 && a.y > p.y - 40) { const n = allyTarget(); if (n) allyJumpTo(n); }   // не обгоняет героя, но и не отстаёт
+    }
+  } else { a.vy += G * dt; a.y += a.vy * dt; a.rot += dt * 6; }
+  // отстал или упал — возвращается к герою, теряя жизнь
+  if (a.y > camY + H + 60) {
+    a.hp--; if (a.hp <= 0) { ally = null; return; }
+    const q = p.pole && poles.includes(p.pole) ? p.pole : safePole();
+    a.st = 'wall'; a.pole = q; a.side = q.cx < W / 2 ? -1 : 1; a.x = a.side > 0 ? q.x0 - PW / 2 : q.x1 + PW / 2; a.y = clamp(p.y + 20, q.y0 + PH / 2, q.y1 - PH / 2); a.t = 0; a.rot = 0; a.inv = 1.5;
+    burst(a.x, a.y, 20, '#ffd23a', 200, 0.5, 4, 0, 'star'); shout('ha');
+  }
+  if (a.inv <= 0) for (const e of ents) if (activeEnemy(e) && Math.hypot(e.x - a.x, e.y - a.y) < (e.r || 8) + 12) { allyHurt(); break; }
+}
+function drawAlly() {
+  if (allyPopsLeft) { for (const q of allyPopsLeft) { q.t += 1 / 60; ctx.globalAlpha = clamp(1.5 - q.t, 0, 1); text(q.s, q.x, q.y - q.t * 30, 2, '#ffffff', 'center', OL); } ctx.globalAlpha = 1; allyPopsLeft = allyPopsLeft.filter(q => q.t < 1.5); if (!allyPopsLeft.length) allyPopsLeft = null; }
+  const a = ally; if (!a) return;
+  const k = a.kick, pose = k ? (k.kind === 'spin' ? 'tuck' : 'jump') : a.st === 'wall' ? 'cling' : a.st === 'ground' ? 'idle' : 'jump';
+  heroSprite(KEDDY, pose, time + 0.5, false);
+  if (k && SET.fx) {   // след удара
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath();
+    ctx.arc(a.x, a.y, 26, k.kind === 'spin' ? 0 : -0.8, k.kind === 'spin' ? Math.PI * 2 * Math.min(1, k.t / k.dur) : 0.8); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  ctx.save(); ctx.translate(a.x, a.y + 1); ctx.rotate(a.rot); ctx.scale(a.face * 1.12, 1.12);
+  ctx.globalAlpha = a.inv > 0 && Math.sin(time * 30) > 0 ? 0.4 : 1;
+  ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore(); ctx.globalAlpha = 1;
+  for (let i = 0; i < a.def.hp; i++) heart(a.x - (a.def.hp - 1) * 7 + i * 14, a.y - 48, i < a.hp);
+  for (const q of a.pops) { ctx.globalAlpha = clamp(1 - q.t, 0, 1); text(q.s, q.x, q.y - q.t * 30, 2, '#ffd23a', 'center', OL); } ctx.globalAlpha = 1;
+}
+function heart(x, y, full) {
+  const c = full ? '#ff3a5a' : '#6a5a6a';
+  pell(ctx, x - 3, y, 4, 4, OL); pell(ctx, x + 3, y, 4, 4, OL); prect(ctx, x - 6, y, 12, 4, OL); prect(ctx, x - 4, y + 4, 8, 2, OL); prect(ctx, x - 2, y + 6, 4, 2, OL);
+  pell(ctx, x - 3, y, 3, 3, c); pell(ctx, x + 3, y, 3, 3, c); prect(ctx, x - 5, y, 10, 3, c); prect(ctx, x - 3, y + 3, 6, 2, c); if (full) prect(ctx, x - 4, y - 2, 2, 2, '#ffffff');
+}
+// ---------- экран союзников: додзё, Кедди отрабатывает удары на манекене ----------
+function drawAllies() {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#5a2a14'); g.addColorStop(1, '#2a1408');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (let x = 0; x < W; x += 60) { prect(ctx, x, 0, 4, 330, '#3a1a08'); }
+  for (let y = 30; y < 330; y += 50) prect(ctx, 0, y, W, 3, '#3a1a08');
+  ctx.globalAlpha = 0.18; for (let x = 4; x < W; x += 60) prect(ctx, x, 0, 56, 330, '#fff0d0'); ctx.globalAlpha = 1;
+  text(T('allies'), 196, 46, 3, '#ffd23a', 'center', OL, 230);
+  roundBtn(BACK_BTN); text('<', BACK_BTN.x + 21, BACK_BTN.y + 28, 3, OL, 'center', null);
+  const A = ALLIES[0], own = allyOwned.includes(A.id), sel = allySel === A.id;
+  // сцена: пол додзё, манекен, Кедди
+  prect(ctx, 20, 84, W - 40, 250, OL); prect(ctx, 24, 88, W - 48, 242, '#c8905a');
+  for (let y = 270; y < 330; y += 12) prect(ctx, 24, y, W - 48, 2, '#a8703a');
+  const L = 4.4, ph = time % L, sc = 3, gy = 300;
+  const hitA = ph > 1.55 && ph < 1.6, hitB = ph > 2.65 && ph < 2.7;
+  if (ph < allyScene.last) allyScene.fired = {};
+  allyScene.fired = allyScene.fired || {};
+  const fire = (k, at, fn) => { if (ph >= at && !allyScene.fired[k]) { allyScene.fired[k] = true; if (state === 'allies' && ac && ac.state === 'running') fn(); } };
+  fire('s1', 1.0, () => shout('kiya')); fire('h1', 1.55, () => kickSound(true)); fire('s2', 2.25, () => shout('huey')); fire('h2', 2.65, () => kickSound(true)); fire('s3', 3.2, () => shout('ha'));
+  allyScene.last = ph;
+  const wob = (ph > 1.55 ? Math.exp(-(ph - 1.55) * 4) * Math.sin((ph - 1.55) * 30) : 0) + (ph > 2.65 ? Math.exp(-(ph - 2.65) * 4) * Math.sin((ph - 2.65) * 30) : 0);
+  // манекен
+  ctx.save(); ctx.translate(250, gy); ctx.rotate(wob * 0.18);
+  prect(ctx, -8, -120, 16, 120, OL); prect(ctx, -6, -118, 12, 118, '#a8703a'); prect(ctx, -6, -118, 4, 118, '#c8905a');
+  pell(ctx, 0, -132, 16, 16, OL); pell(ctx, 0, -132, 13, 13, '#c8905a');
+  for (const [y, d] of [[-100, -1], [-70, 1], [-45, -1]]) { prect(ctx, d < 0 ? -34 : 6, y - 4, 28, 10, OL); prect(ctx, d < 0 ? -32 : 8, y - 2, 24, 6, '#8a5a2a'); }
+  ctx.restore();
+  prect(ctx, 230, gy - 2, 40, 6, '#5a3a1a');
+  // Кедди: стойка, вертушка, высокий удар с разворота, победа
+  let x = 110, y = gy - 34, rot = 0, pose = 'idle';
+  if (ph < 1.0) { y += Math.abs(Math.sin(ph * 8)) * -4; }
+  else if (ph < 1.75) { const q = (ph - 1.0) / 0.75; x = lerp(110, 196, Math.sin(q * Math.PI / 2)); pose = 'tuck'; rot = q * Math.PI * 2; y -= Math.sin(q * Math.PI) * 30; }
+  else if (ph < 2.25) { const q = (ph - 1.75) / 0.5; x = lerp(196, 110, q); y -= Math.sin(q * Math.PI) * 16; pose = 'jump'; }
+  else if (ph < 2.95) { const q = (ph - 2.25) / 0.7; x = lerp(110, 200, Math.min(1, q * 1.6)); y -= Math.sin(Math.min(1, q * 1.4) * Math.PI) * 50; pose = 'jump'; rot = -0.7 * Math.sin(Math.min(1, q * 1.6) * Math.PI / 2); }
+  else if (ph < 3.4) { const q = (ph - 2.95) / 0.45; x = lerp(200, 110, q); pose = 'jump'; }
+  else { pose = 'raise'; y -= Math.abs(Math.sin((ph - 3.4) * 9)) * 10; }
+  heroSprite(KEDDY, pose, time, false);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.drawImage(hcv, -16 * sc, -30 * sc, 32 * sc, 40 * sc); ctx.restore();
+  if ((ph > 1.5 && ph < 1.8) || (ph > 2.6 && ph < 2.9)) {   // удар: звёзды и слово
+    const hx = 228, hy = ph < 2 ? gy - 70 : gy - 110, q = ph < 2 ? (ph - 1.5) / 0.3 : (ph - 2.6) / 0.3;
+    for (let i = 0; i < 8; i++) { const an = i * 0.785; prect(ctx, hx + Math.cos(an) * q * 30 - 2, hy + Math.sin(an) * q * 30 - 2, 4, 4, i % 2 ? '#ffffff' : '#ffd23a'); }
+    ctx.globalAlpha = 1 - q; text(ph < 2 ? T('popBam') : T('popHuey'), hx, hy - 30, 3, '#ffd23a', 'center', OL); ctx.globalAlpha = 1;
+  }
+  if (ph > 0.85 && ph < 1.3) { ctx.globalAlpha = 1 - (ph - 0.85) / 0.45; text(T('popKiya'), x, y - 110, 2, '#ffffff', 'center', OL); ctx.globalAlpha = 1; }
+  // описание и кнопка
+  text(T('keddy'), W / 2, 368, 3, '#ffffff', 'center', OL);
+  text(T('keddyD1'), W / 2, 390, 1, '#ffd23a', 'center', null, W - 30);
+  text(T('keddyD2'), W / 2, 404, 1, '#ffe8c8', 'center', null, W - 30);
+  for (let i = 0; i < A.hp; i++) heart(W / 2 - 14 + i * 14, 414, true);
+  const b = ALLY_BTN;
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 9);
+  ctx.fillStyle = sel ? '#1a9a3a' : own ? '#1a70c0' : '#c06a00'; ctx.fillRect(b.x, b.y + 4, b.w, b.h);
+  ctx.fillStyle = sel ? '#3ce06a' : own ? '#3ab0ff' : '#ffb02a'; ctx.fillRect(b.x, b.y, b.w, b.h - 2);
+  if (own) text(sel ? T('inRun') : T('takeAlly'), b.x + b.w / 2, b.y + 28, 2, '#ffffff', 'center', OL, b.w - 10);
+  else priceDraw(b.x + b.w / 2 - 16, b.y + 30, A.price, 2, '#ffffff');
+  // другие союзники скоро
+  text(T('alliesSoon'), W / 2, 512, 1, '#e0c8a8', 'center', null);
+  for (let i = 0; i < 3; i++) { const r = { x: 60 + i * 86, y: 524, w: 70, h: 70 }; prect(ctx, r.x, r.y, r.w, r.h, OL); prect(ctx, r.x + 3, r.y + 3, r.w - 6, r.h - 6, '#4a2a18'); text('?', r.x + r.w / 2, r.y + 48, 4, '#8a6a4a', 'center', null); }
+}
+function alliesClick(pt) {
+  if (inRect(pt, BACK_BTN)) { state = 'menu'; sfx.click(); return; }
+  if (!inRect(pt, ALLY_BTN)) return;
+  const A = ALLIES[0];
+  if (!allyOwned.includes(A.id)) {
+    if (!canPay(A.price)) { sfx.no(); return; }
+    pay(A.price); allyOwned.push(A.id); allySel = A.id; sfx.ach(); shout('huey');
+  } else { allySel = allySel === A.id ? null : A.id; sfx.click(); if (allySel) shout('ha'); }
+  store.set('allies', allyOwned); store.set('allySel', allySel);
+}
 // герой погиб, а клон жив — камера переходит к клону, и дальше играешь за него
 function cloneTakeover() {
   const c = clone, sk = curSkin(), fx = DEATH_FX[sk.fx || sk.special];
@@ -7309,7 +7185,7 @@ function tentClick(pt) {
   });
 }
 // режим бесконечных денег убран: если он был включён — возвращаем прежние монеты и кристаллы
-if (SET.inf) { const pre = store.get('preInf', { c: 0, g: 0 }); bank = pre.c; gems = pre.g; SET.inf = false; store.set('set', SET); saveMoney(); }
+if (SET.inf) { const pre = store.get('preInf', null) || {}; bank = nat(pre.c); gems = nat(pre.g); SET.inf = false; store.set('set', SET); saveMoney(); }
 function drawShopBg() {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#4a1a8a'); g.addColorStop(0.5, '#2a1060'); g.addColorStop(1, '#120830');
@@ -7467,43 +7343,51 @@ function drawWheelTab() {
   else priceDraw(W / 2, 546, { gems: SPIN_COST }, 2, '#ffffff');
 }
 function drawPremiumTab() {
-  const s = STARTER;
+  const s = STARTER;   // набор новичка
   ctx.fillStyle = OL; ctx.fillRect(s.x - 3, s.y - 3, s.w + 6, s.h + 6);
-  const g = ctx.createLinearGradient(s.x, 0, s.x + s.w, 0);
-  g.addColorStop(0, '#ffb02a'); g.addColorStop(1, '#ff3d7f');
+  const g = ctx.createLinearGradient(s.x, 0, s.x + s.w, 0); g.addColorStop(0, '#ffb02a'); g.addColorStop(1, '#ff3d7f');
   ctx.fillStyle = g; ctx.fillRect(s.x, s.y, s.w, s.h);
-  const sx = s.x + ((time * 80) % (s.w + 60)) - 30;
-  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(sx, s.y, 10, s.h);
-  heroSprite(SKINS.find(k => k.id === 'paladin'), 'idle', time, false);
-  ctx.drawImage(hcv, s.x + 2, s.y - 18, 96, 120);
-  text(T('starter'), s.x + 100, s.y + 30, 2, '#ffffff', 'left', OL, s.w - 110);
-  gemIcon(s.x + 112, s.y + 52, 0.8); text('+50', s.x + 126, s.y + 60, 2, '#ffffff', 'left', OL);
-  ctx.fillStyle = OL; ctx.fillRect(s.x + s.w - 92, s.y + 64, 84, 28); ctx.fillStyle = '#3ce06a'; ctx.fillRect(s.x + s.w - 90, s.y + 66, 80, 24);
-  text('$2.99', s.x + s.w - 50, s.y + 84, 2, '#ffffff', 'center', OL);
-  PACKS.forEach((pk, i) => {
+  const sx = s.x + ((time * 80) % (s.w + 60)) - 30; ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(sx, s.y, 10, s.h);
+  heroSprite(SKINS.find(k => k.id === 'paladin'), 'idle', time, false); ctx.drawImage(hcv, s.x + 4, s.y - 12, 64, 80);
+  text(T('starter'), s.x + 76, s.y + 26, 2, '#ffffff', 'left', OL, s.w - 170);
+  gemIcon(s.x + 86, s.y + 46, 0.7); text('+50', s.x + 100, s.y + 54, 2, '#ffffff', 'left', OL);
+  ctx.fillStyle = OL; ctx.fillRect(s.x + s.w - 86, s.y + 34, 78, 26); ctx.fillStyle = '#3ce06a'; ctx.fillRect(s.x + s.w - 84, s.y + 36, 74, 22);
+  text('$2.99', s.x + s.w - 47, s.y + 53, 2, '#ffffff', 'center', OL);
+  const b = SUB_BTN;   // подписка без рекламы
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6);
+  const g2 = ctx.createLinearGradient(b.x, 0, b.x + b.w, 0); g2.addColorStop(0, '#2a1060'); g2.addColorStop(1, '#a64aff');
+  ctx.fillStyle = g2; ctx.fillRect(b.x, b.y, b.w, b.h);
+  pell(ctx, b.x + 24, b.y + 22, 16, 16, OL); pell(ctx, b.x + 24, b.y + 22, 14, 14, '#ffffff'); text('AD', b.x + 24, b.y + 27, 1, OL, 'center', null);
+  for (let i = -8; i <= 8; i++) prect(ctx, b.x + 24 + i, b.y + 22 - i, 3, 3, '#e8261a');
+  text(T('subTitle'), b.x + 48, b.y + 20, 1, '#ffd23a', 'left', null, b.w - 140);
+  text(T('subDesc'), b.x + 48, b.y + 34, 1, '#ffffff', 'left', null, b.w - 140);
+  ctx.fillStyle = OL; ctx.fillRect(b.x + b.w - 86, b.y + 9, 78, 26); ctx.fillStyle = '#3ce06a'; ctx.fillRect(b.x + b.w - 84, b.y + 11, 74, 22);
+  text('$1.99' + T('perMonth'), b.x + b.w - 47, b.y + 27, 1, '#ffffff', 'center', OL, 70);
+  PACKS.forEach((pk, i) => {   // кристаллы
     const r = packRect(i);
     ctx.fillStyle = OL; ctx.fillRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6);
-    const gg = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
-    gg.addColorStop(0, '#6a3ab0'); gg.addColorStop(1, '#2a1060');
+    const gg = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); gg.addColorStop(0, '#6a3ab0'); gg.addColorStop(1, '#2a1060');
     ctx.fillStyle = gg; ctx.fillRect(r.x, r.y, r.w, r.h);
-    ctx.globalAlpha = 0.25 + Math.sin(time * 3 + i) * 0.1; pell(ctx, r.x + r.w / 2, r.y + 44, 40, 30, '#7ad8ff'); ctx.globalAlpha = 1;
-    for (let q = 0; q <= i; q++) gemIcon(r.x + r.w / 2 + (q - i / 2) * 18, r.y + 40 - (q % 2) * 8, 1.1);
-    text(T('packs')[i], r.x + r.w / 2, r.y + 68, 1, '#c8b8f0', 'center', null, r.w - 8);
-    text('+' + pk.g, r.x + r.w / 2, r.y + 90, 2, '#ffffff', 'center', OL);
-    ctx.fillStyle = OL; ctx.fillRect(r.x + 18, r.y + 95, r.w - 36, 22); ctx.fillStyle = '#3ce06a'; ctx.fillRect(r.x + 20, r.y + 97, r.w - 40, 18);
-    text(pk.price, r.x + r.w / 2, r.y + 112, 2, '#ffffff', 'center', OL);
+    ctx.globalAlpha = 0.25 + Math.sin(time * 3 + i) * 0.1; pell(ctx, r.x + r.w / 2, r.y + 26, 36, 20, '#7ad8ff'); ctx.globalAlpha = 1;
+    for (let q = 0; q <= i; q++) gemIcon(r.x + r.w / 2 + (q - i / 2) * 18, r.y + 26 - (q % 2) * 6, 0.9);
+    text('+' + pk.g, r.x + r.w / 2, r.y + 56, 2, '#ffffff', 'center', OL);
+    ctx.fillStyle = OL; ctx.fillRect(r.x + 18, r.y + 62, r.w - 36, 22); ctx.fillStyle = '#3ce06a'; ctx.fillRect(r.x + 20, r.y + 64, r.w - 40, 18);
+    text(pk.price, r.x + r.w / 2, r.y + 79, 2, '#ffffff', 'center', OL);
   });
-  text(T('payNote1'), W / 2, 486, 1, '#c8b8e0', 'center', null);
-  text(T('payNote2'), W / 2, 500, 1, '#c8b8e0', 'center', null);
-  text(T('goldShop'), W / 2, 530, 2, '#ffd23a', 'center', OL, W - 20);   // золото за кристаллы
+  const m = DEV_MSG;   // обращение разработчика
+  ctx.fillStyle = OL; ctx.fillRect(m.x - 2, m.y - 2, m.w + 4, m.h + 4); ctx.fillStyle = '#fff4dc'; ctx.fillRect(m.x, m.y, m.w, m.h);
+  heart(m.x + 16, m.y + 12 + Math.sin(time * 4) * 1.5, true); heart(m.x + m.w - 16, m.y + 12 + Math.cos(time * 4) * 1.5, true);
+  ['devMsg1', 'devMsg2', 'devMsg3', 'devMsg4'].forEach((k, i) => text(T(k), W / 2, m.y + 16 + i * 13, 1, OL, 'center', null, m.w - 50));
+  text(T('devSign'), W / 2, m.y + m.h - 6, 1, '#c01a5a', 'center', null, m.w - 10);
+  text(T('goldShop'), W / 2, 540, 2, '#ffd23a', 'center', OL, W - 20);   // золото за кристаллы
   GOLD.forEach((G2, i) => {
     const r = goldRect(i), cx = r.x + r.w / 2, ok = gems >= G2.g;
     ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 6);
     ctx.fillStyle = ok ? '#c06a00' : '#6a5a4a'; ctx.fillRect(r.x, r.y + 4, r.w, r.h);
     ctx.fillStyle = ok ? '#ffb02a' : '#8a7a6a'; ctx.fillRect(r.x, r.y, r.w, r.h - 2);
-    for (let q = 0; q <= i; q++) coinIcon(cx + (q - i / 2) * 12, r.y + 16 - (q % 2) * 4, 6);
-    text(String(G2.c), cx, r.y + 40, 2, '#ffffff', 'center', OL, r.w - 6);
-    priceDraw(cx - 10, r.y + 58, { gems: G2.g }, 1, '#ffffff');
+    for (let q = 0; q <= i; q++) coinIcon(cx + (q - i / 2) * 12, r.y + 14 - (q % 2) * 4, 6);
+    text(String(G2.c), cx, r.y + 36, 2, '#ffffff', 'center', OL, r.w - 6);
+    priceDraw(cx - 10, r.y + 52, { gems: G2.g }, 1, '#ffffff');
   });
 }
 function drawShop() {
@@ -7544,12 +7428,60 @@ function drawModal() {
   }
   ctx.restore();
 }
-// тап во время ленты — сразу к выпавшему герою, после показа — закрыть
-function chestTap() {
-  if (chest.reel && chest.t < CHEST_END) { chest.t = CHEST_END; if (!chest.landed) { chest.landed = true; sfx.ach(); } }
-  else if (chest.t > CHEST_END + 0.6) chest = null;
+// эффекты сундука: дребезг и свет из щелей, взрыв искр при открытии, конфетти и фанфары по редкости
+function chestOpenSnd() { noise(0.45, 0.12, 700); tone(200, 900, 0.3, 'triangle', 0.08); [784, 988, 1175, 1568].forEach((f, i) => tone(f, f, 0.25, 'sine', 0.05, 0.12 + i * 0.05)); }
+function revealSnd(r) {
+  const A2 = (fs, gap, dur, w, v, d = 0) => fs.forEach((f, i) => tone(f, f, dur, w, v, d + i * gap));
+  if (r === 0) A2([659, 784, 988], 0.07, 0.2, 'triangle', 0.06);
+  else if (r === 1) A2([523, 659, 784, 1047], 0.06, 0.25, 'square', 0.035);
+  else if (r === 2) { A2([523, 659, 784, 1047, 1319, 1568], 0.05, 0.3, 'square', 0.035); noise(0.6, 0.04, 5000, 0, 0.3); }
+  else {   // легенда: торжественные фанфары
+    for (const [ch, d, dur] of [[[523, 659, 784], 0, 0.16], [[587, 740, 880], 0.18, 0.16], [[784, 988, 1175, 1568], 0.36, 0.9]]) ch.forEach(f => tone(f, f, dur, 'square', 0.028, d));
+    noise(1, 0.05, 5000, 0, 0.35); tone(98, 98, 1.2, 'triangle', 0.15, 0.36);
+  }
+}
+function confetti(c, n, cols, x, y, spd) {
+  for (let i = 0; i < n; i++) { const an = rand(0, Math.PI * 2), v = rand(spd * 0.3, spd); c.fx.push({ x, y, vx: Math.cos(an) * v, vy: Math.sin(an) * v - spd * 0.4, col: cols[i % cols.length], life: rand(1, 1.8), rot: rand(0, 6), w: rand(3, 6) }); }
+}
+function chestLand(c) {
+  if (c.landed) return;
+  c.landed = true; revealSnd(c.k.r); c.flash = c.k.r === 3 ? 0.6 : 0.3;
+  const cols = [['#ffffff', '#d8d8e0'], ['#3ab0ff', '#ffffff', '#7ad8ff'], ['#c04aff', '#ff5ab0', '#ffffff'], ['#ffd23a', '#ff8a1e', '#ffffff', '#fff27a']][c.k.r];
+  confetti(c, [16, 30, 50, 90][c.k.r], cols, W / 2, 230, [220, 300, 380, 460][c.k.r]);
 }
 function drawChest() {
+  const c = chest;
+  c.fx = c.fx || [];
+  if (c.reel && c.t < CHEST_OPEN) {   // дребезг крышки
+    const k = Math.floor(c.t * 12);
+    if (k !== c.rat) { c.rat = k; noise(0.04, 0.05 + c.t * 0.08, 900, 4000); tone(140 + c.t * 200, 120, 0.05, 'square', 0.03); }
+  }
+  if (c.reel && c.t >= CHEST_OPEN && !c.opened) { c.opened = true; chestOpenSnd(); c.flash = 0.35; confetti(c, 40, c.gold ? ['#ffd23a', '#c04aff', '#ffffff'] : ['#ffd23a', '#ffffff', '#ff8a1e'], W / 2, 330, 340); }
+  if (c.reel && c.t >= CHEST_END) chestLand(c);
+  drawChestBody();
+  if (c.reel && c.t < CHEST_OPEN) {   // свет пробивается из щелей
+    const q = c.t / CHEST_OPEN;
+    ctx.save(); ctx.translate(W / 2, 312); ctx.globalAlpha = 0.25 + q * 0.5; ctx.fillStyle = c.gold ? '#e8b0ff' : '#fff2a0';
+    for (let i = 0; i < 7; i++) { const an = -Math.PI / 2 + (i - 3) * 0.28 + Math.sin(time * 3 + i) * 0.04; ctx.save(); ctx.rotate(an + Math.PI / 2); ctx.fillRect(-2 - q * 3, -60 - q * 160, 4 + q * 6, 60 + q * 160); ctx.restore(); }
+    ctx.restore(); ctx.globalAlpha = 1;
+    for (let i = 0; i < 6; i++) { const an = time * 4 + i; prect(ctx, W / 2 + Math.cos(an) * 40 * q - 1, 310 + Math.sin(an * 1.3) * 20 * q - 1, 3, 3, '#ffffff'); }
+  }
+  for (let i = c.fx.length - 1; i >= 0; i--) {   // конфетти
+    const f = c.fx[i]; f.life -= 1 / 60; if (f.life <= 0) { c.fx.splice(i, 1); continue; }
+    f.vy += 300 / 60; f.vx *= 0.99; f.x += f.vx / 60; f.y += f.vy / 60; f.rot += 0.2;
+    ctx.globalAlpha = clamp(f.life * 2, 0, 1); ctx.fillStyle = f.col;
+    ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot); ctx.fillRect(-f.w / 2, -1.5, f.w, 3); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  if (c.flash > 0) { ctx.globalAlpha = clamp(c.flash * 1.5, 0, 0.8); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; c.flash -= 1 / 60; }
+  if (c.landed && c.k.r === 3 && Math.random() < 0.5) c.fx.push({ x: rand(0, W), y: -10, vx: rand(-20, 20), vy: rand(40, 120), col: Math.random() < 0.5 ? '#ffd23a' : '#fff27a', life: 3, rot: 0, w: 4 });   // золотой дождь
+}
+// тап во время ленты — сразу к выпавшему герою, после показа — закрыть
+function chestTap() {
+  if (chest.reel && chest.t < CHEST_END) { chest.t = CHEST_END; chestLand(chest); }
+  else if (chest.t > CHEST_END + 0.6) chest = null;
+}
+function drawChestBody() {
   const c = chest, R = RARITY[c.k.r];
   ctx.fillStyle = c.reel && c.t < CHEST_END ? 'rgba(14,6,24,0.94)' : 'rgba(20,10,4,0.85)'; ctx.fillRect(0, 0, W, H);
   const cy = 320;
@@ -7560,7 +7492,6 @@ function drawChest() {
   }
   if (c.reel && c.t < CHEST_END) { drawReel(c); return; }
   const rt = c.t - CHEST_END;
-  if (c.reel && !c.landed) { c.landed = true; sfx.ach(); }
   ctx.save(); ctx.translate(W / 2, cy - 40); ctx.rotate(time * 0.8);
   ctx.fillStyle = R.col; ctx.globalAlpha = 0.35;
   for (let i = 0; i < 10; i++) { ctx.rotate(Math.PI / 5); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-24, -260); ctx.lineTo(24, -260); ctx.fill(); }
@@ -7569,7 +7500,7 @@ function drawChest() {
   heroSprite(c.k, 'idle', time, false);
   const sc = Math.min(1, rt * 4);
   blitHero(c.k, W / 2 - 64 * sc, cy - 40 - 96 * sc - (1 - sc) * 40, 128 * sc, 160 * sc);
-  if (c.k.cfx && c.k.cfx[0] === 'moto') drawBike(W / 2, cy - 40 - 96 * sc - (1 - sc) * 40 + 36 * 4 * sc, 3.4 * sc, time);
+  if (c.k.cfx && c.k.cfx[0] === 'moto') drawBike(W / 2, cy - 40 - 96 * sc - (1 - sc) * 40 + 36 * 4 * sc, 3.4 * sc, time, c.k.fireC || FIRE_C);
   text(T('one')[c.k.r], W / 2, cy - 140, 2, R.col);
   text(skinName(c.k), W / 2, cy + 40, 3, '#ffffff');
   text(c.dup ? T('repeat') + '  +' + DUP_REFUND : T('newHero'), W / 2, cy + 130, 2, c.dup ? '#ffd23a' : '#7cf08a');
@@ -7668,8 +7599,10 @@ function drawLoad() {
   prect(ctx, bx, by + 2, bw * pr, 4, '#ffb060');
   prect(ctx, bx, by + 14, bw * pr, 4, '#a8481a');
   for (let x = bx + 10; x < bx + bw * pr - 6; x += 24) prect(ctx, x, by + 8, 8, 2, '#a8481a');
-  heroSprite(SKINS[0], 'run', time, false);
-  ctx.save(); ctx.translate(even(bx + bw * pr), by - 18); ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
+  const done = pr >= 1, hop = done ? Math.abs(Math.sin(time * 7)) * 26 : 0;   // на 100% хомяк прыгает от радости, лапа вверх
+  heroSprite(SKINS[0], done ? (hop > 6 ? 'raise' : 'cheer') : 'run', time, false);
+  ctx.save(); ctx.translate(even(bx + bw * pr), by - 18 - hop); ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
+  if (done) for (let i = 0; i < 6; i++) { const an = time * 3 + i * 1.05; prect(ctx, bx + bw + Math.cos(an) * 30 - 2, by - 50 - hop + Math.sin(an) * 20 - 2, 4, 4, i % 2 ? '#ffffff' : '#fff27a'); }
   if (loadReady) { ctx.globalAlpha = 0.55 + Math.sin(time * 5) * 0.45; text(T('tapPlay'), W / 2, 500, 2, '#ffffff'); ctx.globalAlpha = 1; }
   else text(T('loading') + ' ' + Math.floor(pr * 100) + '%', W / 2, 500, 2, '#ffffff');
   text(T('tip'), W / 2, 600, 1, '#ffe24a');
@@ -7695,6 +7628,7 @@ function draw() {
   if (state === 'ach') drawAch();
   if (state === 'set') drawSettings();
   if (state === 'tent') drawTent();
+  if (state === 'allies') drawAllies();
   if (state === 'play' && !paused) drawPowerHud();
   if (state === 'play' && pmenu) drawPowerMenu();
   if (state === 'over') drawOver();
