@@ -45,7 +45,7 @@ const UI_KEYS = ('tap1 tap2 heroes awards settings backMiss back hold flip1 flip
 const UI2_KEYS = ('shop wheel dealsTab dailyReward day claim tomorrow skinsDay sale megaSale refreshIn spin free premium payNote1 payNote2 ' +
   'youWon starter legendChest collected ok crystals').split(' ');
 // порядок карт: o — прежние, n — новые
-const UI3_KEYS = 'tent powers tentTitle tentHi tentTip pMagnet pTele pRocket pJet pClone pMagnetD pTeleD pRocketD pJetD pCloneD fuel pShield pX2 pSlow pMega pBomb pGhost pShieldD pX2D pSlowD pMegaD pBombD pGhostD cloneSwap nickHint cloudOn cloudOff pFreeze pRain pRevive pFreezeD pRainD pReviveD'.split(' ');
+const UI3_KEYS = 'tent powers tentTitle tentHi tentTip pMagnet pTele pRocket pJet pClone pMagnetD pTeleD pRocketD pJetD pCloneD fuel pShield pX2 pSlow pMega pBomb pGhost pShieldD pX2D pSlowD pMegaD pBombD pGhostD cloneSwap pFreeze pRain pRevive pFreezeD pRainD pReviveD'.split(' ');
 const ZONE_ORDER = ['o0', 'n0', 'n47', 'o1', 'n7', 'n27', 'n37', 'n1', 'n17', 'o2', 'n2', 'n28', 'n38', 'n9', 'n22', 'o3', 'o4', 'n29', 'n39', 'n18', 'n10', 'o5', 'n3', 'n30', 'n40', 'n21', 'o6', 'n8', 'n4', 'n31', 'n41', 'n24', 'o7', 'n11', 'o8', 'n32', 'n42', 'n23', 'n12', 'n5', 'n19', 'n33', 'n43', 'n13', 'n20', 'o9', 'n14', 'n34', 'n44', 'n26', 'o10', 'n6', 'n15', 'n35', 'n45', 'o11', 'n25', 'o12', 'n16', 'n36', 'n46'];
 const ZONE_M = [0, 70, 142, 216, 292, 370, 450, 532, 616, 702, 790, 880, 972, 1066, 1162, 1260, 1360, 1462, 1566, 1672, 1780, 1890, 2002, 2116, 2232, 2350, 2470, 2592, 2716, 2842, 2970, 3100, 3232, 3366, 3502, 3640, 3780, 3922, 4066, 4212, 4360, 4510, 4662, 4816, 4972, 5130, 5290, 5452, 5616, 5782, 5950, 6120, 6292, 6466, 6642, 6820, 7000, 7182, 7366, 7552, 7740];
 const zoneFrom = (o, n) => ZONE_ORDER.map(k => (k[0] === 'o' ? o : n)[+k.slice(1)]);
@@ -61,7 +61,7 @@ const LANG_DATA = {
     packs: 'ГОРСТЬ|МЕШОК|СУНДУК|ГОРА',
     zones2: 'САКУРОВЫЙ САД|ГРИБНАЯ ПОЛЯНА|ТУМАННОЕ БОЛОТО|СТАРЫЙ ЗАМОК|ПРИЗРАЧНЫЙ ЛЕС|НЕОНОВЫЙ ГОРОД|РАДУЖНОЕ НЕБО|ЗАКАТНАЯ ДОЛИНА|ГРОЗОВЫЕ ТУЧИ|ЛЕТАЮЩИЕ ОСТРОВА|ПРАЗДНИК ФОНАРИКОВ|МОРСКАЯ БЕЗДНА|ДИСКО-ГОРОД|ЦИФРОВОЙ МИР|СЕВЕРНОЕ СИЯНИЕ|МЕТЕОРИТНЫЙ ДОЖДЬ|ЧЁРНАЯ ДЫРА|ПИРАТСКАЯ БУХТА|ЕГИПЕТСКИЕ ПИРАМИДЫ|ГОРОД БУДУЩЕГО|МЕХАНИЧЕСКИЙ ЗАВОД|СТАРОЕ КЛАДБИЩЕ|ВОЛШЕБНЫЙ ЛЕС|ШОКОЛАДНАЯ ФАБРИКА|РАДУЖНЫЙ ВОДОПАД|ЛУННАЯ БАЗА|ХРАМ В ДЖУНГЛЯХ|ВОЗДУШНЫЕ ШАРЫ|ОГНЕННЫЕ ГОРЫ|НЕБЕСНЫЕ КИТЫ|ЛЕДЯНОЙ ЗАМОК|ВЕСЁЛАЯ ЯРМАРКА|КОРАЛЛОВЫЙ РИФ|САКУРОВАЯ БУРЯ|ЗАБРОШЕННАЯ ШАХТА|ЗАМОК ВАМПИРА|КОСМИЧЕСКАЯ СТАНЦИЯ|ТЫКВЕННАЯ НОЧЬ|ЗИМНЯЯ ДЕРЕВНЯ|АТЛАНТИДА|ПУСТЫННЫЙ ОАЗИС|НЕБЕСНЫЕ ВРАТА|ДОЛИНА ДИНОЗАВРОВ|ГОРОД-СТИМПАНК|СЕВЕРНЫЙ ПОЛЮС|ПОЛЕ ПОДСОЛНУХОВ|СТАРОЕ КИНО|СЛАДКОЕ КОРОЛЕВСТВО',
     ach2: 'ВЕЗУНЧИК|НЕДЕЛЯ ПОДРЯД|КОЛЛЕКЦИОНЕР',
-    ui3: 'ПАЛАТКА|СИЛЫ|ПАЛАТКА АЛХИМИКА|ЗАХОДИ, ДРУЖОК!|НАЖМИ НА ТОВАР — КУПИТЬ|МАГНИТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯНЕТ МОНЕТЫ И АЛМАЗЫ|НА БЕЗОПАСНЫЙ СТОЛБ ВЫШЕ|5 СЕКУНД ВВЕРХ|ДЕРЖИ СЛЕВА ИЛИ СПРАВА|NPC-ПРОФИ ЛЕЗЕТ С ТОБОЙ|ТОПЛИВО|ЩИТ|МОНЕТЫ X2|ЗАМЕДЛЕНИЕ|МЕГА-ПРЫЖОК|БОМБА|ПРИЗРАК|ВЫДЕРЖИТ ОДИН УДАР|20 СЕКУНД ДВОЙНЫЕ МОНЕТЫ|ВРЕМЯ ИДЁТ МЕДЛЕННЕЕ|12 СЕКУНД ПРЫЖКИ ВЫШЕ|ВЗРЫВ УНИЧТОЖАЕТ ВРАГОВ|8 СЕКУНД НИЧТО НЕ СТРАШНО|ТЕПЕРЬ ТЫ — КЛОН!|ВВЕДИ НИК|ПРОГРЕСС В ОБЛАКЕ|СОХРАНЕНО НА УСТРОЙСТВЕ|ЗАМОРОЗКА|ДОЖДЬ МОНЕТ|ВТОРАЯ ЖИЗНЬ|ВРАГИ ЗАМИРАЮТ НА 8 СЕКУНД|С НЕБА СЫПЛЮТСЯ МОНЕТЫ|ВОСКРЕШАЕТ ОДИН РАЗ',
+    ui3: 'ПАЛАТКА|СИЛЫ|ПАЛАТКА АЛХИМИКА|ЗАХОДИ, ДРУЖОК!|НАЖМИ НА ТОВАР — КУПИТЬ|МАГНИТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯНЕТ МОНЕТЫ И АЛМАЗЫ|НА БЕЗОПАСНЫЙ СТОЛБ ВЫШЕ|5 СЕКУНД ВВЕРХ|ДЕРЖИ СЛЕВА ИЛИ СПРАВА|NPC-ПРОФИ ЛЕЗЕТ С ТОБОЙ|ТОПЛИВО|ЩИТ|МОНЕТЫ X2|ЗАМЕДЛЕНИЕ|МЕГА-ПРЫЖОК|БОМБА|ПРИЗРАК|ВЫДЕРЖИТ ОДИН УДАР|20 СЕКУНД ДВОЙНЫЕ МОНЕТЫ|ВРЕМЯ ИДЁТ МЕДЛЕННЕЕ|12 СЕКУНД ПРЫЖКИ ВЫШЕ|ВЗРЫВ УНИЧТОЖАЕТ ВРАГОВ|8 СЕКУНД НИЧТО НЕ СТРАШНО|ТЕПЕРЬ ТЫ — КЛОН!|ЗАМОРОЗКА|ДОЖДЬ МОНЕТ|ВТОРАЯ ЖИЗНЬ|ВРАГИ ЗАМИРАЮТ НА 8 СЕКУНД|С НЕБА СЫПЛЮТСЯ МОНЕТЫ|ВОСКРЕШАЕТ ОДИН РАЗ',
   },
   en: {
     ui: 'TAP —|TO JUMP OFF A WALL|HEROES|AWARDS|SETTINGS|TAP OUTSIDE TO GO BACK|TAP TO GO BACK|HOLD FOR A LONG JUMP|TAP IN THE AIR —|FLIP AND TURN!|PAUSED|TAP TO PLAY|BEST|NEW RECORD!|OOPS!|KICKS|FLIPS|TAP TO TRY AGAIN|MAGNET|SELECTED|USE|CHEST|ODDS|OPENING...|DUPLICATE|NEW HERO!|TAP TO CLOSE|LOADING|TIP:|MUSIC|SOUNDS|SCREEN SHAKE|EFFECTS|VIBRATION|HINTS|LANGUAGE|RESET PROGRESS|SURE? TAP AGAIN|ON|OFF|ENGLISH|M',
@@ -74,7 +74,7 @@ const LANG_DATA = {
     packs: 'HANDFUL|BAG|CHEST|MOUNTAIN',
     zones2: 'SAKURA GARDEN|MUSHROOM GLADE|MISTY SWAMP|OLD CASTLE|HAUNTED WOODS|NEON CITY|RAINBOW SKY|SUNSET VALLEY|THUNDERCLOUDS|FLOATING ISLANDS|LANTERN FESTIVAL|OCEAN ABYSS|DISCO CITY|DIGITAL WORLD|NORTHERN LIGHTS|METEOR SHOWER|BLACK HOLE|PIRATE BAY|EGYPTIAN PYRAMIDS|FUTURE CITY|CLOCKWORK FACTORY|OLD GRAVEYARD|ENCHANTED FOREST|CHOCOLATE FACTORY|RAINBOW FALLS|MOON BASE|JUNGLE TEMPLE|HOT AIR BALLOONS|FIRE MOUNTAINS|SKY WHALES|ICE CASTLE|FUNFAIR|CORAL REEF|SAKURA STORM|ABANDONED MINE|VAMPIRE CASTLE|SPACE STATION|PUMPKIN NIGHT|WINTER VILLAGE|ATLANTIS|DESERT OASIS|HEAVEN GATES|DINO VALLEY|STEAMPUNK CITY|NORTH POLE|SUNFLOWER FIELD|OLD MOVIE|CANDY KINGDOM',
     ach2: 'LUCKY SPIN|7-DAY STREAK|COLLECTOR',
-    ui3: 'TENT|POWERS|ALCHEMIST TENT|COME IN, FRIEND!|TAP AN ITEM TO BUY|MAGNET|TELEPORT|FIRECRACKER|JETPACK|CLONE|PULLS COINS AND GEMS|TO A SAFE POLE ABOVE|5 SECONDS STRAIGHT UP|HOLD LEFT OR RIGHT|A PRO NPC CLIMBS WITH YOU|FUEL|SHIELD|COINS X2|SLOW-MO|MEGA JUMP|BOMB|GHOST|BLOCKS ONE HIT|20 SECONDS OF DOUBLE COINS|TIME GOES SLOWER|12 SECONDS OF HIGHER JUMPS|BLAST DESTROYS ENEMIES|8 SECONDS OF NO DANGER|NOW YOU ARE THE CLONE!|ENTER NICKNAME|PROGRESS SAVED IN CLOUD|SAVED ON THIS DEVICE|FREEZE|COIN RAIN|EXTRA LIFE|ENEMIES FREEZE FOR 8 SEC|COINS FALL FROM THE SKY|REVIVES YOU ONCE',
+    ui3: 'TENT|POWERS|ALCHEMIST TENT|COME IN, FRIEND!|TAP AN ITEM TO BUY|MAGNET|TELEPORT|FIRECRACKER|JETPACK|CLONE|PULLS COINS AND GEMS|TO A SAFE POLE ABOVE|5 SECONDS STRAIGHT UP|HOLD LEFT OR RIGHT|A PRO NPC CLIMBS WITH YOU|FUEL|SHIELD|COINS X2|SLOW-MO|MEGA JUMP|BOMB|GHOST|BLOCKS ONE HIT|20 SECONDS OF DOUBLE COINS|TIME GOES SLOWER|12 SECONDS OF HIGHER JUMPS|BLAST DESTROYS ENEMIES|8 SECONDS OF NO DANGER|NOW YOU ARE THE CLONE!|FREEZE|COIN RAIN|EXTRA LIFE|ENEMIES FREEZE FOR 8 SEC|COINS FALL FROM THE SKY|REVIVES YOU ONCE',
   },
   es: {
     ui: 'TOCA —|PARA SALTAR DE LA PARED|HÉROES|PREMIOS|AJUSTES|TOCA FUERA PARA VOLVER|TOCA PARA VOLVER|MANTÉN PARA SALTO LARGO|TOCA EN EL AIRE —|¡VOLTERETA Y GIRO!|PAUSA|TOCA PARA JUGAR|RÉCORD|¡NUEVO RÉCORD!|¡UY!|REBOTES|VOLTERETAS|TOCA PARA REPETIR|IMÁN|ELEGIDO|USAR|COFRE|PROBABILIDAD|ABRIENDO...|REPETIDO|¡NUEVO HÉROE!|TOCA PARA CERRAR|CARGANDO|CONSEJO:|MÚSICA|SONIDOS|TEMBLOR|EFECTOS|VIBRACIÓN|PISTAS|IDIOMA|BORRAR PROGRESO|¿SEGURO? TOCA OTRA VEZ|SÍ|NO|ESPAÑOL|M',
@@ -87,7 +87,7 @@ const LANG_DATA = {
     packs: 'PUÑADO|BOLSA|COFRE|MONTAÑA',
     zones2: 'JARDÍN SAKURA|CLARO DE SETAS|PANTANO BRUMOSO|CASTILLO ANTIGUO|BOSQUE ENCANTADO|CIUDAD NEÓN|CIELO ARCOÍRIS|VALLE DEL OCASO|NUBES DE TORMENTA|ISLAS FLOTANTES|FIESTA DE FAROLILLOS|ABISMO MARINO|CIUDAD DISCO|MUNDO DIGITAL|AURORA BOREAL|LLUVIA DE METEOROS|AGUJERO NEGRO|BAHÍA PIRATA|PIRÁMIDES DE EGIPTO|CIUDAD DEL FUTURO|FÁBRICA MECÁNICA|VIEJO CEMENTERIO|BOSQUE ENCANTADO|FÁBRICA DE CHOCOLATE|CASCADA ARCOÍRIS|BASE LUNAR|TEMPLO DE LA SELVA|GLOBOS AEROSTÁTICOS|MONTAÑAS DE FUEGO|BALLENAS DEL CIELO|CASTILLO DE HIELO|FERIA|ARRECIFE DE CORAL|TORMENTA DE SAKURA|MINA ABANDONADA|CASTILLO DEL VAMPIRO|ESTACIÓN ESPACIAL|NOCHE DE CALABAZAS|ALDEA INVERNAL|ATLÁNTIDA|OASIS DEL DESIERTO|PUERTAS DEL CIELO|VALLE DE DINOSAURIOS|CIUDAD STEAMPUNK|POLO NORTE|CAMPO DE GIRASOLES|CINE ANTIGUO|REINO DE CARAMELO',
     ach2: '¡QUÉ SUERTE!|7 DÍAS SEGUIDOS|COLECCIONISTA',
-    ui3: 'TIENDA|PODERES|TIENDA DEL ALQUIMISTA|PASA, AMIGO!|TOCA PARA COMPRAR|IMÁN|TELETRANSPORTE|PETARDO|JETPACK|CLON|ATRAE MONEDAS Y GEMAS|A UN POSTE SEGURO ARRIBA|5 SEGUNDOS HACIA ARRIBA|MANTÉN IZQUIERDA O DERECHA|UN NPC PRO SUBE CONTIGO|COMBUSTIBLE|ESCUDO|MONEDAS X2|CÁMARA LENTA|SUPERSALTO|BOMBA|FANTASMA|AGUANTA UN GOLPE|20 SEGUNDOS DE MONEDAS DOBLES|EL TIEMPO VA MÁS LENTO|12 SEGUNDOS DE SALTOS ALTOS|LA EXPLOSIÓN BORRA ENEMIGOS|8 SEGUNDOS SIN PELIGRO|AHORA ERES EL CLON!|TU APODO|PROGRESO EN LA NUBE|GUARDADO EN EL DISPOSITIVO|CONGELAR|LLUVIA DE MONEDAS|VIDA EXTRA|ENEMIGOS CONGELADOS 8 S|LLUEVEN MONEDAS DEL CIELO|TE REVIVE UNA VEZ',
+    ui3: 'TIENDA|PODERES|TIENDA DEL ALQUIMISTA|PASA, AMIGO!|TOCA PARA COMPRAR|IMÁN|TELETRANSPORTE|PETARDO|JETPACK|CLON|ATRAE MONEDAS Y GEMAS|A UN POSTE SEGURO ARRIBA|5 SEGUNDOS HACIA ARRIBA|MANTÉN IZQUIERDA O DERECHA|UN NPC PRO SUBE CONTIGO|COMBUSTIBLE|ESCUDO|MONEDAS X2|CÁMARA LENTA|SUPERSALTO|BOMBA|FANTASMA|AGUANTA UN GOLPE|20 SEGUNDOS DE MONEDAS DOBLES|EL TIEMPO VA MÁS LENTO|12 SEGUNDOS DE SALTOS ALTOS|LA EXPLOSIÓN BORRA ENEMIGOS|8 SEGUNDOS SIN PELIGRO|AHORA ERES EL CLON!|CONGELAR|LLUVIA DE MONEDAS|VIDA EXTRA|ENEMIGOS CONGELADOS 8 S|LLUEVEN MONEDAS DEL CIELO|TE REVIVE UNA VEZ',
   },
   de: {
     ui: 'TIPPE —|UM VON DER WAND ZU SPRINGEN|HELDEN|PREISE|EINSTELLUNGEN|AUSSERHALB TIPPEN: ZURÜCK|TIPPEN: ZURÜCK|HALTEN FÜR WEITEN SPRUNG|IN DER LUFT TIPPEN —|SALTO UND WENDE!|PAUSE|TIPPEN ZUM SPIELEN|REKORD|NEUER REKORD!|HOPPLA!|SPRÜNGE|SALTOS|TIPPEN FÜR NOCHMAL|MAGNET|GEWÄHLT|NEHMEN|TRUHE|CHANCE|ÖFFNEN...|DOPPELT|NEUER HELD!|TIPPEN ZUM SCHLIESSEN|LADEN|TIPP:|MUSIK|TÖNE|WACKELN|EFFEKTE|VIBRATION|HINWEISE|SPRACHE|FORTSCHRITT LÖSCHEN|SICHER? NOCHMAL TIPPEN|AN|AUS|DEUTSCH|M',
@@ -100,7 +100,7 @@ const LANG_DATA = {
     packs: 'HANDVOLL|BEUTEL|TRUHE|BERG',
     zones2: 'KIRSCHBLÜTENGARTEN|PILZLICHTUNG|NEBELSUMPF|ALTE BURG|SPUKWALD|NEONSTADT|REGENBOGENHIMMEL|ABENDROT-TAL|GEWITTERWOLKEN|SCHWEBENDE INSELN|LATERNENFEST|TIEFSEE|DISCO-STADT|DIGITALE WELT|NORDLICHTER|METEORSCHAUER|SCHWARZES LOCH|PIRATENBUCHT|ÄGYPTISCHE PYRAMIDEN|STADT DER ZUKUNFT|MECHANISCHE FABRIK|ALTER FRIEDHOF|ZAUBERWALD|SCHOKOLADENFABRIK|REGENBOGENFALL|MONDBASIS|DSCHUNGELTEMPEL|HEISSLUFTBALLONS|FEUERBERGE|HIMMELSWALE|EISSCHLOSS|JAHRMARKT|KORALLENRIFF|KIRSCHBLÜTENSTURM|VERLASSENE MINE|VAMPIRSCHLOSS|RAUMSTATION|KÜRBISNACHT|WINTERDORF|ATLANTIS|WÜSTENOASE|HIMMELSTOR|DINOTAL|STEAMPUNK-STADT|NORDPOL|SONNENBLUMENFELD|ALTER FILM|SÜSSIGKEITENREICH',
     ach2: 'GLÜCKSPILZ|7 TAGE AM STÜCK|SAMMLER',
-    ui3: 'ZELT|KRÄFTE|ALCHEMISTENZELT|KOMM REIN, FREUND!|TIPPE ZUM KAUFEN|MAGNET|TELEPORT|BÖLLER|JETPACK|KLON|ZIEHT MÜNZEN UND KRISTALLE AN|AUF EINEN SICHEREN PFAHL OBEN|5 SEKUNDEN NACH OBEN|HALTE LINKS ODER RECHTS|EIN PROFI-NPC KLETTERT MIT|TREIBSTOFF|SCHILD|MÜNZEN X2|ZEITLUPE|MEGASPRUNG|BOMBE|GEIST|HÄLT EINEN TREFFER AUS|20 SEKUNDEN DOPPELTE MÜNZEN|DIE ZEIT LÄUFT LANGSAMER|12 SEKUNDEN HÖHERE SPRÜNGE|EXPLOSION ZERSTÖRT GEGNER|8 SEKUNDEN KEINE GEFAHR|JETZT BIST DU DER KLON!|DEIN NAME|FORTSCHRITT IN DER CLOUD|AUF DEM GERÄT GESPEICHERT|FROST|MÜNZREGEN|EXTRALEBEN|GEGNER 8 SEK EINGEFROREN|MÜNZEN FALLEN VOM HIMMEL|BELEBT DICH EINMAL WIEDER',
+    ui3: 'ZELT|KRÄFTE|ALCHEMISTENZELT|KOMM REIN, FREUND!|TIPPE ZUM KAUFEN|MAGNET|TELEPORT|BÖLLER|JETPACK|KLON|ZIEHT MÜNZEN UND KRISTALLE AN|AUF EINEN SICHEREN PFAHL OBEN|5 SEKUNDEN NACH OBEN|HALTE LINKS ODER RECHTS|EIN PROFI-NPC KLETTERT MIT|TREIBSTOFF|SCHILD|MÜNZEN X2|ZEITLUPE|MEGASPRUNG|BOMBE|GEIST|HÄLT EINEN TREFFER AUS|20 SEKUNDEN DOPPELTE MÜNZEN|DIE ZEIT LÄUFT LANGSAMER|12 SEKUNDEN HÖHERE SPRÜNGE|EXPLOSION ZERSTÖRT GEGNER|8 SEKUNDEN KEINE GEFAHR|JETZT BIST DU DER KLON!|FROST|MÜNZREGEN|EXTRALEBEN|GEGNER 8 SEK EINGEFROREN|MÜNZEN FALLEN VOM HIMMEL|BELEBT DICH EINMAL WIEDER',
   },
   fr: {
     ui: "TOUCHE —|POUR SAUTER DU MUR|HÉROS|TROPHÉES|RÉGLAGES|TOUCHE À CÔTÉ : RETOUR|TOUCHE : RETOUR|MAINTIENS : GRAND SAUT|TOUCHE EN L'AIR —|SALTO ET DEMI-TOUR !|PAUSE|TOUCHE POUR JOUER|RECORD|NOUVEAU RECORD !|OUPS !|REBONDS|SALTOS|TOUCHE POUR REJOUER|AIMANT|CHOISI|PRENDRE|COFFRE|CHANCES|OUVERTURE...|DOUBLON|NOUVEAU HÉROS !|TOUCHE POUR FERMER|CHARGEMENT|ASTUCE :|MUSIQUE|SONS|SECOUSSES|EFFETS|VIBRATION|ASTUCES|LANGUE|EFFACER LA PROGRESSION|SÛR ? TOUCHE ENCORE|OUI|NON|FRANÇAIS|M",
@@ -113,7 +113,7 @@ const LANG_DATA = {
     packs: 'POIGNÉE|SAC|COFFRE|MONTAGNE',
     zones2: 'JARDIN SAKURA|CLAIRIÈRE AUX CHAMPIGNONS|MARAIS BRUMEUX|VIEUX CHÂTEAU|BOIS HANTÉ|VILLE NÉON|CIEL ARC-EN-CIEL|VALLÉE DU COUCHANT|NUAGES ORAGEUX|ÎLES FLOTTANTES|FÊTE DES LANTERNES|ABYSSES MARINS|DISCO-VILLE|MONDE NUMÉRIQUE|AURORE BORÉALE|PLUIE DE MÉTÉORES|TROU NOIR|BAIE DES PIRATES|PYRAMIDES ÉGYPTIENNES|VILLE DU FUTUR|USINE MÉCANIQUE|VIEUX CIMETIÈRE|FORÊT ENCHANTÉE|CHOCOLATERIE|CASCADE ARC-EN-CIEL|BASE LUNAIRE|TEMPLE DE LA JUNGLE|MONTGOLFIÈRES|MONTAGNES DE FEU|BALEINES DU CIEL|CHÂTEAU DE GLACE|FÊTE FORAINE|RÉCIF DE CORAIL|TEMPÊTE DE SAKURA|MINE ABANDONNÉE|CHÂTEAU DU VAMPIRE|STATION SPATIALE|NUIT DES CITROUILLES|VILLAGE ENNEIGÉ|ATLANTIDE|OASIS DU DÉSERT|PORTES DU CIEL|VALLÉE DES DINOS|VILLE STEAMPUNK|PÔLE NORD|CHAMP DE TOURNESOLS|VIEUX FILM|ROYAUME SUCRÉ',
     ach2: 'CHANCEUX|7 JOURS DE SUITE|COLLECTIONNEUR',
-    ui3: 'TENTE|POUVOIRS|TENTE ALCHIMISTE|ENTRE, AMI!|TOUCHE POUR ACHETER|AIMANT|TÉLÉPORT|PÉTARD|JETPACK|CLONE|ATTIRE PIÈCES ET GEMMES|VERS UN POTEAU SÛR EN HAUT|5 SECONDES VERS LE HAUT|MAINTIENS À GAUCHE OU À DROITE|UN PNJ PRO GRIMPE AVEC TOI|CARBURANT|BOUCLIER|PIÈCES X2|RALENTI|MÉGA SAUT|BOMBE|FANTÔME|ENCAISSE UN COUP|20 SECONDES DE PIÈCES DOUBLES|LE TEMPS RALENTIT|12 SECONDES DE SAUTS PLUS HAUTS|EXPLOSION CONTRE LES ENNEMIS|8 SECONDES SANS DANGER|TU ES LE CLONE!|TON PSEUDO|PROGRÈS DANS LE CLOUD|SAUVEGARDE LOCALE|GEL|PLUIE DE PIÈCES|VIE BONUS|ENNEMIS GELÉS 8 S|DES PIÈCES TOMBENT DU CIEL|TE RESSUSCITE UNE FOIS',
+    ui3: 'TENTE|POUVOIRS|TENTE ALCHIMISTE|ENTRE, AMI!|TOUCHE POUR ACHETER|AIMANT|TÉLÉPORT|PÉTARD|JETPACK|CLONE|ATTIRE PIÈCES ET GEMMES|VERS UN POTEAU SÛR EN HAUT|5 SECONDES VERS LE HAUT|MAINTIENS À GAUCHE OU À DROITE|UN PNJ PRO GRIMPE AVEC TOI|CARBURANT|BOUCLIER|PIÈCES X2|RALENTI|MÉGA SAUT|BOMBE|FANTÔME|ENCAISSE UN COUP|20 SECONDES DE PIÈCES DOUBLES|LE TEMPS RALENTIT|12 SECONDES DE SAUTS PLUS HAUTS|EXPLOSION CONTRE LES ENNEMIS|8 SECONDES SANS DANGER|TU ES LE CLONE!|GEL|PLUIE DE PIÈCES|VIE BONUS|ENNEMIS GELÉS 8 S|DES PIÈCES TOMBENT DU CIEL|TE RESSUSCITE UNE FOIS',
   },
   pt: {
     ui: 'TOQUE —|PARA PULAR DA PAREDE|HERÓIS|PRÊMIOS|AJUSTES|TOQUE FORA PARA VOLTAR|TOQUE PARA VOLTAR|SEGURE PARA SALTO LONGO|TOQUE NO AR —|MORTAL E VIRADA!|PAUSA|TOQUE PARA JOGAR|RECORDE|NOVO RECORDE!|OPA!|PULOS|MORTAIS|TOQUE PARA REPETIR|ÍMÃ|ESCOLHIDO|USAR|BAÚ|CHANCE|ABRINDO...|REPETIDO|NOVO HERÓI!|TOQUE PARA FECHAR|CARREGANDO|DICA:|MÚSICA|SONS|TREMOR|EFEITOS|VIBRAÇÃO|DICAS|IDIOMA|APAGAR PROGRESSO|CERTEZA? TOQUE DE NOVO|LIG|DESL|PORTUGUÊS|M',
@@ -126,7 +126,7 @@ const LANG_DATA = {
     packs: 'PUNHADO|SACO|BAÚ|MONTANHA',
     zones2: 'JARDIM SAKURA|CLAREIRA DE COGUMELOS|PÂNTANO NEBULOSO|CASTELO ANTIGO|FLORESTA ASSOMBRADA|CIDADE NEON|CÉU ARCO-ÍRIS|VALE DO PÔR DO SOL|NUVENS DE TEMPESTADE|ILHAS FLUTUANTES|FESTA DAS LANTERNAS|ABISMO DO MAR|CIDADE DISCO|MUNDO DIGITAL|AURORA BOREAL|CHUVA DE METEOROS|BURACO NEGRO|BAÍA PIRATA|PIRÂMIDES DO EGITO|CIDADE DO FUTURO|FÁBRICA MECÂNICA|VELHO CEMITÉRIO|FLORESTA ENCANTADA|FÁBRICA DE CHOCOLATE|CASCATA ARCO-ÍRIS|BASE LUNAR|TEMPLO DA SELVA|BALÕES DE AR|MONTANHAS DE FOGO|BALEIAS DO CÉU|CASTELO DE GELO|PARQUE DE DIVERSÕES|RECIFE DE CORAL|TEMPESTADE DE SAKURA|MINA ABANDONADA|CASTELO DO VAMPIRO|ESTAÇÃO ESPACIAL|NOITE DAS ABÓBORAS|ALDEIA DE INVERNO|ATLÂNTIDA|OÁSIS DO DESERTO|PORTÕES DO CÉU|VALE DOS DINOSSAUROS|CIDADE STEAMPUNK|POLO NORTE|CAMPO DE GIRASSÓIS|FILME ANTIGO|REINO DOS DOCES',
     ach2: 'SORTUDO|7 DIAS SEGUIDOS|COLECIONADOR',
-    ui3: 'TENDA|PODERES|TENDA DO ALQUIMISTA|ENTRE, AMIGO!|TOQUE PARA COMPRAR|ÍMÃ|TELETRANSPORTE|ROJÃO|JETPACK|CLONE|PUXA MOEDAS E GEMAS|PARA UM POSTE SEGURO ACIMA|5 SEGUNDOS PARA CIMA|SEGURE ESQUERDA OU DIREITA|UM NPC PRO SOBE CONTIGO|COMBUSTÍVEL|ESCUDO|MOEDAS X2|CÂMERA LENTA|MEGAPULO|BOMBA|FANTASMA|AGUENTA UM GOLPE|20 SEGUNDOS DE MOEDAS EM DOBRO|O TEMPO FICA MAIS LENTO|12 SEGUNDOS DE PULOS ALTOS|EXPLOSÃO DESTRÓI INIMIGOS|8 SEGUNDOS SEM PERIGO|AGORA VOCÊ É O CLONE!|SEU APELIDO|PROGRESSO NA NUVEM|SALVO NO APARELHO|CONGELAR|CHUVA DE MOEDAS|VIDA EXTRA|INIMIGOS CONGELADOS 8 S|MOEDAS CAEM DO CÉU|TE REVIVE UMA VEZ',
+    ui3: 'TENDA|PODERES|TENDA DO ALQUIMISTA|ENTRE, AMIGO!|TOQUE PARA COMPRAR|ÍMÃ|TELETRANSPORTE|ROJÃO|JETPACK|CLONE|PUXA MOEDAS E GEMAS|PARA UM POSTE SEGURO ACIMA|5 SEGUNDOS PARA CIMA|SEGURE ESQUERDA OU DIREITA|UM NPC PRO SOBE CONTIGO|COMBUSTÍVEL|ESCUDO|MOEDAS X2|CÂMERA LENTA|MEGAPULO|BOMBA|FANTASMA|AGUENTA UM GOLPE|20 SEGUNDOS DE MOEDAS EM DOBRO|O TEMPO FICA MAIS LENTO|12 SEGUNDOS DE PULOS ALTOS|EXPLOSÃO DESTRÓI INIMIGOS|8 SEGUNDOS SEM PERIGO|AGORA VOCÊ É O CLONE!|CONGELAR|CHUVA DE MOEDAS|VIDA EXTRA|INIMIGOS CONGELADOS 8 S|MOEDAS CAEM DO CÉU|TE REVIVE UMA VEZ',
   },
   it: {
     ui: 'TOCCA —|PER SALTARE DAL MURO|EROI|PREMI|IMPOSTAZIONI|TOCCA FUORI PER TORNARE|TOCCA PER TORNARE|TIENI PER SALTO LUNGO|TOCCA IN ARIA —|CAPRIOLA E GIRO!|PAUSA|TOCCA PER GIOCARE|RECORD|NUOVO RECORD!|OPS!|RIMBALZI|CAPRIOLE|TOCCA PER RIPROVARE|CALAMITA|SCELTO|USA|FORZIERE|PROBABILITÀ|APERTURA...|DOPPIONE|NUOVO EROE!|TOCCA PER CHIUDERE|CARICAMENTO|CONSIGLIO:|MUSICA|SUONI|SCOSSE|EFFETTI|VIBRAZIONE|SUGGERIMENTI|LINGUA|CANCELLA PROGRESSI|SICURO? TOCCA ANCORA|SÌ|NO|ITALIANO|M',
@@ -139,7 +139,7 @@ const LANG_DATA = {
     packs: 'MANCIATA|SACCO|FORZIERE|MONTAGNA',
     zones2: 'GIARDINO SAKURA|RADURA DEI FUNGHI|PALUDE NEBBIOSA|VECCHIO CASTELLO|BOSCO STREGATO|CITTÀ NEON|CIELO ARCOBALENO|VALLE DEL TRAMONTO|NUBI DI TEMPESTA|ISOLE VOLANTI|FESTA DELLE LANTERNE|ABISSO MARINO|CITTÀ DISCO|MONDO DIGITALE|AURORA BOREALE|PIOGGIA DI METEORE|BUCO NERO|BAIA DEI PIRATI|PIRAMIDI EGIZIE|CITTÀ DEL FUTURO|FABBRICA MECCANICA|VECCHIO CIMITERO|FORESTA INCANTATA|FABBRICA DI CIOCCOLATO|CASCATA ARCOBALENO|BASE LUNARE|TEMPIO DELLA GIUNGLA|MONGOLFIERE|MONTAGNE DI FUOCO|BALENE DEL CIELO|CASTELLO DI GHIACCIO|LUNA PARK|BARRIERA CORALLINA|TEMPESTA DI SAKURA|MINIERA ABBANDONATA|CASTELLO DEL VAMPIRO|STAZIONE SPAZIALE|NOTTE DELLE ZUCCHE|VILLAGGIO INVERNALE|ATLANTIDE|OASI NEL DESERTO|PORTE DEL CIELO|VALLE DEI DINOSAURI|CITTÀ STEAMPUNK|POLO NORD|CAMPO DI GIRASOLI|VECCHIO FILM|REGNO DEI DOLCI',
     ach2: 'FORTUNATO|7 GIORNI DI FILA|COLLEZIONISTA',
-    ui3: 'TENDA|POTERI|TENDA ALCHIMISTA|ENTRA, AMICO!|TOCCA PER COMPRARE|CALAMITA|TELETRASPORTO|PETARDO|JETPACK|CLONE|ATTIRA MONETE E GEMME|SU UN PALO SICURO IN ALTO|5 SECONDI IN SU|TIENI A SINISTRA O DESTRA|UN NPC PRO SALE CON TE|CARBURANTE|SCUDO|MONETE X2|RALLENTATORE|MEGA SALTO|BOMBA|FANTASMA|REGGE UN COLPO|20 SECONDI DI MONETE DOPPIE|IL TEMPO RALLENTA|12 SECONDI DI SALTI ALTI|ESPLOSIONE DISTRUGGE NEMICI|8 SECONDI SENZA PERICOLI|ORA SEI IL CLONE!|IL TUO NICK|PROGRESSI NEL CLOUD|SALVATO SUL DISPOSITIVO|GELO|PIOGGIA DI MONETE|VITA EXTRA|NEMICI CONGELATI 8 S|MONETE DAL CIELO|TI RIANIMA UNA VOLTA',
+    ui3: 'TENDA|POTERI|TENDA ALCHIMISTA|ENTRA, AMICO!|TOCCA PER COMPRARE|CALAMITA|TELETRASPORTO|PETARDO|JETPACK|CLONE|ATTIRA MONETE E GEMME|SU UN PALO SICURO IN ALTO|5 SECONDI IN SU|TIENI A SINISTRA O DESTRA|UN NPC PRO SALE CON TE|CARBURANTE|SCUDO|MONETE X2|RALLENTATORE|MEGA SALTO|BOMBA|FANTASMA|REGGE UN COLPO|20 SECONDI DI MONETE DOPPIE|IL TEMPO RALLENTA|12 SECONDI DI SALTI ALTI|ESPLOSIONE DISTRUGGE NEMICI|8 SECONDI SENZA PERICOLI|ORA SEI IL CLONE!|GELO|PIOGGIA DI MONETE|VITA EXTRA|NEMICI CONGELATI 8 S|MONETE DAL CIELO|TI RIANIMA UNA VOLTA',
   },
   tr: {
     ui: 'DOKUN —|DUVARDAN ZIPLA|KAHRAMANLAR|ÖDÜLLER|AYARLAR|GERİ İÇİN DIŞARI DOKUN|GERİ İÇİN DOKUN|UZUN ZIPLAMA İÇİN BASILI TUT|HAVADA DOKUN —|TAKLA VE DÖNÜŞ!|DURAKLATILDI|OYNAMAK İÇİN DOKUN|REKOR|YENİ REKOR!|EYVAH!|SEKME|TAKLA|TEKRAR İÇİN DOKUN|MIKNATIS|SEÇİLDİ|AL|SANDIK|ŞANS|AÇILIYOR...|TEKRAR|YENİ KAHRAMAN!|KAPATMAK İÇİN DOKUN|YÜKLENİYOR|İPUCU:|MÜZİK|SESLER|SARSINTI|EFEKTLER|TİTREŞİM|İPUÇLARI|DİL|İLERLEMEYİ SIFIRLA|EMİN MİSİN? TEKRAR DOKUN|AÇIK|KAPALI|TÜRKÇE|M',
@@ -152,7 +152,7 @@ const LANG_DATA = {
     packs: 'AVUÇ|KESE|SANDIK|DAĞ',
     zones2: 'SAKURA BAHÇESİ|MANTAR AÇIKLIĞI|SİSLİ BATAKLIK|ESKİ KALE|LANETLİ ORMAN|NEON ŞEHİR|GÖKKUŞAĞI GÖĞÜ|GÜN BATIMI VADİSİ|FIRTINA BULUTLARI|UÇAN ADALAR|FENER ŞENLİĞİ|OKYANUS DERİNLİĞİ|DİSKO ŞEHRİ|DİJİTAL DÜNYA|KUZEY IŞIKLARI|METEOR YAĞMURU|KARA DELİK|KORSAN KOYU|MISIR PİRAMİTLERİ|GELECEĞİN ŞEHRİ|MEKANİK FABRİKA|ESKİ MEZARLIK|BÜYÜLÜ ORMAN|ÇİKOLATA FABRİKASI|GÖKKUŞAĞI ŞELALESİ|AY ÜSSÜ|ORMAN TAPINAĞI|SICAK HAVA BALONLARI|ATEŞ DAĞLARI|GÖK BALİNALARI|BUZ ŞATOSU|LUNAPARK|MERCAN RESİFİ|SAKURA FIRTINASI|TERK EDİLMİŞ MADEN|VAMPİR ŞATOSU|UZAY İSTASYONU|BALKABAĞI GECESİ|KIŞ KÖYÜ|ATLANTİS|ÇÖL VAHASI|CENNET KAPILARI|DİNOZOR VADİSİ|STEAMPUNK ŞEHRİ|KUZEY KUTBU|AYÇİÇEĞİ TARLASI|ESKİ FİLM|ŞEKER KRALLIĞI',
     ach2: 'ŞANSLI|7 GÜN ÜST ÜSTE|KOLEKSİYONCU',
-    ui3: 'ÇADIR|GÜÇLER|SİMYACI ÇADIRI|GEL, DOSTUM!|SATIN ALMAK İÇİN DOKUN|MIKNATIS|IŞINLANMA|MAYTAP|JETPACK|KLON|PARA VE ELMAS ÇEKER|YUKARIDA GÜVENLİ DİREĞE|5 SANİYE YUKARI|SOLA YA DA SAĞA BAS|PRO NPC SENİNLE TIRMANIR|YAKIT|KALKAN|PARA X2|AĞIR ÇEKİM|MEGA ZIPLAMA|BOMBA|HAYALET|BİR DARBEYİ KORUR|20 SANİYE ÇİFT PARA|ZAMAN YAVAŞLAR|12 SANİYE YÜKSEK ZIPLAMA|PATLAMA DÜŞMANLARI YOK EDER|8 SANİYE TEHLİKE YOK|ARTIK KLON SENSİN!|TAKMA ADIN|İLERLEME BULUTTA|CİHAZDA KAYITLI|DONDURMA|ALTIN YAĞMURU|EKSTRA CAN|DÜŞMANLAR 8 SN DONAR|GÖKTEN ALTIN YAĞAR|SENİ BİR KEZ DİRİLTİR',
+    ui3: 'ÇADIR|GÜÇLER|SİMYACI ÇADIRI|GEL, DOSTUM!|SATIN ALMAK İÇİN DOKUN|MIKNATIS|IŞINLANMA|MAYTAP|JETPACK|KLON|PARA VE ELMAS ÇEKER|YUKARIDA GÜVENLİ DİREĞE|5 SANİYE YUKARI|SOLA YA DA SAĞA BAS|PRO NPC SENİNLE TIRMANIR|YAKIT|KALKAN|PARA X2|AĞIR ÇEKİM|MEGA ZIPLAMA|BOMBA|HAYALET|BİR DARBEYİ KORUR|20 SANİYE ÇİFT PARA|ZAMAN YAVAŞLAR|12 SANİYE YÜKSEK ZIPLAMA|PATLAMA DÜŞMANLARI YOK EDER|8 SANİYE TEHLİKE YOK|ARTIK KLON SENSİN!|DONDURMA|ALTIN YAĞMURU|EKSTRA CAN|DÜŞMANLAR 8 SN DONAR|GÖKTEN ALTIN YAĞAR|SENİ BİR KEZ DİRİLTİR',
   },
   uk: {
     ui: "НАТИСНИ —|СТРИБОК ВІД СТІНИ|ГЕРОЇ|НАГОРОДИ|НАЛАШТУВАННЯ|НАТИСНИ ПОРУЧ — НАЗАД|НАТИСНИ — НАЗАД|ТРИМАЙ — ДОВГИЙ СТРИБОК|ТИСНИ В ПОВІТРІ —|САЛЬТО І РОЗВОРОТ!|ПАУЗА|НАТИСНИ, ЩОБ ГРАТИ|РЕКОРД|НОВИЙ РЕКОРД!|ОЙ-ОЙ!|ВІДСКОКІВ|САЛЬТО|НАТИСНИ, ЩОБ ЩЕ|МАГНІТ|ОБРАНО|ВЗЯТИ|СКРИНЯ|ШАНС|ВІДКРИВАЄМО...|ПОВТОР|НОВИЙ ГЕРОЙ!|НАТИСНИ, ЩОБ ЗАКРИТИ|ЗАВАНТАЖЕННЯ|ПОРАДА:|МУЗИКА|ЗВУКИ|ТРЯСІННЯ|ЕФЕКТИ|ВІБРАЦІЯ|ПІДКАЗКИ|МОВА|СКИНУТИ ПРОГРЕС|ТОЧНО? НАТИСНИ ЩЕ|УВІМК|ВИМК|УКРАЇНСЬКА|М",
@@ -165,7 +165,7 @@ const LANG_DATA = {
     packs: 'ЖМЕНЯ|МІШОК|СКРИНЯ|ГОРА',
     zones2: 'САКУРОВИЙ САД|ГРИБНА ГАЛЯВИНА|ТУМАННЕ БОЛОТО|СТАРИЙ ЗАМОК|ПРИВИДНИЙ ЛІС|НЕОНОВЕ МІСТО|ВЕСЕЛКОВЕ НЕБО|ДОЛИНА ЗАХОДУ|ГРОЗОВІ ХМАРИ|ЛІТАЮЧІ ОСТРОВИ|СВЯТО ЛІХТАРИКІВ|МОРСЬКА БЕЗОДНЯ|ДИСКО-МІСТО|ЦИФРОВИЙ СВІТ|ПІВНІЧНЕ СЯЙВО|МЕТЕОРНИЙ ДОЩ|ЧОРНА ДІРА|ПІРАТСЬКА БУХТА|ЄГИПЕТСЬКІ ПІРАМІДИ|МІСТО МАЙБУТНЬОГО|МЕХАНІЧНИЙ ЗАВОД|СТАРИЙ ЦВИНТАР|ЧАРІВНИЙ ЛІС|ШОКОЛАДНА ФАБРИКА|ВЕСЕЛКОВИЙ ВОДОСПАД|МІСЯЧНА БАЗА|ХРАМ У ДЖУНГЛЯХ|ПОВІТРЯНІ КУЛІ|ВОГНЯНІ ГОРИ|НЕБЕСНІ КИТИ|КРИЖАНИЙ ЗАМОК|ВЕСЕЛИЙ ЯРМАРОК|КОРАЛОВИЙ РИФ|САКУРОВА БУРЯ|ПОКИНУТА ШАХТА|ЗАМОК ВАМПІРА|КОСМІЧНА СТАНЦІЯ|ГАРБУЗОВА НІЧ|ЗИМОВЕ СЕЛО|АТЛАНТИДА|ПУСТЕЛЬНА ОАЗА|НЕБЕСНІ ВРАТА|ДОЛИНА ДИНОЗАВРІВ|МІСТО-СТІМПАНК|ПІВНІЧНИЙ ПОЛЮС|ПОЛЕ СОНЯШНИКІВ|СТАРЕ КІНО|СОЛОДКЕ КОРОЛІВСТВО',
     ach2: 'ЩАСЛИВЧИК|ТИЖДЕНЬ ПОСПІЛЬ|КОЛЕКЦІОНЕР',
-    ui3: 'НАМЕТ|СИЛИ|НАМЕТ АЛХІМІКА|ЗАХОДЬ, ДРУЖЕ!|НАТИСНИ НА ТОВАР — КУПИТИ|МАГНІТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯГНЕ МОНЕТИ Й АЛМАЗИ|НА БЕЗПЕЧНИЙ СТОВП ВИЩЕ|5 СЕКУНД УГОРУ|ТРИМАЙ ЛІВОРУЧ АБО ПРАВОРУЧ|NPC-ПРОФІ ЛІЗЕ З ТОБОЮ|ПАЛИВО|ЩИТ|МОНЕТИ X2|УПОВІЛЬНЕННЯ|МЕГА-СТРИБОК|БОМБА|ПРИВИД|ВИТРИМАЄ ОДИН УДАР|20 СЕКУНД ПОДВІЙНІ МОНЕТИ|ЧАС ІДЕ ПОВІЛЬНІШЕ|12 СЕКУНД СТРИБКИ ВИЩЕ|ВИБУХ ЗНИЩУЄ ВОРОГІВ|8 СЕКУНД НІЧОГО НЕ СТРАШНО|ТЕПЕР ТИ — КЛОН!|ВВЕДИ НІК|ПРОГРЕС У ХМАРІ|ЗБЕРЕЖЕНО НА ПРИСТРОЇ|ЗАМОРОЗКА|ДОЩ МОНЕТ|ДРУГЕ ЖИТТЯ|ВОРОГИ ЗАМИРАЮТЬ НА 8 СЕКУНД|З НЕБА СИПЛЯТЬСЯ МОНЕТИ|ВОСКРЕШАЄ ОДИН РАЗ',
+    ui3: 'НАМЕТ|СИЛИ|НАМЕТ АЛХІМІКА|ЗАХОДЬ, ДРУЖЕ!|НАТИСНИ НА ТОВАР — КУПИТИ|МАГНІТ|ТЕЛЕПОРТ|ПЕТАРДА|ДЖЕТПАК|КЛОН|ТЯГНЕ МОНЕТИ Й АЛМАЗИ|НА БЕЗПЕЧНИЙ СТОВП ВИЩЕ|5 СЕКУНД УГОРУ|ТРИМАЙ ЛІВОРУЧ АБО ПРАВОРУЧ|NPC-ПРОФІ ЛІЗЕ З ТОБОЮ|ПАЛИВО|ЩИТ|МОНЕТИ X2|УПОВІЛЬНЕННЯ|МЕГА-СТРИБОК|БОМБА|ПРИВИД|ВИТРИМАЄ ОДИН УДАР|20 СЕКУНД ПОДВІЙНІ МОНЕТИ|ЧАС ІДЕ ПОВІЛЬНІШЕ|12 СЕКУНД СТРИБКИ ВИЩЕ|ВИБУХ ЗНИЩУЄ ВОРОГІВ|8 СЕКУНД НІЧОГО НЕ СТРАШНО|ТЕПЕР ТИ — КЛОН!|ЗАМОРОЗКА|ДОЩ МОНЕТ|ДРУГЕ ЖИТТЯ|ВОРОГИ ЗАМИРАЮТЬ НА 8 СЕКУНД|З НЕБА СИПЛЯТЬСЯ МОНЕТИ|ВОСКРЕШАЄ ОДИН РАЗ',
   },
   pl: {
     ui: 'STUKNIJ —|ABY ODBIĆ SIĘ OD ŚCIANY|BOHATEROWIE|NAGRODY|USTAWIENIA|STUKNIJ OBOK: WSTECZ|STUKNIJ: WSTECZ|TRZYMAJ: DŁUGI SKOK|STUKNIJ W POWIETRZU —|SALTO I ZAWRÓT!|PAUZA|STUKNIJ, ABY GRAĆ|REKORD|NOWY REKORD!|OJEJ!|ODBICIA|SALTA|STUKNIJ, ABY ZNÓW|MAGNES|WYBRANY|WEŹ|SKRZYNIA|SZANSA|OTWIERANIE...|DUPLIKAT|NOWY BOHATER!|STUKNIJ, ABY ZAMKNĄĆ|ŁADOWANIE|RADA:|MUZYKA|DŹWIĘKI|WSTRZĄSY|EFEKTY|WIBRACJE|PODPOWIEDZI|JĘZYK|USUŃ POSTĘP|NA PEWNO? STUKNIJ ZNÓW|WŁ|WYŁ|POLSKI|M',
@@ -178,7 +178,7 @@ const LANG_DATA = {
     packs: 'GARŚĆ|WOREK|SKRZYNIA|GÓRA',
     zones2: 'OGRÓD SAKURY|GRZYBOWA POLANA|MGLISTE BAGNO|STARY ZAMEK|NAWIEDZONY LAS|NEONOWE MIASTO|TĘCZOWE NIEBO|DOLINA ZACHODU|BURZOWE CHMURY|LATAJĄCE WYSPY|ŚWIĘTO LAMPIONÓW|OTCHŁAŃ OCEANU|MIASTO DISCO|CYFROWY ŚWIAT|ZORZA POLARNA|DESZCZ METEORÓW|CZARNA DZIURA|ZATOKA PIRATÓW|PIRAMIDY EGIPTU|MIASTO PRZYSZŁOŚCI|MECHANICZNA FABRYKA|STARY CMENTARZ|ZACZAROWANY LAS|FABRYKA CZEKOLADY|TĘCZOWY WODOSPAD|BAZA KSIĘŻYCOWA|ŚWIĄTYNIA W DŻUNGLI|BALONY|OGNISTE GÓRY|NIEBIAŃSKIE WIELORYBY|LODOWY ZAMEK|WESOŁE MIASTECZKO|RAFA KORALOWA|BURZA SAKURY|OPUSZCZONA KOPALNIA|ZAMEK WAMPIRA|STACJA KOSMICZNA|DYNIOWA NOC|ZIMOWA WIOSKA|ATLANTYDA|OAZA NA PUSTYNI|NIEBIAŃSKIE WROTA|DOLINA DINOZAURÓW|MIASTO STEAMPUNK|BIEGUN PÓŁNOCNY|POLE SŁONECZNIKÓW|STARE KINO|SŁODKIE KRÓLESTWO',
     ach2: 'SZCZĘŚCIARZ|7 DNI Z RZĘDU|KOLEKCJONER',
-    ui3: 'NAMIOT|MOCE|NAMIOT ALCHEMIKA|WEJDŹ, PRZYJACIELU!|DOTKNIJ, BY KUPIĆ|MAGNES|TELEPORT|PETARDA|JETPACK|KLON|PRZYCIĄGA MONETY I KLEJNOTY|NA BEZPIECZNY SŁUP WYŻEJ|5 SEKUND W GÓRĘ|TRZYMAJ LEWO LUB PRAWO|PRO NPC WSPINA SIĘ Z TOBĄ|PALIWO|TARCZA|MONETY X2|SPOWOLNIENIE|MEGASKOK|BOMBA|DUCH|WYTRZYMA JEDEN CIOS|20 SEKUND PODWÓJNYCH MONET|CZAS PŁYNIE WOLNIEJ|12 SEKUND WYŻSZYCH SKOKÓW|WYBUCH NISZCZY WROGÓW|8 SEKUND BEZ STRACHU|TERAZ TY JESTEŚ KLONEM!|TWÓJ NICK|POSTĘP W CHMURZE|ZAPISANO NA URZĄDZENIU|ZAMROŻENIE|DESZCZ MONET|DODATKOWE ŻYCIE|WROGOWIE ZAMARZAJĄ NA 8 S|MONETY SPADAJĄ Z NIEBA|WSKRZESZA CIĘ RAZ',
+    ui3: 'NAMIOT|MOCE|NAMIOT ALCHEMIKA|WEJDŹ, PRZYJACIELU!|DOTKNIJ, BY KUPIĆ|MAGNES|TELEPORT|PETARDA|JETPACK|KLON|PRZYCIĄGA MONETY I KLEJNOTY|NA BEZPIECZNY SŁUP WYŻEJ|5 SEKUND W GÓRĘ|TRZYMAJ LEWO LUB PRAWO|PRO NPC WSPINA SIĘ Z TOBĄ|PALIWO|TARCZA|MONETY X2|SPOWOLNIENIE|MEGASKOK|BOMBA|DUCH|WYTRZYMA JEDEN CIOS|20 SEKUND PODWÓJNYCH MONET|CZAS PŁYNIE WOLNIEJ|12 SEKUND WYŻSZYCH SKOKÓW|WYBUCH NISZCZY WROGÓW|8 SEKUND BEZ STRACHU|TERAZ TY JESTEŚ KLONEM!|ZAMROŻENIE|DESZCZ MONET|DODATKOWE ŻYCIE|WROGOWIE ZAMARZAJĄ NA 8 S|MONETY SPADAJĄ Z NIEBA|WSKRZESZA CIĘ RAZ',
   },
 };
 const L = {};
@@ -711,6 +711,12 @@ const MORE_SKINS5 = [
   { id: 'plasmoid', r: 3, gems: 145, body: '#3af0ff', dark: '#1a8ab0', light: '#c8ffff', ear: '#3af0ff', ol: '#0a2a4a', ears: 'none', alpha: 0.85, noMuzzle: true, noScarf: true, eyeGlow: '#ffffff', parts: ['plasmaCore', 'glowEyes', 'lightning'], trail: { kind: 'spark', cols: ['#3af0ff', '#ff3af0', '#ffffff'] }, sfx: 'thunder', fx: 'galaxy' },
 ];
 SKINS.push(...MORE_SKINS5);
+// цена зависит только от редкости: редкие 200–450, эпики 700–1300 (дорогие — только легенды)
+for (const k of SKINS) {
+  const h = [...k.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
+  if (k.r === 1) k.cost = 200 + h % 6 * 50;
+  else if (k.r === 2) k.cost = 700 + h % 7 * 100;
+}
 // улучшенные герои: оружие, питомцы, свои анимации
 const MORE_PARTS = {
   ninja: ['katanaBack', 'shuriken'], wizard: ['staff'], knight: ['roundShield', 'sword'], jester: ['juggle'],
@@ -773,10 +779,10 @@ const store = {
   set(k, v) { try { localStorage.setItem('wk3_' + k, JSON.stringify(v)); } catch (e) {} if (store.onSet) store.onSet(); },
   onSet: null,
 };
-// ---------- Ник и облачное сохранение ----------
+// ---------- Облачное сохранение ----------
 // В claude.ai прогресс игрока хранится в его личном приватном документе (без email: аккаунт определяется сам).
 // Без облака (например, на GitHub Pages) всё сохраняется на устройстве.
-let nick = store.get('nick', '');
+try { localStorage.removeItem('wk3_nick'); } catch (e) {}
 const cloud = { db: null, uid: null, status: 'off', busy: false, again: false, timer: 0 };
 const cloudPath = () => 'data/users/' + cloud.uid + '/save';
 function markDirty() {
@@ -793,7 +799,7 @@ async function pushCloud() {
   if (cloud.busy) { cloud.again = true; return; }
   cloud.busy = true; cloud.status = 'saving';
   try {
-    await cloud.db.doc(cloudPath()).set({ v: 1, t: +(localStorage.getItem('wk3__savedAt') || Date.now()), nick, data: localSave() });
+    await cloud.db.doc(cloudPath()).set({ v: 1, t: +(localStorage.getItem('wk3__savedAt') || Date.now()), data: localSave() });
     cloud.status = 'on';
   } catch (e) { cloud.status = 'error'; }
   cloud.busy = false;
@@ -3417,7 +3423,6 @@ function uiClick(pt) {
   if (state === 'play' && inRect(pt, BTN.pause)) { paused = !paused; return true; }
   if (state === 'play' && paused) { paused = false; return true; }
   if (state === 'menu') {
-    if (inRect(pt, NICK_BTN)) { editNick(); return true; }
     const open = main => { audio(); startMusic(); state = 'shop'; shopMain = main; sfx.click(); return true; };
     if (inRect(pt, BTN.shop)) return open(0);
     if (inRect(pt, BTN.store)) return open(1);
@@ -5137,40 +5142,8 @@ function priceDraw(cx, y, pr, k = 1, col = OL) {
   if (pr.gems != null) gemIcon(x0 + 5 * k, y - 4 * k, 0.4 * k); else coinIcon(x0 + 5 * k, y - 4 * k, 3 * k + 1);
   text(str, x0 + 12 * k, y, k, col, 'left', null);
 }
-// поле ввода ника поверх игры
-const NICK_BTN = { x: W / 2 - 92, y: 198, w: 184, h: 24 };
-function editNick() {
-  const inp = document.createElement('input');
-  const r = cv.getBoundingClientRect(), k = r.width / W;
-  Object.assign(inp.style, { position: 'fixed', left: (r.left + NICK_BTN.x * k) + 'px', top: (r.top + NICK_BTN.y * k) + 'px', width: (NICK_BTN.w * k) + 'px', height: (NICK_BTN.h * k) + 'px',
-    font: 'bold ' + Math.round(14 * k) + 'px monospace', textAlign: 'center', textTransform: 'uppercase', border: '3px solid #2a1408', borderRadius: '6px', background: '#fff6d8', color: '#2a1408', zIndex: 10, boxSizing: 'border-box' });
-  inp.maxLength = 12; inp.value = nick;
-  document.body.appendChild(inp); inp.focus();
-  let fin = false;
-  const done = () => {
-    if (fin) return;
-    fin = true;
-    const v = [...inp.value.toUpperCase()].filter(ch => ch === ' ' || glyph(ch) !== GLYPHS['?'] || ch === '?').join('').trim().slice(0, 12);
-    inp.remove(); nick = v; store.set('nick', nick); sfx.click();
-  };
-  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') done(); });
-  inp.addEventListener('pointerdown', e => e.stopPropagation());
-  inp.addEventListener('blur', done);
-}
-function drawNickBtn() {
-  const b = NICK_BTN;
-  ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 6); ctx.fillStyle = '#5a2a8a'; ctx.fillRect(b.x, b.y, b.w, b.h);
-  pell(ctx, b.x + 14, b.y + 8, 4, 4, '#ffd23a'); prect(ctx, b.x + 8, b.y + 14, 12, 6, '#ffd23a');
-  text(nick || T('nickHint'), b.x + b.w / 2 + 6, b.y + 18, nick ? 2 : 1, nick ? '#ffffff' : '#e0d0ff', 'center', null, b.w - 50);
-  const on = cloud.status === 'on' || cloud.status === 'saving', cx = b.x + b.w - 16, cy = b.y + 12;
-  pell(ctx, cx, cy + 2, 9, 5, on ? '#ffffff' : '#8a7a9a'); pell(ctx, cx - 3, cy, 5, 5, on ? '#ffffff' : '#8a7a9a'); pell(ctx, cx + 3, cy - 1, 5, 5, on ? '#ffffff' : '#8a7a9a');
-  if (cloud.status === 'saving' && Math.sin(time * 10) > 0) prect(ctx, cx - 1, cy - 1, 2, 4, '#3ab0ff');
-  if (on) { prect(ctx, cx - 4, cy + 1, 2, 2, '#3ce06a'); prect(ctx, cx - 2, cy + 3, 2, 2, '#3ce06a'); prect(ctx, cx, cy + 1, 2, 2, '#3ce06a'); prect(ctx, cx + 2, cy - 1, 2, 2, '#3ce06a'); }
-  text(on ? T('cloudOn') : T('cloudOff'), W / 2, 238, 1, on ? '#bff0c8' : '#e0d0ff', 'center', null);
-}
 function drawMenu() {
   drawLogo(92);
-  drawNickBtn();
   coinIcon(46, 250); text(String(bank), 60, 260, 2, '#ffffff', 'left');
   gemIcon(152, 250, 0.8); text(String(gems), 166, 260, 2, '#ffffff', 'left');
   trophyIcon(252, 250); text(best + T('m'), 266, 260, 2, '#ffffff', 'left');
@@ -6080,8 +6053,8 @@ function coinRain() {
   burst(p.x, p.y - 20, 24, '#ffd23a', 220, 0.7, 4, 200, 'coin'); sfx.ach();
 }
 // вторая жизнь: вместо смерти — на безопасный столб на экране
-function reviveNow() {
-  p.revive = false;
+// безопасный столб, целиком видный на экране, ближе всего к середине
+function safePole() {
   const mid = camY + H * 0.5;
   let best = null;
   for (const q of poles) {
@@ -6089,14 +6062,27 @@ function reviveNow() {
     if (q.y0 < camY + 60 || q.y1 > camY + H - 60) continue;
     if (!best || Math.abs((q.y0 + q.y1) / 2 - mid) < Math.abs((best.y0 + best.y1) / 2 - mid)) best = q;
   }
+  return best;
+}
+function putOnPole(q) {
+  const right = q.cx < W / 2;
+  p.x = right ? q.x1 + PW / 2 : q.x0 - PW / 2; p.side = right ? -1 : 1; p.face = -p.side;
+  p.y = clamp(q.y0 + 40, q.y0 + PH / 2 + 2, q.y1 - PH / 2);
+  p.state = 'wall'; p.pole = q; p.stand = null; p.vx = 0; p.vy = 0; p.stick = 0.6; p.dj = true; p.spin = 0; p.rot = 0;
+}
+// джетпак или петарда кончились в воздухе — мягко сажаем на ближайший столб, чтобы не разбиться
+function landAfterFlight() {
+  generate();
+  const q = safePole(); if (!q) return;
+  burst(p.x, p.y, 14, '#ffffff', 160, 0.5, 4, 0, 'star'); putOnPole(q); burst(p.x, p.y, 14, '#ffffff', 160, 0.5, 4, 0, 'star'); sfx.grab();
+}
+function reviveNow() {
+  p.revive = false;
+  const best = safePole();
   burst(p.x, p.y, 20, '#ff5a8a', 200, 0.6, 5, 0, 'heart');
   p.vx = 0; p.vy = 0; p.spin = 0; p.rot = 0; p.jet = 0; p.rocket = 0; p.inv = 2; p.dj = true; p.holdT = 0; p.trail = [];
-  if (best) {
-    const right = best.cx < W / 2;
-    p.x = right ? best.x1 + PW / 2 : best.x0 - PW / 2; p.side = right ? -1 : 1; p.face = -p.side;
-    p.y = clamp(best.y0 + 40, best.y0 + PH / 2 + 2, best.y1 - PH / 2);
-    p.state = 'wall'; p.pole = best; p.stand = null; p.stick = 0.6;
-  } else { p.x = W / 2; p.y = camY + H * 0.45; p.state = 'air'; p.pole = null; p.stand = null; p.vy = -600; }
+  if (best) putOnPole(best);
+  else { p.x = W / 2; p.y = camY + H * 0.45; p.state = 'air'; p.pole = null; p.stand = null; p.vy = -600; }
   burst(p.x, p.y, 24, '#ff8ac8', 220, 0.7, 5, -40, 'heart');
   tone(523, 1047, 0.2, 'sine', 0.07); tone(784, 1568, 0.3, 'triangle', 0.05, 0.15); flashT = 0.3;
   swapT = 2.2; swapK = 'pRevive';
@@ -6136,10 +6122,7 @@ function teleport() {
   }
   if (!best) { pw.tele = (pw.tele || 0) + 1; savePw(); sfx.no(); return; }
   burst(p.x, p.y, 18, '#c080ff', 200, 0.5, 4, 0, 'star');
-  const right = best.cx < W / 2;
-  p.x = right ? best.x1 + PW / 2 : best.x0 - PW / 2; p.side = right ? -1 : 1; p.face = -p.side;
-  p.y = clamp(best.y0 + 40, best.y0 + PH / 2 + 2, best.y1 - PH / 2);
-  p.state = 'wall'; p.pole = best; p.stand = null; p.vx = 0; p.vy = 0; p.stick = 0.6; p.dj = true; p.spin = 0; p.rot = 0;
+  putOnPole(best);
   burst(p.x, p.y, 18, '#ffffff', 200, 0.5, 4, 0, 'star'); sfx.portal(); flashT = 0.2;
 }
 // полёт на джетпаке и на петарде
@@ -6150,7 +6133,7 @@ function superMove(dt) {
     p.x = clamp(p.x + p.vx * dt, PW / 2, W - PW / 2); p.y += p.vy * dt;
     if (SET.fx) for (let i = 0; i < 3; i++) parts.push({ x: p.x + rand(-4, 4), y: p.y + 26, vx: rand(-70, 70), vy: rand(60, 220), life: 0.4, max: 0.4, color: ['#ff3a1a', '#ffd23a', '#ffffff'][i], size: rand(2, 6), grav: 0 });
     if (Math.random() < dt * 8) noise(0.05, 0.05, 2000);
-    if (p.rocket <= 0) { p.rocket = 0; p.rot = 0; p.vy = -300; p.vx = 0; p.dj = true; burst(p.x, p.y + 20, 26, '#ffd23a', 240, 0.6, 4, 200, 'star'); noise(0.4, 0.25, 0, 1500); flashT = 0.15; }
+    if (p.rocket <= 0) { p.rocket = 0; p.rot = 0; p.vy = -300; p.vx = 0; p.dj = true; burst(p.x, p.y + 20, 26, '#ffd23a', 240, 0.6, 4, 200, 'star'); noise(0.4, 0.25, 0, 1500); flashT = 0.15; landAfterFlight(); }
     return;
   }
   p.jet -= dt; p.spin = 0; p.rot = 0;
@@ -6162,7 +6145,7 @@ function superMove(dt) {
   } else { p.vy = Math.min(p.vy + G * 0.4 * dt, 260); p.vx *= Math.pow(0.2, dt); }
   if (moveX(S, p.vx * dt)) p.vx = 0;
   if (moveY(S, p.vy * dt)) p.vy = 0;
-  if (p.jet <= 0) { p.jet = 0; p.dj = true; burst(p.x - p.face * 12, p.y, 12, '#8a8a9a', 120, 0.6, 6, -60); tone(300, 80, 0.4, 'sawtooth', 0.05); }
+  if (p.jet <= 0) { p.jet = 0; p.dj = true; burst(p.x - p.face * 12, p.y, 12, '#8a8a9a', 120, 0.6, 6, -60); tone(300, 80, 0.4, 'sawtooth', 0.05); landAfterFlight(); }
 }
 function drawSuperFx() {
   if (p.jet > 0) {   // джетпак на спине и шкала топлива
@@ -6433,7 +6416,8 @@ function drawHeroesTab() {
     ctx.fillStyle = on ? R.col : R.dk; ctx.fillRect(r.x, r.y, r.w, r.h);
     text(T('rarity')[i], r.x + r.w / 2, r.y + 17, 1, on ? OL : '#ffffff', 'center', null, r.w - 4);
   }
-  pageSkins().forEach((k, j) => drawSkinCard(shopRect(j), k));
+  const ps = pageSkins();   // снизу вверх: высокие шляпы нижнего ряда не закрывают цены верхнего
+  for (let j = ps.length - 1; j >= 0; j--) drawSkinCard(shopRect(j), ps[j]);
   if (pageCount() > 1) {
     for (const [b, ch, ok] of [[PAGE_PREV, '<', shopPage > 0], [PAGE_NEXT, '>', shopPage < pageCount() - 1]]) {
       ctx.globalAlpha = ok ? 1 : 0.35;
