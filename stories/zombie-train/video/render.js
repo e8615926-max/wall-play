@@ -55,7 +55,7 @@ function timeline() {
     '-f', 'image2pipe', '-c:v', 'mjpeg', '-framerate', String(FPS), '-i', '-',
     '-i', path.join(OUT, 'voiceover_with_sfx.mp3'),
     '-vf', `ass=${assPath}`,
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '23', '-maxrate', '4M', '-bufsize', '8M', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
     '-c:a', 'aac', '-b:a', '192k', '-shortest', path.join(OUT, 'zombie_train.mp4')], { stdio: ['pipe', 'inherit', 'inherit'] });
   const started = Date.now();
   for (let i = 0; i < frames; i++) {
