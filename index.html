@@ -1483,10 +1483,10 @@ const MORE_SKINS12 = [
 for (const k of MORE_SKINS12) if (k.r === 1 || k.r === 2) { const h = [...k.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7); k.cost = k.r === 1 ? 200 + h % 6 * 50 : 700 + h % 7 * 100; }
 for (const k of MORE_SKINS12) { const fx = { samuraiham: ['petals', '#ffb0d8'], nebula: ['planets', '#a06ae0'], lavaknight: ['lava', '#ff5a1a'], dreamsheep: ['clouds', '#ffffff'] }[k.id]; if (fx) k.cfx = fx; }
 SKINS.push(...MORE_SKINS12);
-SKINS.push({ id: 'firephoenix', r: 4, ruby: 8, nm: ['ОГНЕННЫЙ ФЕНИКС', 'FIRE PHOENIX'], ...HAM, body: '#ff6a1a', head: '#ffb02a', dark: '#c01a0a', light: '#fff27a', ear: '#ffd23a', ol: '#4a0a00', ears: 'none', scarf: '#ffd23a', scarfD: '#ff5a1a', parts: ['wingsFire'], trail: { kind: 'ember', cols: ['#fff27a', '#ff5a1a', '#c01a0a'] }, fx: 'gold' });
-SKINS.push({ id: 'frostphoenix', r: 4, ruby: 10, nm: ['ЛЕДЯНОЙ ФЕНИКС', 'FROST PHOENIX'], ...HAM, body: '#5ad0ff', head: '#c8f0ff', dark: '#1a70c0', light: '#ffffff', ear: '#9ae8ff', ol: '#0a2a5a', ears: 'none', scarf: '#ffffff', scarfD: '#5ad0ff', parts: ['wingsFire'], trail: { kind: 'snow', cols: ['#ffffff', '#7ad8ff', '#1a70c0'] }, fx: 'gold' });
-SKINS.push({ id: 'voidphoenix', r: 4, ruby: 12, nm: ['ТЁМНЫЙ ФЕНИКС', 'VOID PHOENIX'], ...HAM, body: '#7a3aff', head: '#c08aff', dark: '#2a0a6a', light: '#e8d0ff', ear: '#a06ae0', ol: '#14042a', ears: 'none', scarf: '#ff3af0', scarfD: '#7a1ab0', parts: ['wingsFire'], trail: { kind: 'ember', cols: ['#e8d0ff', '#a06ae0', '#4a1aa0'] }, fx: 'gold' });
-SKINS.push({ id: 'sunphoenix', r: 4, ruby: 15, nm: ['СОЛНЕЧНЫЙ ФЕНИКС', 'SUN PHOENIX'], ...HAM, body: '#ffd23a', head: '#fff6a0', dark: '#c08a10', light: '#ffffff', ear: '#fff6a0', ol: '#4a3000', ears: 'none', scarf: '#ff3a3a', scarfD: '#a01010', parts: ['wingsFire'], trail: { kind: 'ember', cols: ['#ffffff', '#ffd23a', '#ff8a1a'] }, fx: 'gold' });
+SKINS.push({ id: 'firephoenix', r: 4, ruby: 8, nm: ['ОГНЕННЫЙ ФЕНИКС', 'FIRE PHOENIX'], body: '#ff5a1a', head: '#ff8a2a', dark: '#a01a0a', light: '#fff27a', ear: '#ffd23a', ol: '#3a0600', ears: 'none', beak: true, eye: '#fff6a0', noScarf: true, wc: ['#fff27a', '#ffb21a', '#e8261a'], parts: ['mythWings', 'mythTail', 'mythCrest', 'emberAura'], trail: { kind: 'ember', cols: ['#fff27a', '#ff5a1a', '#c01a0a'] }, fx: 'fire', vanish: true });
+SKINS.push({ id: 'frostphoenix', r: 4, ruby: 10, nm: ['ЛЕДЯНОЙ ФЕНИКС', 'FROST PHOENIX'], body: '#7ad8ff', head: '#bff0ff', dark: '#1a6ab0', light: '#ffffff', ear: '#bff4ff', ol: '#062a50', ears: 'none', beak: true, eye: '#1a5ab0', noScarf: true, wc: ['#ffffff', '#9ae8ff', '#3a8ad8'], parts: ['mythWings', 'mythTail', 'iceCrown', 'frostAura', 'frostBreath'], trail: { kind: 'snow', cols: ['#ffffff', '#7ad8ff', '#1a70c0'] }, fx: 'ice' });
+SKINS.push({ id: 'voidphoenix', r: 4, ruby: 12, nm: ['ТЁМНЫЙ ФЕНИКС', 'VOID PHOENIX'], body: '#2a0a5a', head: '#3a1a7a', dark: '#12042a', light: '#a06ae0', ear: '#7a3aff', ol: '#06000f', ears: 'none', beak: true, eye: '#ff3af0', look: 'galaxy', noScarf: true, wc: ['#ff8af0', '#a04aff', '#2a0a6a'], parts: ['mythWings', 'mythTail', 'voidHorns', 'starsAround'], trail: { kind: 'star', cols: ['#e8d0ff', '#a06ae0', '#ff3af0'] }, fx: 'galaxy', vanish: true });
+SKINS.push({ id: 'sunphoenix', r: 4, ruby: 15, nm: ['СОЛНЕЧНЫЙ ФЕНИКС', 'SUN PHOENIX'], body: '#ffd23a', head: '#fff0a0', dark: '#c07a10', light: '#ffffff', ear: '#fff6a0', ol: '#3a2400', ears: 'none', beak: true, eye: '#c02a0a', look: 'gold', noScarf: true, wc: ['#ffffff', '#ffe27a', '#ff8a1a'], parts: ['sunDisk', 'mythWings', 'mythTail', 'mythCrest'], trail: { kind: 'ember', cols: ['#ffffff', '#ffd23a', '#ff8a1a'] }, fx: 'gold' });
 // новые мифические герои: свои цвета ореола (myth), сценка в рамке, прыжок, шлейф и звук
 const MYTHICS = [
   { id: 'thunderlord', snd: 'thunder', ruby: 9, nm: ['ГРОМОВЕРЖЕЦ', 'THUNDER LORD'], ...HAM, body: '#3a6ad8', head: '#5a8af0', dark: '#1a3a8a', light: '#bfe0ff', ear: '#9ad8ff', ol: '#0a1a4a', scarf: '#fff27a', scarfD: '#c8a010', cape: true, parts: ['crownGold', 'lightning', 'hammer', 'boltStripes'], trail: { kind: 'spark', cols: ['#fff27a', '#ffffff', '#7ad8ff'] }, myth: ['#fff27a', '#7ad8ff'], cfx: ['lightning', '#fff27a'], jump: ['bolts', ['#fff27a', '#ffffff', '#7ad8ff'], 'flash'], sfx: 'zap', fx: 'crystal' },
@@ -1496,7 +1496,7 @@ const MYTHICS = [
   { id: 'moongoddess', snd: 'moonwitch', ruby: 12, nm: ['ЛУННАЯ БОГИНЯ', 'MOON GODDESS'], body: '#e8ecff', head: '#f4f6ff', dark: '#9aa0d0', light: '#ffffff', ear: '#c8b0ff', ol: '#2a2a5a', ears: 'long', eye: '#5a6ad8', scarf: '#c8b0ff', scarfD: '#8a6ad0', cape: true, parts: ['moonBack', 'tiara', 'moonWand', 'starsAround'], trail: { kind: 'wisp', cols: ['#ffffff', '#c8b0ff', '#fff27a'] }, myth: ['#c8b0ff', '#fff27a'], cfx: ['moon', '#fff27a'], jump: ['stars', ['#fff27a', '#ffffff', '#c8b0ff'], 'float'], sfx: 'astro', fx: 'astro' },
   { id: 'timelord', snd: 'timekeeper', ruby: 11, nm: ['ВЛАДЫКА ВРЕМЕНИ', 'TIME LORD'], ...HAM, body: '#c8902a', head: '#e8b04a', dark: '#7a5010', light: '#fff0c0', ear: '#ffd23a', ol: '#2a1a00', scarf: '#3af0ff', scarfD: '#1a8aa0', parts: ['clockBelly', 'hourglass', 'steamGoggles', 'sunHalo'], trail: { kind: 'spark', cols: ['#ffd23a', '#3af0ff'] }, myth: ['#ffd23a', '#3af0ff'], cfx: ['gears', '#ffd23a'], jump: ['gears', ['#ffd23a', '#c8902a', '#3af0ff'], 'spin'], sfx: 'cyborg', fx: 'gold' },
   { id: 'skykitsune', snd: 'kitsune', ruby: 14, nm: ['НЕБЕСНАЯ КИЦУНЭ', 'SKY KITSUNE'], body: '#ffffff', dark: '#d8c8f0', light: '#ffffff', ear: '#ff8ac8', ol: '#3a1a5a', ears: 'cat', whiskers: true, eye: '#c04aff', scarf: '#ff3a8a', scarfD: '#a01a5a', parts: ['nineTails', 'foxMarks', 'spiritFlames', 'sunHalo'], trail: { kind: 'wisp', cols: ['#7ad8ff', '#ff8ac8', '#ffffff'] }, myth: ['#7ad8ff', '#ff8ac8'], cfx: ['flames', '#3a6aff', '#ff8ac8'], jump: ['fire', ['#7ad8ff', '#ff8ac8', '#ffffff'], 'ghost'], sfx: 'shadow', fx: 'crystal' },
-  { id: 'soulreaper', snd: 'reaper', ruby: 12, nm: ['ЖНЕЦ ДУШ', 'SOUL REAPER'], body: '#1a1a24', head: '#2a2a34', dark: '#0a0a10', light: '#3a3a4a', ear: '#1a1a24', ol: '#000000', ears: 'none', noMuzzle: true, eye: '#5aff8a', noScarf: true, parts: ['necroHood', 'scythe', 'darkAura', 'ghostChains', 'greenFlames'], trail: { kind: 'wisp', cols: ['#5aff8a', '#2a8a4a'] }, myth: ['#5aff8a', '#1a1a24'], cfx: ['souls', '#5aff8a'], jump: ['souls', ['#5aff8a', '#bfffd0'], 'ghost'], sfx: 'shadow', fx: 'stone', vanish: true },
+  { id: 'soulreaper', snd: 'phantom', ruby: 12, nm: ['ЖНЕЦ ДУШ', 'SOUL REAPER'], body: '#1a2240', dark: '#0a1020', light: '#262e52', ear: '#1a2240', ol: '#000000', ears: 'none', ghost: true, noEyes: true, noMuzzle: true, noScarf: true, parts: ['reaperCloak', 'reaperCowl', 'reaperScythe', 'soulOrbs'], trail: { kind: 'wisp', cols: ['#7af0ff', '#3a6aff', '#ffffff'] }, myth: ['#7af0ff', '#3a4ab0'], cfx: ['souls', '#7af0ff'], jump: ['souls', ['#7af0ff', '#bff8ff'], 'ghost'], sfx: 'ice', fx: 'galaxy', vanish: true },
   { id: 'diamondtitan', snd: 'gemgolem', ruby: 16, nm: ['АЛМАЗНЫЙ ТИТАН', 'DIAMOND TITAN'], body: '#9ae8ff', head: '#c8f4ff', dark: '#3a9ac8', light: '#ffffff', ear: '#9ae8ff', ol: '#0a3a5a', ears: 'none', look: 'crystal', noScarf: true, parts: ['crystalSpikes', 'gemOrbit', 'crownGold'], trail: { kind: 'star', cols: ['#ffffff', '#9ae8ff', '#ff8ac8'] }, myth: ['#9ae8ff', '#ff8ac8'], cfx: ['crystals', 'prism'], jump: ['crystals', ['#9ae8ff', '#ffffff', '#ff8ac8'], 'flash'], sfx: 'ice', fx: 'crystal' },
   { id: 'starunicorn', snd: 'unicornking', ruby: 18, nm: ['ЗВЁЗДНЫЙ ЕДИНОРОГ', 'STAR UNICORN'], body: '#fff0fa', dark: '#e0b0d8', light: '#ffffff', ear: '#ffb0e0', ol: '#4a1a4a', ears: 'cat', horn: '#ffd23a', special: 'rainbow', tail: 'bushy', scarf: '#ff5ab0', scarfD: '#c01f7a', parts: ['wingsAngel', 'starMane', 'rainbowBelt'], trail: { kind: 'rainbow' }, myth: ['#ff8ac8', '#7ad8ff'], cfx: ['rainbow'], jump: ['rainbow', [], 'spin'], sfx: 'rainbow', fx: 'rainbow' },
   { id: 'infernodemon', snd: 'demonlord', ruby: 15, nm: ['ДЕМОН ИНФЕРНО', 'INFERNO DEMON'], body: '#5a0a0a', head: '#8a1a10', dark: '#2a0000', light: '#ff5a1a', ear: '#8a1a10', ol: '#100000', ears: 'none', eye: '#ffd23a', acc: 'horns', tail: 'devil', noScarf: true, parts: ['wingsBat', 'hellFlames', 'darkSword', 'lavaCracks'], trail: { kind: 'ember', cols: ['#ff3a1a', '#ff8a1e', '#1a0a10'] }, myth: ['#ff3a1a', '#1a0a10'], cfx: ['hellfire', '#e8261a', '#ff8a1e'], jump: ['fire', ['#e8261a', '#1a0a10', '#ff8a1e'], 'flash'], sfx: 'fire', fx: 'fire', fireWheel: true, fireC: ['#ffd23a', '#ff5a1a', '#c01a0a', '#2a0000'] },
@@ -2468,7 +2468,7 @@ const BACK_PARTS = new Set(['wingsAngel', 'wingsBat', 'wingsFairy', 'wingsButter
   'katanaBack', 'roundShield', 'heroCapeLong', 'frostAura', 'tailFeathers', 'shoulderCannon', 'speedLines', 'smokeWisps', 'lionMane', 'tailTuft',
   'accretionBack', 'wingsBee', 'jackalEars', 'smokeTail', 'skullFireBack',
   'quiver', 'gladShield', 'helmWheel', 'nineTails', 'waterAura', 'braids', 'mailBag', 'longScarf', 'sunHalo', 'starMane', 'backpack', 'darkAura', 'goldWings', 'lootSack', 'cottonPuffs', 'surfboard', 'branchArm', 'warBanner', 'protonPack', 'boltTail', 'greenCloak', 'dualKatana',
-  'rwCloak', 'rwKiAura', 'parrotWing', 'beetleShell', 'squirrelTail', 'beaverTail', 'axoGills', 'peacockFan', 'bugWings', 'glowBum', 'moonBack', 'auroraTail', 'jellyTentacles']);
+  'rwCloak', 'rwKiAura', 'parrotWing', 'beetleShell', 'squirrelTail', 'beaverTail', 'axoGills', 'peacockFan', 'bugWings', 'glowBum', 'moonBack', 'auroraTail', 'jellyTentacles', 'mythWings', 'mythTail', 'reaperCloak']);
 function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
   const r = Math.round, ol = sk.ol, hx = r(Hd.x), hy = r(Hd.y), bx = r(B.x), by = r(B.y);
   const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(r(x), r(y), w, h); };
@@ -2641,6 +2641,74 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
       case 'mane': ['#ff3a3a', '#ffa02a', '#ffe03a', '#3ae05a', '#3ab0ff', '#a64aff'].forEach((col, i) => R(hx - 6 + i, hy - 7 + (i % 2) + Math.sin(t * 8 + i) * 0.8, 1, 4, col)); break;
       case 'mermaidTail': { O(B.x - 1, B.y + B.ry + 1, 3.5, 2.2, sk.body); const w = Math.sin(t * 6) > 0 ? 1 : 0; R(bx - 7, by + B.ry + 1 + w, 4, 3, ol); R(bx - 6, by + B.ry + 2 + w, 2, 1, sk.light); break; }
       case 'shellTop': R(bx - 3, by - 3, 3, 2, '#ff9ad8'); R(bx + 1, by - 3, 3, 2, '#ff9ad8'); break;
+      // ---- мифические фениксы: большие крылья, длинный хвост, хохолок и свои короны (цвета — sk.wc: блик, середина, край) ----
+      case 'mythWings': {   // большое крыло поднимается над головой: контур, три цвета от основания к краю, перья-полосы
+        const [w1, w2, w3] = sk.wc || FIRE_C, a = (flying ? Math.sin(t * 18) * 0.35 : Math.sin(t * 3) * 0.08) - 0.05, ox = bx - 2, oy = by - 2;
+        const poly = [[0, -6], [-3, -19], [-8, -25], [-12, -24], [-14, -17], [-13, -9], [-10, -3], [-5, 3], [0, 3]].map(([x, y]) => [x * 0.85, y]).map(([x, y]) => [ox + x * Math.cos(a) - y * Math.sin(a), oy + x * Math.sin(a) + y * Math.cos(a)]);
+        const inside = (x, y) => { let q = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) q = !q; } return q; };
+        for (let y = -8; y < by + 5; y++) for (let x = 0; x < bx; x++) {
+          if (!inside(x + 0.5, y + 0.5)) continue;
+          const edge = !inside(x - 0.5, y + 0.5) || !inside(x + 1.5, y + 0.5) || !inside(x + 0.5, y - 0.5) || !inside(x + 0.5, y + 1.5);
+          const d = Math.hypot(x - ox, y - oy) / 26, band = (x - y * 0.5 + 40) % 4 < 1 && d > 0.3;
+          c.fillStyle = edge ? ol : band ? w3 : d < 0.35 ? w1 : d < 0.65 ? w2 : w3; c.fillRect(x, y, 1, 1);
+        }
+        if (Math.sin(t * 9) > 0.4) R(poly[2][0] + 1, poly[2][1] + 2, 1, 1, '#ffffff');
+        break;
+      }
+      case 'mythTail': {
+        const [w1, w2, w3] = sk.wc || FIRE_C;
+        for (let f = 0; f < 3; f++) {
+          const pts = [];
+          for (let i = 0; i < 9; i++) pts.push([r(bx - 5 - i * 1.1), r(by + 3 + f * 1.2 + i * (0.55 + f * 0.2) + Math.sin(t * 6 + i * 0.7 + f) * 0.8)]);
+          c.fillStyle = ol; for (const [x, y] of pts) c.fillRect(x - 1, y - 1, 3, 3);
+          pts.forEach(([x, y], i) => { c.fillStyle = i > 6 ? w1 : f === 1 ? w2 : w3; c.fillRect(x, y, 1, 1); });
+          const [ex, ey2] = pts[8]; E(ex - 1, ey2, 1.8, 1.8, ol); E(ex - 1, ey2, 1.1, 1.1, f === 1 ? w1 : w2);
+        }
+        break;
+      }
+      case 'mythCrest': {   // три пера хохолка: сначала общий контур, потом заливка, кончики колышутся
+        const [w1, w2, w3] = sk.wc || FIRE_C, fe = [0, 1, 2].map(i => ({ an: -Math.PI / 2 - 0.25 - i * 0.45 + Math.sin(t * 5 + i) * 0.08, L: 7 - i }));
+        for (const { an, L } of fe) for (let d = 0; d <= L; d++) R(hx - 1 + Math.cos(an) * d - 1, hy - 5 + Math.sin(an) * d - 1, 3, 3, ol);
+        fe.forEach(({ an, L }, i) => { for (let d = 0; d <= L; d++) R(hx - 1 + Math.cos(an) * d, hy - 5 + Math.sin(an) * d, 1, 1, d > L - 2 ? w1 : i === 1 ? w2 : w3); });
+        break;
+      }
+      case 'featherCollar': {
+        const [w1, w2, w3] = sk.wc || FIRE_C;
+        for (let i = 0; i < 6; i++) { const x = bx - 5 + i * 2; stri(c, x, by - 5, 3, ol, 1); stri(c, x, by - 5, 3, i % 2 ? w2 : w3); R(x, by - 5, 1, 1, w1); }
+        break;
+      }
+      case 'iceCrown': for (const [dx, h] of [[-4, 4], [-1, 7], [2, 5], [5, 3]]) { stri(c, hx + dx, hy - 6 - h, h + 1, ol, 1); stri(c, hx + dx, hy - 6 - h, h + 1, '#bff4ff'); R(hx + dx, hy - 5 - h, 1, 1, '#ffffff'); } if (Math.sin(t * 6) > 0.7) R(hx - 1, hy - 14, 1, 1, '#ffffff'); break;
+      case 'voidHorns': {
+        for (const x of [hx - 4, hx + 2]) { const pt = i => [x - (i > 2 ? i - 2 : 0), hy - 5 - Math.min(i, 4)]; for (let i = 0; i < 6; i++) { const [a, b] = pt(i); R(a - 1, b - 1, 3, 3, ol); } for (let i = 0; i < 6; i++) { const [a, b] = pt(i); R(a, b, 1, 1, i > 3 ? '#ff3af0' : '#7a3aff'); } }
+        const g = 0.5 + Math.sin(t * 4) * 0.5; c.globalAlpha = g; R(hx - 1, hy - 15, 3, 1, '#ffffff'); R(hx, hy - 16, 1, 3, '#ffffff'); c.globalAlpha = 1; break;
+      }
+      case 'sunDisk': {   // солнечный диск с лучами за головой
+        const n = 10; for (let k = 0; k < n; k++) { const an = k / n * Math.PI * 2 + t * 1.5, d = 9 + (k % 2) * 2; R(hx - 1 + Math.cos(an) * d, hy - 2 + Math.sin(an) * d, 2, 2, k % 2 ? '#fff6a0' : '#ffb21a'); }
+        break;
+      }
+      // ---- Жнец душ: рваный плащ, капюшон-бездна, большая коса и кружащие души ----
+      case 'reaperCloak': {
+        for (let i = 0; i < 6; i++) { const x = bx - 8 + i * 2.4, h = 7 + (i % 2) * 3 + r(Math.sin(t * 5 + i) * 1.2); R(x - 1, by - 6, 4, h + 7, ol); R(x, by - 5, 2, h + 5, i % 2 ? '#1a2240' : '#262e52'); }
+        break;
+      }
+      case 'reaperCowl': {
+        O(Hd.x - 0.5, Hd.y - 0.5, Hd.rx + 1, Hd.ry + 1, '#1a2240'); E(hx + 2.5, hy + 1, 4.5, 4.5, '#02030a');
+        stri(c, hx - 6, hy - 13, 6, ol, 1); stri(c, hx - 6, hy - 13, 6, '#1a2240');   // кончик капюшона откинут назад
+        for (let i = 0; i < 5; i++) R(hx - 6 + i * 3, hy + 6 + (i % 2), 2, 1, '#1a2240');   // рваный край
+        if (!blink) { const g = Math.sin(t * 7) > -0.6 ? '#7af0ff' : '#3a8aff'; R(ex1, ey + 1, 2, 2, g); R(ex2, ey + 1, 2, 2, g); c.globalAlpha = 0.4; R(ex1 - 1, ey, 4, 4, '#7af0ff'); R(ex2 - 1, ey, 4, 4, '#7af0ff'); c.globalAlpha = 1; }
+        break;
+      }
+      case 'reaperScythe': {
+        const sx = r(A1.x + 1), top = hy - 12, bot = by + 8;
+        R(sx - 1, top, 3, bot - top, ol); R(sx, top + 1, 1, bot - top - 2, '#3a3a4a');
+        for (let i = 0; i < 4; i++) R(sx, top + 4 + i * 4, 1, 1, Math.sin(t * 5 + i) > 0 ? '#7af0ff' : '#3a6aa0');   // руны на древке
+        const pts = [[0, 0], [-1, -1], [-2, -1], [-3, -1], [-4, -1], [-5, 0], [-6, 0], [-7, 1], [-8, 2], [-9, 3], [-9, 4]];
+        for (const [dx, dy] of pts) R(sx + dx - 1, top + dy - 1, 3, 3, ol);
+        for (const [dx, dy] of pts) R(sx + dx, top + dy, 1, 1, '#d8e8ff');
+        c.globalAlpha = 0.5 + Math.sin(t * 6) * 0.3; for (const [dx, dy] of pts) R(sx + dx, top + dy + 1, 1, 1, '#7af0ff'); c.globalAlpha = 1;
+        break;
+      }
+      case 'soulOrbs': for (let i = 0; i < 3; i++) { const an = t * 2.4 + i * 2.1, x = bx + Math.cos(an) * 11, y = by - 4 + Math.sin(an) * 5; c.globalAlpha = 0.85; E(x, y, 1.6, 1.6, '#7af0ff'); R(x - 0.5, y - 3, 1, 2, '#bff8ff'); c.globalAlpha = 1; } break;
       case 'hood':
         O(Hd.x, Hd.y, Hd.rx + 0.5, Hd.ry + 0.5, '#1a1a24'); E(hx + 2.5, hy + 0.5, 4.5, 4.5, '#05050a');
         if (!blink) { R(ex1, ey + 1, 2, 1, '#7cf0ff'); R(ex2, ey + 1, 2, 1, '#7cf0ff'); }
@@ -4206,6 +4274,7 @@ function mpDrawOne(q, g, r) {
   f.x = g.x; f.y = g.y; f.vx = r.vx || 0; f.vy = r.vy || (r.u ? -1 : 1); f.face = r.f || 1; f.state = r.st === 'wall' || r.st === 'ground' ? r.st : 'air'; f.spin = r.sp ? 1 : 0; f.rot = r.rot || 0;
   f.shield = fx & 1 ? 1 : 0; f.jet = fx & 2 ? 6 : 0; f.rocket = fx & 4 ? 5 : 0; f.ghost = fx & 8 ? 1 : 0; f.star = fx & 16 ? 1 : 0; f.wings = fx & 32 ? 1 : 0; f.magnet = fx & 64 ? 1 : 0;
   f.trail.unshift({ x: f.x, y: f.y, rot: f.rot }); if (f.trail.length > 10) f.trail.length = 10;
+  f.em = q.em;   // эмоция другого игрока тоже играет на его герое
   const sp = p, ss = state, sk = skinId, si = idleT, sh = held;
   p = f; state = r.d ? 'dead' : 'play'; skinId = mpSkin(q.skin).id; idleT = 0; held = !!(fx & 2);
   try {
@@ -4232,7 +4301,7 @@ function mpGhost() {
     if (q.zm && Date.now() - q.zmT < 800) { const zd = q.zd || (q.zd = {}); for (const z of q.zm) { const d = zd[z.i] || (zd[z.i] = { x: z.x, y: z.y }); d.x += (z.x - d.x) * 0.4; d.y += (z.y - d.y) * 0.4; if (z.hp > 0 && d.y > camY - 60 && d.y < camY + H + 60) zmDrawMinion(d.x, d.y, z.f, z.hp, z.rg, time * 3 + z.i); } }
     if (r.ai && !r.d) { let x = g.x + r.ai[0] / 100 * 14, y = g.y - 6 + r.ai[1] / 100 * 14; const v = 520 + 520 * r.ai[2] / 100, vx = r.ai[0] / 100 * v; let vy = r.ai[1] / 100 * v; for (let i = 0; i < 14; i++) { ctx.globalAlpha = 0.75 - i * 0.05; pell(ctx, x, y, 2.5, 2.5, '#fff2c8'); for (let s = 0; s < 4; s++) { vy += 700 * 0.012; x += vx * 0.012; y += vy * 0.012; } } ctx.globalAlpha = 1; }
     mpDrawOne(q, g, r);
-    text(q.nick, g.x, g.y - 46, 1, '#9be7ff'); if (q.em && !emoDraw(g.x, g.y, q.em, mpSkin(q.skin))) q.em = null;
+    text(q.nick, g.x, g.y - 46, 1, '#9be7ff'); if (q.em && !emoTag(g.x, g.y, q.em)) q.em = null;
   }
 }
 function mpIcon(id) { if (!mp.icons[id]) { const k = mpSkin(id); heroSprite(k, 'idle', time, false); const c = document.createElement('canvas'); c.width = 32; c.height = 40; c.getContext('2d').drawImage(hcv, 0, 0); mp.icons[id] = c; } return mp.icons[id]; }
@@ -4275,7 +4344,7 @@ const trBg = 'position:fixed;inset:0;z-index:101;background:radial-gradient(circ
 const trBtn = bg => 'font:inherit;padding:10px 14px;border:3px solid #2a1408;border-radius:10px;background:' + bg + ';color:#fff;text-shadow:0 2px #2a1408;cursor:pointer;';
 const trMk = (tag, css, txt) => { const e = document.createElement(tag); if (css) e.style.cssText = css; if (txt !== undefined) e.textContent = txt; return e; };
 const trMine = () => owned.filter(id => id !== 'hamster' && SKINS.some(k => k.id === id));
-const trNorm = a => [...new Set(a.filter(Boolean))].sort();
+const trNorm = a => [...new Set((Array.isArray(a) ? a : []).filter(id => typeof id === 'string' && SKINS.some(k => k.id === id)))].sort();   // только известные герои — чужая версия игры не подсунет лишнего
 const trHash = () => { const t = mp.tr; return JSON.stringify([mp.id, t.with].sort().map(id => trNorm(id === mp.id ? t.my : t.his))); };
 function trIcon(id, w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; c.style.cssText = 'width:' + w + 'px;height:' + h + 'px'; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(mpIcon(id), 0, 0, w, h); return c; }
 const trBlank = (id, role, phase) => ({ with: id, role, phase, my: Array(9).fill(''), his: Array(9).fill(''), myR: 0, hisR: 0, myC: '', hisC: '' });
@@ -4418,6 +4487,11 @@ function emoIcon(id, cx, cy, s) {
   else if (id === 'lol') { ctx.rotate(Math.sin(time * 18) * 0.15); face('#ffd23a'); P(-6, -4, 4, 2, OL); P(2, -4, 4, 2, OL); pell(ctx, 0, 3, 5, 4, OL); pell(ctx, 0, 4, 3, 2, '#ff5a5a'); P(-10, 0, 2, 5, '#7ad8ff'); P(8, 0, 2, 5, '#7ad8ff'); }
   else if (id === 'cool') { face('#ffd23a'); P(-8, -4, 7, 4, '#111'); P(1, -4, 7, 4, '#111'); P(-1, -3, 2, 1, '#111'); P(-6, -3, 2, 1, '#8af'); P(-3, 3, 6, 2, OL); }
   else if (id === 'angry') { ctx.translate(Math.sin(time * 30) * 0.8, 0); face('#ff4a3a'); ctx.strokeStyle = OL; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, -7); ctx.lineTo(-2, -3); ctx.moveTo(8, -7); ctx.lineTo(2, -3); ctx.stroke(); P(-5, -2, 3, 3, OL); P(2, -2, 3, 3, OL); P(-4, 4, 8, 2, OL); }
+  else if (id === 'dance') { const b = Math.sin(time * 10) * 2; ctx.translate(0, b); P(1, -10, 3, 14, OL); P(2, -9, 1, 12, '#ff7aff'); P(2, -10, 7, 3, OL); P(3, -9, 5, 1, '#ff7aff'); pell(ctx, -1, 4, 5, 4, OL); pell(ctx, -1, 4, 3.5, 2.6, '#ff7aff'); }
+  else if (id === 'ninja') { ctx.rotate(time * 8); for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(-3, -2); ctx.lineTo(0, -12); ctx.lineTo(3, -2); ctx.closePath(); ctx.fillStyle = OL; ctx.fill(); ctx.beginPath(); ctx.moveTo(-1.5, -3); ctx.lineTo(0, -10); ctx.lineTo(1.5, -3); ctx.fillStyle = '#d8dcec'; ctx.fill(); } pell(ctx, 0, 0, 4, 4, OL); pell(ctx, 0, 0, 2, 2, '#7a7a8a'); }
+  else if (id === 'fire') { const f2 = Math.sin(time * 16) * 1.5; ctx.beginPath(); ctx.moveTo(0, -13 - f2); ctx.quadraticCurveTo(10, -2, 7, 5); ctx.quadraticCurveTo(0, 12, -7, 5); ctx.quadraticCurveTo(-10, -2, 0, -13 - f2); ctx.fillStyle = OL; ctx.fill(); ctx.beginPath(); ctx.moveTo(0, -9 - f2); ctx.quadraticCurveTo(7, -1, 5, 4); ctx.quadraticCurveTo(0, 9, -5, 4); ctx.quadraticCurveTo(-7, -1, 0, -9 - f2); ctx.fillStyle = '#ff6a1a'; ctx.fill(); pell(ctx, 0, 3, 3, 4, '#ffd23a'); }
+  else if (id === 'king') { ctx.fillStyle = OL; ctx.beginPath(); ctx.moveTo(-11, 7); ctx.lineTo(-12, -7); ctx.lineTo(-6, -1); ctx.lineTo(0, -10); ctx.lineTo(6, -1); ctx.lineTo(12, -7); ctx.lineTo(11, 7); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(-9, 5); ctx.lineTo(-10, -3); ctx.lineTo(-5, 1); ctx.lineTo(0, -6); ctx.lineTo(5, 1); ctx.lineTo(10, -3); ctx.lineTo(9, 5); ctx.fill(); pell(ctx, 0, 2, 2, 2, '#e8261a'); }
+  else if (id === 'ufo') { ctx.translate(0, Math.sin(time * 4) * 1.5); pell(ctx, 0, -3, 6, 5, OL); pell(ctx, 0, -3, 4.5, 3.6, '#9ae8ff'); pell(ctx, 0, 2, 13, 5, OL); pell(ctx, 0, 2, 11.5, 3.6, '#9aa8c8'); for (let i = 0; i < 3; i++) pell(ctx, (i - 1) * 6, 3, 1.4, 1.4, (Math.floor(time * 6) + i) % 2 ? '#ffd23a' : '#ff5a5a'); }
   else { ctx.rotate(time * 2); ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, r = i % 2 ? 5 : 12; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.lineWidth = 3; ctx.strokeStyle = OL; ctx.stroke(); ctx.fillStyle = '#ffd23a'; ctx.fill(); P(-2, -4, 3, 3, '#fff'); }
   ctx.restore();
 }
@@ -4444,12 +4518,19 @@ function emoOverlay(id, s, t) {
   else if (id === 'king') { const d = Math.min(1, t * 2), cy2 = (-40 - (1 - d) * 40) * s; ctx.fillStyle = OL; ctx.beginPath(); ctx.moveTo(-11 * s, cy2 + 8 * s); ctx.lineTo(-12 * s, cy2 - 6 * s); ctx.lineTo(-6 * s, cy2); ctx.lineTo(0, cy2 - 9 * s); ctx.lineTo(6 * s, cy2); ctx.lineTo(12 * s, cy2 - 6 * s); ctx.lineTo(11 * s, cy2 + 8 * s); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(-9 * s, cy2 + 6 * s); ctx.lineTo(-10 * s, cy2 - 3 * s); ctx.lineTo(-5 * s, cy2 + 1 * s); ctx.lineTo(0, cy2 - 6 * s); ctx.lineTo(5 * s, cy2 + 1 * s); ctx.lineTo(10 * s, cy2 - 3 * s); ctx.lineTo(9 * s, cy2 + 6 * s); ctx.fill(); pell(ctx, 0, cy2 + 2 * s, 2 * s, 2 * s, '#e8261a'); }
 }
 function emoHamster(id, sk, cx, cy, s, t) {
-  if (id === 'angry') { ctx.globalAlpha = 0.3 + Math.sin(t * 12) * 0.12; pell(ctx, cx, cy + 4 * s, 40 * s, 40 * s, '#ff2a2a'); ctx.globalAlpha = 1; }
-  if (id === 'fire') { ctx.globalAlpha = 0.35 + Math.sin(t * 14) * 0.1; pell(ctx, cx, cy + 6 * s, 38 * s, 34 * s, '#ff6a1a'); ctx.globalAlpha = 1; }
-  if (id === 'ufo') { ctx.globalAlpha = 0.3 + Math.sin(t * 9) * 0.08; ctx.fillStyle = '#9affc8'; ctx.beginPath(); ctx.moveTo(cx - 8 * s, cy - 42 * s); ctx.lineTo(cx + 8 * s, cy - 42 * s); ctx.lineTo(cx + 30 * s, cy + 44 * s); ctx.lineTo(cx - 30 * s, cy + 44 * s); ctx.fill(); ctx.globalAlpha = 1; }
+  emoFx(id, cx, cy, s, t, false);
   const draw = (tt, al, main) => { const m = emoMotion(id, tt); heroSprite(sk, m.pose, tt, false); ctx.save(); ctx.globalAlpha = al; ctx.translate(cx + (m.x || 0) * s, cy + 12 * s + (m.y || 0) * s); ctx.rotate(m.rot || 0); ctx.scale(m.sx || 1, m.sy || 1); ctx.drawImage(hcv, -32 * s, -52 * s, 64 * s, 80 * s); if (main) emoOverlay(id, s, t); ctx.restore(); };
   if (id === 'ninja') for (let g = 4; g >= 1; g--) draw(t - g * 0.06, 0.18, false);
   draw(t, 1, true);
+  emoFx(id, cx, cy, s, t, true);
+}
+function emoFx(id, cx, cy, s, t, front) {   // свечение и лучи — за героем, сердечки, искры и прочее — перед ним
+  if (!front) {
+  if (id === 'angry') { ctx.globalAlpha = 0.3 + Math.sin(t * 12) * 0.12; pell(ctx, cx, cy + 4 * s, 40 * s, 40 * s, '#ff2a2a'); ctx.globalAlpha = 1; }
+  if (id === 'fire') { ctx.globalAlpha = 0.35 + Math.sin(t * 14) * 0.1; pell(ctx, cx, cy + 6 * s, 38 * s, 34 * s, '#ff6a1a'); ctx.globalAlpha = 1; }
+  if (id === 'ufo') { ctx.globalAlpha = 0.3 + Math.sin(t * 9) * 0.08; ctx.fillStyle = '#9affc8'; ctx.beginPath(); ctx.moveTo(cx - 8 * s, cy - 42 * s); ctx.lineTo(cx + 8 * s, cy - 42 * s); ctx.lineTo(cx + 30 * s, cy + 44 * s); ctx.lineTo(cx - 30 * s, cy + 44 * s); ctx.fill(); ctx.globalAlpha = 1; }
+  ctx.globalAlpha = 1; return;
+  }
   if (id === 'heart') { for (let i = 0; i < 4; i++) { const u = (t * 0.8 + i * 0.25) % 1; ctx.globalAlpha = 1 - u; emoHeart(cx + Math.sin(i * 2.1 + t * 3) * 24 * s, cy - 6 * s - u * 46 * s, 1.3 * s, '#ff3d5a'); } const u = (t * 0.9) % 1; ctx.globalAlpha = 1 - u * u; emoHeart(cx + 14 * s + u * 44 * s, cy - 8 * s - Math.sin(u * Math.PI) * 14 * s, (1 + u * 1.8) * s, '#ff6a8a'); }
   else if (id === 'lol') { text(tr('ХА', 'HA'), cx + 24 * s, cy - 30 * s - Math.abs(Math.sin(t * 10)) * 6 * s, 2, '#ffffff', 'center', OL); for (const o of [-16, 16]) { const u = (t * 2 + (o > 0 ? 0.5 : 0)) % 1; ctx.globalAlpha = 1 - u; prect(ctx, cx + o * s - 1, cy - 14 * s + u * 20 * s, 3, 5, '#7ad8ff'); } }
   else if (id === 'angry') for (let i = 0; i < 3; i++) { const u = (t * 1.2 + i / 3) % 1; ctx.globalAlpha = (1 - u) * 0.8; pell(ctx, cx + (i - 1) * 12 * s, cy - 44 * s - u * 28 * s, 4 * s * (1 + u), 4 * s * (1 + u), '#ffffff'); }
@@ -4467,6 +4548,14 @@ function emoPortrait(id, sk, x, y, w, h, t, round, s) {
   const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, C[0]); g.addColorStop(1, C[1]); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
   ctx.fillStyle = 'rgba(255,255,255,0.16)'; for (let i = 0; i < 4; i++) ctx.fillRect(x + ((t * 30 + i * w / 4) % (w + 40)) - 20, y, 8, h);
   emoHamster(id, sk, x + w / 2, y + h / 2, s, t); ctx.restore();
+}
+const EMO_DUR = 3;
+function emoTag(x, y, e) {   // эмоция играет на самом герое, над головой — маленький значок с её иконкой
+  if (!e) return false; const t = time - e.t0; if (t > EMO_DUR || t < 0) return false;
+  const k = Math.min(1, t * 7) * (t < 0.3 ? 1 + Math.sin(t / 0.3 * Math.PI) * 0.3 : 1), a = t > EMO_DUR - 0.3 ? (EMO_DUR - t) / 0.3 : 1, C = EMO_COL[e.id];
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(even(x), even(y - (e.id === 'ufo' ? 82 : e.id === 'king' || e.id === 'star' ? 74 : 62) - Math.sin(t * 4) * 2)); ctx.scale(k, k);
+  pell(ctx, 0, 0, 15, 15, OL); pell(ctx, 0, 0, 13, 13, C[0]); ctx.beginPath(); ctx.moveTo(-4, 13); ctx.lineTo(4, 13); ctx.lineTo(0, 19); ctx.fillStyle = OL; ctx.fill();
+  emoIcon(e.id, 0, 0, 0.8); ctx.restore(); return true;
 }
 function emoDraw(x, y, e, sk) {
   if (!e) return false; const t = time - e.t0; if (t > 2.4 || t < 0) return false;
@@ -4505,9 +4594,25 @@ function drawEmotes() {
   coinIcon(W / 2 - 30, 78); text(String(bank), W / 2 - 16, 86, 2, '#ffffff', 'left', OL);
   text(tr('Листай вниз. Купленные — круглая кнопка в раунде', 'Scroll down. Owned: round button in a round'), W / 2, H - 8, 1, '#ffffff', 'center', OL, W - 20);
 }
+function emoSnd(id) {   // у каждой эмоции свой звук
+  const A = (fs, gap, dur, w, v) => fs.forEach((f, i) => tone(f, f, dur, w, v, i * gap));
+  if (id === 'heart') A([784, 988, 1319], 0.08, 0.25, 'sine', 0.05);
+  else if (id === 'lol') A([660, 520, 660, 520, 700], 0.09, 0.08, 'square', 0.035);
+  else if (id === 'cool') { tone(300, 900, 0.18, 'triangle', 0.05); tone(1568, 1568, 0.15, 'sine', 0.03, 0.2); }
+  else if (id === 'angry') { tone(140, 90, 0.4, 'sawtooth', 0.06); noise(0.3, 0.05, 0, 900); }
+  else if (id === 'star') A([1047, 1319, 1568, 2093], 0.05, 0.2, 'triangle', 0.035);
+  else if (id === 'dance') { A([523, 659, 523, 784], 0.12, 0.1, 'square', 0.035); noise(0.05, 0.08, 3000); noise(0.05, 0.08, 3000, 0, 0.24); }
+  else if (id === 'ninja') { noise(0.15, 0.08, 3000); tone(1800, 400, 0.15, 'sine', 0.03); }
+  else if (id === 'fire') { noise(0.6, 0.08, 200, 2000); tone(200, 500, 0.3, 'sawtooth', 0.03); }
+  else if (id === 'king') A([523, 659, 784, 1047], 0.1, 0.3, 'square', 0.03);
+  else if (id === 'ufo') { tone(400, 900, 0.5, 'sine', 0.05); tone(900, 400, 0.5, 'sine', 0.04, 0.5); }
+  else { tone(700, 1100, 0.1, 'square', 0.05); tone(900, 1400, 0.12, 'triangle', 0.04, 0.08); }
+}
 function emoDo(id) {
   if (state !== 'play' || !emOwn.includes(id)) return; p.em = { id, t0: time }; emOpen = false;
-  tone(700, 1100, 0.1, 'square', 0.05); tone(900, 1400, 0.12, 'triangle', 0.04, 0.08); burst(p.x, p.y - 30, 8, '#ffd23a', 140, 0.6, 4, -40, 'star');
+  emoSnd(id); const C = EMO_COL[id] || ['#ffd23a', '#ffffff'];
+  burst(p.x, p.y - 20, 12, C[0], 160, 0.6, 4, -40, 'star'); burst(p.x, p.y - 20, 6, '#ffffff', 90, 0.4, 3, 0);
+  parts.push({ x: p.x, y: p.y - 6, vx: 0, vy: 0, life: 0.4, max: 0.4, color: C[0], size: 40, grav: 0, shape: 'wave' });
   if (mp.active) mpSend({ t: 'em', e: id });
 }
 function emoPlayClick(pt) {
@@ -4660,7 +4765,7 @@ const SV_WIN = { x: 12, y: 52, w: 336, h: 536 };
 const SV_X = { x: SV_WIN.x + SV_WIN.w - 44, y: SV_WIN.y + 6, w: 38, h: 38 };
 const SV_BUY = { x: SV_WIN.x + SV_WIN.w - 158, y: SV_WIN.y + SV_WIN.h - 58, w: 146, h: 44 };
 const SV_NO = { x: SV_WIN.x + 12, y: SV_WIN.y + SV_WIN.h - 58, w: 110, h: 44 };
-const SV_GP = { x: SV_WIN.x + SV_WIN.w - 158, y: SV_WIN.y + 62, w: 146, h: 346 };
+const SV_GP = { x: SV_WIN.x + SV_WIN.w - 176, y: SV_WIN.y + 66, w: 168, h: 336 };
 function svOpen(k, pr) { sv = { k, pr, confirm: false, t0: time, no: -9 }; sfx.click(); }
 function svClick(pt) {
   if (inRect(pt, SV_X) || !inRect(pt, SV_WIN)) { sv = null; sfx.click(); return; }
@@ -4669,48 +4774,262 @@ function svClick(pt) {
   if (sv.confirm) { if (inRect(pt, SV_NO)) { sv.confirm = false; sfx.click(); } else if (inRect(pt, SV_BUY)) { const pr = sv.pr; sv = null; buySkin(k, pr); } return; }
   if (inRect(pt, SV_BUY)) { if (canPay(sv.pr)) { sv.confirm = true; sfx.click(); } else { sv.no = time; sfx.no(); } }
 }
-function svGameplay(k, X, Y, Wd, Ht, t) {   // ролик геймплея на 5 секунд, потом заново
-  const R = RARITY[k.r]; ctx.save(); ctx.beginPath(); ctx.rect(X, Y, Wd, Ht); ctx.clip();
-  const g = ctx.createLinearGradient(0, Y, 0, Y + Ht); g.addColorStop(0, '#12365a'); g.addColorStop(1, '#2a8a5a'); ctx.fillStyle = g; ctx.fillRect(X, Y, Wd, Ht);
-  const sc = t * 120; ctx.globalAlpha = 0.14; ctx.fillStyle = '#fff'; for (let i = 0; i < 6; i++) ctx.fillRect(X + 20 + (i * 37) % 80, Y + ((i * 70 + sc * 0.4) % (Ht + 40)) - 20, 50, 6); ctx.globalAlpha = 1;
-  const xl = X + 20, xr = X + Wd - 20;
-  for (const px of [xl - 14, xr + 2]) { ctx.fillStyle = OL; ctx.fillRect(px - 1, Y, 16, Ht); ctx.fillStyle = '#7a4a1a'; ctx.fillRect(px + 1, Y, 12, Ht); ctx.fillStyle = '#a8682a'; for (let j = 0; j < 8; j++) ctx.fillRect(px + 1, Y + ((j * 60 + sc) % (Ht + 60)) - 30, 12, 4); }
-  const per = 0.9, pos = tt => { const n = Math.floor(tt / per), u = (tt % per) / per, a = n % 2 ? xr - 16 : xl + 16, b = n % 2 ? xl + 16 : xr - 16, e = u * u * (3 - 2 * u); return { x: a + (b - a) * e, y: Y + Ht * 0.58 - Math.sin(u * Math.PI) * 46, u, f: b > a ? 1 : -1 }; };
-  const cols = k.trail && k.trail.cols ? k.trail.cols : [k.light || '#fff', k.scarf || '#ffd23a'];
-  for (let j = 7; j >= 1; j--) { const q = pos(Math.max(0, t - j * 0.035)); ctx.globalAlpha = 0.5 * (1 - j / 8); pell(ctx, q.x, q.y, 5 - j * 0.4, 5 - j * 0.4, cols[j % cols.length]); } ctx.globalAlpha = 1;
-  const h = pos(t); if (k.r >= 3) { ctx.globalAlpha = 0.3 + Math.sin(time * 6) * 0.1; pell(ctx, h.x, h.y, 26, 26, R.col); ctx.globalAlpha = 1; }
-  heroSprite(k, h.u < 0.12 ? 'cling' : h.u < 0.55 ? 'jump' : 'fall', time, false); ctx.save(); ctx.translate(h.x, h.y); ctx.scale(h.f, 1); ctx.drawImage(hcv, -22, -28, 44, 56); ctx.restore();
-  if (t < 0.18) { ctx.globalAlpha = 1 - t / 0.18; ctx.fillStyle = '#fff'; ctx.fillRect(X, Y, Wd, Ht); ctx.globalAlpha = 1; }
-  ctx.fillStyle = '#ffd23a'; ctx.fillRect(X, Y + Ht - 5, Wd * (t / 5), 5); ctx.fillStyle = '#ff3a3a'; pell(ctx, X + 10, Y + 10, 3, 3, '#ff3a3a'); text(tr('ГЕЙМПЛЕЙ', 'GAMEPLAY'), X + 18, Y + 14, 1, '#ffffff', 'left', OL);
-  ctx.restore(); ctx.strokeStyle = OL; ctx.lineWidth = 3; ctx.strokeRect(X, Y, Wd, Ht);
+// ---- Настоящий геймплей в окне: свой маленький мир из тех же столбов, фона, монет и эффектов, что в игре ----
+// мир генерирует тот же генератор, рисуют те же функции; на время шага глобальные переменные игры подменяются
+// миром ролика и потом возвращаются — счёт, монеты и рекорды настоящей игры не трогаются
+function svWith(D, fn) {
+  const o = { p, poles, path, pathPrev, birds, ents, parts, leaves, camY, camR, minY, state, skinId, idleT, held, clone, ally, shake, aim, paused, pmenu, coinsRun, flips };
+  p = D.p; poles = D.poles; path = D.path; pathPrev = D.pathPrev; birds = D.birds; ents = D.ents; parts = D.parts; leaves = D.leaves;
+  camY = D.camY; camR = D.camR; minY = D.minY; state = 'play'; skinId = D.k.id; idleT = 0; held = false; clone = null; ally = null; shake = 0; aim = null; paused = false; pmenu = false; coinsRun = D.coins; flips = 0;
+  try { fn(); } finally {
+    Object.assign(D, { p, poles, path, pathPrev, birds, ents, parts, leaves, camY, camR, minY, coins: coinsRun });
+    ({ p, poles, path, pathPrev, birds, ents, parts, leaves, camY, camR, minY, state, skinId, idleT, held, clone, ally, shake, aim, paused, pmenu, coinsRun, flips } = o);
+  }
 }
+function svDemoNew(k) {
+  const D = { k, t: 0, coins: 0, wait: 0.6, fly: null };
+  const first = makePole(110, -200, 0, 'log', 1, 0);
+  Object.assign(D, { poles: [first], path: first, pathPrev: null, p: newHero(first), birds: [], ents: [], parts: [], leaves: [], camY: -H + 150, camR: even(-H + 150) });
+  D.minY = D.p.y;
+  svWith(D, () => { const o = Math.random; try { generate(); } finally { Math.random = o; } ents = ents.filter(e => e.type === 'coin' || e.type === 'gem'); });
+  return D;
+}
+const svSpot = (q, f) => ({ x: f > 0 ? q.x1 + PW / 2 : q.x0 - PW / 2 });
+function svDemoStep(D, dt) {
+  D.t += dt;
+  svWith(D, () => {
+    const sk = curSkin();
+    if (p.jT > 0) p.jT -= dt;
+    p.squash *= Math.pow(0.0005, dt);
+    if (p.state === 'wall') {   // висит на столбе и чуть сползает, потом прыгает к следующему столбу пути
+      p.y += SLIDE * dt; D.wait -= dt;
+      let n = p.pole.next; if (n && n.kind === 'portal' && n.next) n = n.next;
+      if (D.wait <= 0 && n) {
+        const f0 = p.pole.face || p.face, stack = n.cx === p.pole.cx, tx = svSpot(n, n.face || -f0).x;
+        const ty = clamp(p.y - rand(70, 120), n.y0 + PH / 2 + 4, n.y1 - PH / 2 - 2);
+        const T = stack ? 0.62 : clamp(Math.abs(tx - p.x) / JVX, 0.28, 0.6);
+        const vy = (ty - p.y - G * T * T / 2) / T, flip = stack || vy < JVY * 1.05 || Math.random() < 0.35;
+        D.fly = { x0: p.x, y0: p.y, tx, ty, T, vy, t: 0, stack, flip, dir: f0, to: n, flipped: false };
+        p.state = 'air'; p.face = f0; p.pole = null; p.squash = 1; p.dj = true;
+        dust(p.x - f0 * PW / 2, p.y, f0);
+        if (sk.r >= 3) legendJumpFx(sk, false);
+        heroJumpFx(sk, false, f0);
+      }
+    } else if (D.fly) {
+      const F = D.fly; F.t += dt; const u = Math.min(1, F.t / F.T);
+      const ox = F.stack ? Math.sin(u * Math.PI) * 46 * F.dir : 0;
+      p.x = F.stack ? F.x0 + ox : lerp(F.x0, F.tx, u); p.y = F.y0 + F.vy * F.t + G * F.t * F.t / 2;
+      p.vx = F.stack ? (u < 0.5 ? F.dir : -F.dir) * JVX : (F.tx - F.x0) / F.T; p.vy = F.vy + G * F.t;
+      if (F.flip && !F.flipped && u > 0.42) {   // сальто — как двойное касание в игре
+        F.flipped = true; p.spin = 1; if (F.stack) p.face = -F.dir;
+        burst(p.x, p.y + 10, 10, '#ffffff', 110, 0.35, 4, 0);
+        if (sk.r >= 3) legendJumpFx(sk, true);
+        heroJumpFx(sk, true, p.face);
+      }
+      if (p.spin > 0) { p.spin -= dt * 2.2; p.rot = (1 - Math.max(0, p.spin)) * Math.PI * 2 * p.face; } else p.rot = 0;
+      if (u >= 1) {
+        const q = F.to, f = q.face || -F.dir;
+        p.state = 'wall'; p.pole = q; p.x = svSpot(q, f).x; p.y = F.ty; p.side = -f; p.face = f; p.spin = 0; p.rot = 0; p.squash = -0.8; p.vx = 0; p.vy = 0;
+        D.fly = null; D.wait = rand(0.18, 0.45);
+      }
+    }
+    p.trail.unshift({ x: p.x, y: p.y, rot: p.rot }); if (p.trail.length > 10) p.trail.length = 10;
+    if (sk.r >= 3) spawnTrail(sk, sk.r === 4 ? 9 : 5, dt);
+    for (let i = ents.length - 1; i >= 0; i--) {   // монеты и алмазы собираются только в ролике
+      const e = ents[i]; if (Math.hypot(e.x - p.x, e.y - p.y) > (e.r || 8) + 14) continue;
+      burst(e.x, e.y, e.type === 'gem' ? 10 : 6, e.type === 'gem' ? '#7ad8ff' : '#ffe24a', 130, 0.4, 4, 0, e.type === 'gem' ? 'star' : null); coinsRun++; ents.splice(i, 1);
+    }
+    for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.life -= dt; if (q.life <= 0) { parts.splice(i, 1); continue; } q.vy += (q.grav || 0) * dt; q.x += q.vx * dt; q.y += q.vy * dt; }
+    if (parts.length > 300) parts.splice(0, parts.length - 300);
+    if (p.y < minY) minY = p.y;
+    camY += (p.y - H * 0.62 - camY) * Math.min(1, dt * 4); camR = even(camY);
+    const o = Math.random; try { generate(); } finally { Math.random = o; }
+    ents = ents.filter(e => e.type === 'coin' || e.type === 'gem');
+  });
+}
+function svDemoDraw(D, X, Y, Wd, Ht) {
+  const s = Ht / H, want = clamp(Wd / 2 - D.p.x * s, Wd - W * s, 0);   // камера чуть следует за героем вбок
+  D.ox = D.ox == null ? want : D.ox + (want - D.ox) * 0.08;
+  ctx.save(); ctx.beginPath(); ctx.rect(X, Y, Wd, Ht); ctx.clip();
+  ctx.translate(X + D.ox, Y); ctx.scale(s, s);
+  svWith(D, () => {
+    drawBackground();
+    ctx.save(); ctx.translate(0, -camR);
+    drawGround();
+    for (const q of poles) if (q.y1 > camY - 40 && q.y0 < camY + H + 30) drawPole(q);
+    for (const b of birds) drawBird(b);
+    drawEnts(); drawHero();
+    for (const q of parts) drawParticle(q);
+    ctx.restore(); ctx.globalAlpha = 1;
+  });
+  ctx.restore();
+  // поверх ролика: метка «играет», высота и монеты
+  ctx.save(); ctx.beginPath(); ctx.rect(X, Y, Wd, Ht); ctx.clip();
+  if (D.t < 0.2) { ctx.globalAlpha = 1 - D.t / 0.2; ctx.fillStyle = '#fff'; ctx.fillRect(X, Y, Wd, Ht); ctx.globalAlpha = 1; }
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(X, Y, Wd, 20);
+  pell(ctx, X + 10, Y + 10, 3.5, 3.5, Math.sin(time * 6) > 0 ? '#ff3a3a' : '#a01010');
+  text(tr('ИГРА', 'LIVE'), X + 18, Y + 14, 1, '#ffffff', 'left', null);
+  const m = Math.max(0, Math.floor((-PH / 2 - D.minY) / PX_PER_M));
+  text(m + tr(' М', ' M'), X + Wd / 2 + 8, Y + 14, 1, '#ffffff', 'center', null);
+  coinIcon(X + Wd - 30, Y + 10, 5); text(String(D.coins), X + Wd - 22, Y + 14, 1, '#ffd23a', 'left', null);
+  ctx.restore();
+}
+
+// ---- Особый фон окна у легенд и мификов: сцена по стихии героя ----
+const SCENE_OF = {
+  flames: 'fire', hellfire: 'fire', lava: 'fire', snow: 'ice', blizzard: 'ice', crystals: 'ice', waves: 'sea', bubbles: 'sea', fish: 'sea',
+  stars: 'space', planets: 'space', constellation: 'space', void: 'space', rays: 'sky', holy: 'sky', feathers: 'sky', clouds: 'sky', rainbow: 'rainbow',
+  lightning: 'storm', rain: 'storm', moon: 'night', souls: 'night', smoke: 'night', spot: 'night', leaves: 'forest', petals: 'sakura', bamboo: 'forest',
+  sand: 'desert', stone: 'desert', laser: 'tech', scan: 'tech', glitch: 'tech', neon: 'tech', gears: 'tech', eq: 'tech', moto: 'tech', coins: 'gold', honey: 'gold', jelly: 'rainbow', lamp: 'gold',
+};
+function heroScene(k) {
+  const kind = k.cfx ? k.cfx[0] : k.look === 'galaxy' ? 'stars' : k.look === 'lava' ? 'flames' : 'rays';
+  const hex = v => typeof v === 'string' && v[0] === '#';
+  const c1 = k.myth ? k.myth[0] : hex(k.cfx && k.cfx[1]) ? k.cfx[1] : RARITY[k.r].col, c2 = k.myth ? k.myth[1] : hex(k.cfx && k.cfx[2]) ? k.cfx[2] : (k.scarf || '#ffffff');
+  return { sc: SCENE_OF[kind] || 'sky', c1, c2 };
+}
+const SCENE_SKY = { fire: ['#2a0400', '#a0200a'], ice: ['#0a2a5a', '#7ac8ff'], sea: ['#02203a', '#1a7a9a'], space: ['#06021a', '#2a1a5a'], sky: ['#5ab0ff', '#fff0c0'],
+  rainbow: ['#ff9ad8', '#9ae8ff'], storm: ['#14182a', '#3a4a6a'], night: ['#0a0a22', '#2a2a5a'], forest: ['#1a4a2a', '#8ad06a'], sakura: ['#ffb0d0', '#fff0f4'],
+  desert: ['#ff9a4a', '#ffe0a0'], tech: ['#0a0a1a', '#1a1a4a'], gold: ['#4a2a00', '#c08a20'] };
+function drawScene(k, X, Y, Wd, Ht) {
+  const { sc, c1, c2 } = heroScene(k), t = time, sk = SCENE_SKY[sc];
+  const g = ctx.createLinearGradient(0, Y, 0, Y + Ht); g.addColorStop(0, sk[0]); g.addColorStop(1, sk[1]); ctx.fillStyle = g; ctx.fillRect(X, Y, Wd, Ht);
+  const P = (x, y, w, h, c) => prect(ctx, x, y, w, h, c), rnd = i => hash(i * 7 + 3), A = a => { ctx.globalAlpha = clamp(a, 0, 1); };
+  const loopY = (i, sp, up) => { const v = (rnd(i) * Ht + t * sp) % Ht; return up ? Y + Ht - v : Y + v; };
+  const hills = (col, base, amp, fr, ph) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(X, Y + Ht); for (let x = 0; x <= Wd; x += 6) ctx.lineTo(X + x, Y + base + Math.sin(x * fr + ph) * amp + Math.sin(x * fr * 2.7 + ph) * amp * 0.4); ctx.lineTo(X + Wd, Y + Ht); ctx.fill(); };
+  if (sc === 'fire') {
+    hills('#3a0a04', Ht * 0.78, 14, 0.03, 1); hills('#1a0402', Ht * 0.86, 10, 0.05, 3);
+    A(0.5 + Math.sin(t * 3) * 0.15); P(X, Y + Ht - 18, Wd, 18, '#ff5a1a'); A(0.8); P(X, Y + Ht - 6, Wd, 6, '#ffd23a');
+    for (let i = 0; i < 30; i++) { A(0.8); const y = loopY(i, 40 + (i % 5) * 14, true); P(X + rnd(i + 50) * Wd + Math.sin(t * 2 + i) * 6, y, 3, 3, i % 3 ? c1 : '#ffd23a'); }
+  } else if (sc === 'ice') {
+    A(0.35); for (let b = 0; b < 3; b++) { ctx.fillStyle = b % 2 ? '#7af0d0' : c1; ctx.beginPath(); for (let x = 0; x <= Wd; x += 8) { const y = Y + 40 + b * 16 + Math.sin(x * 0.03 + t * 0.8 + b) * 10; x ? ctx.lineTo(X + x, y) : ctx.moveTo(X + x, y); } ctx.lineTo(X + Wd, Y + 70 + b * 16); ctx.lineTo(X, Y + 70 + b * 16); ctx.fill(); }
+    A(1); ctx.fillStyle = '#d8f0ff'; ctx.beginPath(); ctx.moveTo(X, Y + Ht); for (const [px, py] of [[0, 0.7], [0.18, 0.5], [0.32, 0.66], [0.5, 0.42], [0.68, 0.62], [0.84, 0.48], [1, 0.66]]) ctx.lineTo(X + px * Wd, Y + py * Ht); ctx.lineTo(X + Wd, Y + Ht); ctx.fill();
+    hills('#ffffff', Ht * 0.84, 6, 0.04, 2);
+    for (let i = 0; i < 40; i++) { A(0.85); P(X + ((rnd(i + 9) * Wd + Math.sin(t + i) * 10) % Wd + Wd) % Wd, loopY(i, 30 + (i % 4) * 12, false), i % 4 ? 2 : 3, i % 4 ? 2 : 3, '#ffffff'); }
+  } else if (sc === 'sea') {
+    for (let i = 0; i < 6; i++) { A(0.12); ctx.fillStyle = '#bff8ff'; const x = X + ((i * 70 + t * 10) % (Wd + 80)) - 40; ctx.beginPath(); ctx.moveTo(x, Y); ctx.lineTo(x + 24, Y); ctx.lineTo(x + 70, Y + Ht); ctx.lineTo(x + 30, Y + Ht); ctx.fill(); }
+    A(1); hills('#c8a060', Ht * 0.9, 5, 0.05, 1); for (let i = 0; i < 7; i++) { const x = X + 14 + i * Wd / 7; for (let j = 0; j < 7; j++) P(x + Math.sin(t * 2 + j * 0.6 + i) * 3, Y + Ht - 16 - j * 7, 3, 7, i % 2 ? '#2a8a4a' : '#3ab05a'); }
+    for (let i = 0; i < 24; i++) { A(0.7); const y = loopY(i, 26 + (i % 4) * 10, true); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X + rnd(i + 3) * Wd + Math.sin(t * 2 + i) * 5, y, 2 + (i % 3), 0, 7); ctx.stroke(); }
+    for (let i = 0; i < 3; i++) { A(0.9); const x = X + ((t * (20 + i * 9) + i * 120) % (Wd + 40)) - 20, y = Y + 80 + i * 60; P(x, y, 10, 5, i % 2 ? '#ffb02a' : c1); P(x - 4, y - 1, 4, 7, i % 2 ? '#ff8a1e' : c2); }
+  } else if (sc === 'space' || sc === 'night' || sc === 'storm') {
+    for (let i = 0; i < 60; i++) { A(0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i))); const sz = i % 7 ? 1 : 2; P(X + rnd(i) * Wd, Y + rnd(i + 99) * Ht * (sc === 'space' ? 1 : 0.7), sz, sz, '#ffffff'); }
+    if (sc === 'space') {
+      A(0.3); pell(ctx, X + Wd * 0.3, Y + Ht * 0.35, 80, 40, c1); A(0.25); pell(ctx, X + Wd * 0.7, Y + Ht * 0.55, 70, 36, c2);
+      A(1); const px = X + Wd * 0.78, py = Y + 70; pell(ctx, px, py, 26, 26, OL); pell(ctx, px, py, 24, 24, c1); pell(ctx, px - 6, py - 6, 10, 10, 'rgba(255,255,255,0.35)');
+      ctx.strokeStyle = c2; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(px, py, 40, 9, -0.3, 0, 7); ctx.stroke();
+      const sx = X + ((t * 120) % (Wd + 200)) - 100; A(0.9); for (let j = 0; j < 8; j++) P(sx - j * 5, Y + 40 + j * 2, 3, 2, '#ffffff');
+    } else if (sc === 'night') {
+      A(1); const mx = X + Wd * 0.72, my = Y + 80; A(0.3); pell(ctx, mx, my, 44, 44, c1); A(1); pell(ctx, mx, my, 30, 30, '#fff8d8'); pell(ctx, mx - 8, my - 4, 6, 6, '#e8dca8'); pell(ctx, mx + 9, my + 8, 4, 4, '#e8dca8');
+      hills('#14143a', Ht * 0.8, 16, 0.025, 2); hills('#0a0a1e', Ht * 0.88, 10, 0.05, 5);
+      for (let i = 0; i < 6; i++) { A(0.25); pell(ctx, X + ((rnd(i) * Wd + t * 12 * (i % 2 ? 1 : -1)) % (Wd + 80) + Wd + 80) % (Wd + 80) - 40, Y + Ht * 0.7 + i * 12, 60, 10, c1); }
+    } else {
+      A(1); for (let i = 0; i < 5; i++) { const x = X + ((rnd(i) * Wd + t * 8) % (Wd + 120)) - 60; pell(ctx, x, Y + 30 + (i % 2) * 20, 60, 22, '#2a3048'); pell(ctx, x + 10, Y + 24 + (i % 2) * 20, 40, 16, '#3a4260'); }
+      for (let i = 0; i < 40; i++) { A(0.5); const x = X + rnd(i) * Wd, y = loopY(i, 300, false); ctx.strokeStyle = '#9ab8e0'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 9); ctx.stroke(); }
+      if ((t % 2.6) < 0.18) { A(0.35); ctx.fillStyle = '#ffffff'; ctx.fillRect(X, Y, Wd, Ht); A(1); let x = X + Wd * (0.2 + hash(Math.floor(t / 2.6)) * 0.6), y = Y + 40; ctx.strokeStyle = c1; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); for (let s = 0; s < 8; s++) { x += rand(-14, 14); y += 30; ctx.lineTo(x, y); } ctx.stroke(); }
+      hills('#10121e', Ht * 0.88, 8, 0.05, 1);
+    }
+  } else if (sc === 'forest' || sc === 'sakura') {
+    const leaf = sc === 'sakura' ? '#ffb0d8' : c1;
+    hills(sc === 'sakura' ? '#e88ab0' : '#2a6a3a', Ht * 0.72, 18, 0.025, 1); hills(sc === 'sakura' ? '#c06a90' : '#1a4a2a', Ht * 0.84, 12, 0.04, 4);
+    for (let i = 0; i < 4; i++) { const x = X + 20 + i * (Wd - 40) / 3; A(1); P(x - 3, Y + Ht * 0.55, 6, Ht * 0.4, '#5a3a1a'); pell(ctx, x, Y + Ht * 0.52, 26, 22, sc === 'sakura' ? '#ff9ac8' : '#3a8a3a'); pell(ctx, x - 6, Y + Ht * 0.48, 14, 12, sc === 'sakura' ? '#ffd0e4' : '#5ab05a'); }
+    for (let i = 0; i < 26; i++) { A(0.9); const x = X + ((rnd(i) * Wd + Math.sin(t * 1.5 + i) * 18 + t * 14) % Wd + Wd) % Wd; P(x, loopY(i, 30 + (i % 4) * 10, false), 4, 3, i % 3 ? leaf : '#ffffff'); }
+  } else if (sc === 'desert') {
+    A(1); const sx = X + Wd * 0.7, sy = Y + 90; A(0.3); pell(ctx, sx, sy, 50, 50, '#fff6a0'); A(1); pell(ctx, sx, sy, 30, 30, '#fff0a0');
+    ctx.fillStyle = '#c87a3a'; ctx.beginPath(); ctx.moveTo(X + Wd * 0.15, Y + Ht * 0.72); ctx.lineTo(X + Wd * 0.32, Y + Ht * 0.48); ctx.lineTo(X + Wd * 0.5, Y + Ht * 0.72); ctx.fill();
+    hills('#e8a85a', Ht * 0.74, 10, 0.03, 1); hills('#d0904a', Ht * 0.86, 8, 0.045, 3);
+    for (let i = 0; i < 30; i++) { A(0.5); P(X + ((rnd(i) * Wd + t * (80 + (i % 4) * 30)) % Wd), Y + Ht * 0.6 + rnd(i + 7) * Ht * 0.35, 2, 1, '#fff0c0'); }
+  } else if (sc === 'tech') {
+    A(0.6); ctx.strokeStyle = c1; ctx.lineWidth = 1; const hz = Y + Ht * 0.55;
+    for (let i = 0; i < 12; i++) { const y = hz + Math.pow((i + (t * 0.8) % 1) / 12, 2) * (Ht - hz + Y); ctx.beginPath(); ctx.moveTo(X, y); ctx.lineTo(X + Wd, y); ctx.stroke(); }
+    for (let i = -8; i <= 8; i++) { ctx.beginPath(); ctx.moveTo(X + Wd / 2 + i * 8, hz); ctx.lineTo(X + Wd / 2 + i * 60, Y + Ht); ctx.stroke(); }
+    A(0.8); pell(ctx, X + Wd / 2, hz - 30, 40, 40, c2 || '#ff3af0'); A(0.9); for (let i = 0; i < 5; i++) P(X + Wd / 2 - 40, hz - 50 + i * 9, 80, 3, sk[0]);
+    A(0.25); P(X, Y + ((t * 80) % Ht), Wd, 3, '#ffffff');
+    for (let i = 0; i < 14; i++) { A(0.4 + Math.sin(t * 5 + i) * 0.3); P(X + rnd(i) * Wd, Y + rnd(i + 3) * hz * 0.8, 4, 2, i % 2 ? c1 : '#ffffff'); }
+  } else if (sc === 'gold') {
+    ctx.save(); ctx.translate(X + Wd / 2, Y + Ht * 0.5); ctx.rotate(t * 0.3); A(0.18); ctx.fillStyle = '#fff6a0'; for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-18, -400); ctx.lineTo(18, -400); ctx.fill(); } ctx.restore();
+    A(1); for (let i = 0; i < 40; i++) { const x = X + (i % 10) * Wd / 9 + (Math.floor(i / 10) % 2) * 10, y = Y + Ht - 10 - Math.floor(i / 10) * 9 - Math.sin(i) * 3; coinIcon(x, y, 6); }
+    for (let i = 0; i < 12; i++) { A(0.8 * Math.abs(Math.sin(t * 3 + i))); emoStar(X + rnd(i) * Wd, Y + rnd(i + 5) * Ht * 0.7, 4, '#ffffff'); }
+  } else {   // небо: облака, лучи; у радужных — радуга
+    ctx.save(); ctx.translate(X + Wd / 2, Y - 20); A(0.2); ctx.fillStyle = '#ffffff'; for (let i = 0; i < 9; i++) { const a = Math.PI * 0.15 + i * Math.PI * 0.09 + Math.sin(t * 0.5) * 0.04; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a - 0.04) * 700, Math.sin(a - 0.04) * 700); ctx.lineTo(Math.cos(a + 0.04) * 700, Math.sin(a + 0.04) * 700); ctx.fill(); } ctx.restore();
+    if (sc === 'rainbow') { A(0.6); ['#ff3a3a', '#ffa02a', '#ffe03a', '#3ae05a', '#3ab0ff', '#a64aff'].forEach((col, i) => { ctx.strokeStyle = col; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(X + Wd / 2, Y + Ht * 0.75, Wd * 0.55 - i * 8, Math.PI, 0); ctx.stroke(); }); }
+    A(1); for (let i = 0; i < 6; i++) { const x = X + ((rnd(i) * (Wd + 140) + t * (8 + i * 3)) % (Wd + 140)) - 70, y = Y + 40 + rnd(i + 4) * Ht * 0.7; pell(ctx, x, y, 34, 10, '#ffffff'); pell(ctx, x - 12, y - 6, 16, 11, '#ffffff'); pell(ctx, x + 10, y - 8, 18, 13, '#ffffff'); }
+    hills('#ffffff', Ht * 0.86, 8, 0.05, 2);
+    for (let i = 0; i < 16; i++) { A(0.7 * Math.abs(Math.sin(t * 2 + i))); emoStar(X + rnd(i) * Wd, Y + rnd(i + 8) * Ht * 0.8, 3, i % 2 ? c1 : '#ffffff'); }
+  }
+  A(1);
+  const v = ctx.createRadialGradient(X + Wd / 2, Y + Ht / 2, Math.min(Wd, Ht) * 0.3, X + Wd / 2, Y + Ht / 2, Math.max(Wd, Ht) * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.45)'); ctx.fillStyle = v; ctx.fillRect(X, Y, Wd, Ht);
+}
+// ---- Рамка мифика: переливающаяся двухцветная грань, самоцветы по углам, руны бегут по краю, корона сверху ----
+function mythFrame(k, X, Y, Wd, Ht) {
+  const [m1, m2] = k.myth || ['#ff3d9a', '#fff27a'], t = time;
+  ctx.globalAlpha = 0.35 + Math.sin(t * 4) * 0.15; ctx.fillStyle = Math.sin(t * 2) > 0 ? m1 : m2; ctx.fillRect(X - 12, Y - 12, Wd + 24, Ht + 24); ctx.globalAlpha = 1;
+  ctx.fillStyle = OL; ctx.fillRect(X - 8, Y - 8, Wd + 16, Ht + 16);
+  const g = ctx.createLinearGradient(X, Y, X + Wd, Y + Ht), u = (t * 0.25) % 1;
+  g.addColorStop(0, m1); g.addColorStop(u, '#ffffff'); g.addColorStop(Math.min(1, u + 0.08), m2); g.addColorStop(1, m1);
+  ctx.fillStyle = g; ctx.fillRect(X - 6, Y - 6, Wd + 12, Ht + 12);
+  ctx.fillStyle = OL; ctx.fillRect(X - 2, Y - 2, Wd + 4, Ht + 4);
+  for (let i = 0; i < 8; i++) { const a = X + (i + 0.5) * Wd / 8; prect(ctx, a - 1, Y - 5, 2, 2, OL); prect(ctx, a - 1, Y + Ht + 3, 2, 2, OL); }
+  cardMarquee({ x: X - 4, y: Y - 4, w: Wd + 8, h: Ht + 8 }, m1, t, k.myth);
+  for (const [cx, cy] of [[X - 4, Y - 4], [X + Wd + 4, Y - 4], [X - 4, Y + Ht + 4], [X + Wd + 4, Y + Ht + 4]]) {   // самоцветы
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI / 4); ctx.fillStyle = OL; ctx.fillRect(-9, -9, 18, 18); ctx.fillStyle = m1; ctx.fillRect(-7, -7, 14, 14); ctx.fillStyle = m2; ctx.fillRect(-7, -7, 7, 7); ctx.fillStyle = '#ffffff'; ctx.fillRect(-5, -5, 3, 3); ctx.restore();
+    if (Math.sin(t * 3 + cx) > 0.7) emoStar(cx + 6, cy - 6, 5, '#ffffff');
+  }
+  const cx = X + Wd / 2, cy = Y - 6, b = Math.sin(t * 3) * 2;   // корона над рамкой
+  ctx.fillStyle = OL; ctx.beginPath(); ctx.moveTo(cx - 22, cy + 6); ctx.lineTo(cx - 24, cy - 12 + b); ctx.lineTo(cx - 11, cy - 3); ctx.lineTo(cx, cy - 18 + b); ctx.lineTo(cx + 11, cy - 3); ctx.lineTo(cx + 24, cy - 12 + b); ctx.lineTo(cx + 22, cy + 6); ctx.fill();
+  ctx.fillStyle = m2; ctx.beginPath(); ctx.moveTo(cx - 19, cy + 3); ctx.lineTo(cx - 20, cy - 7 + b); ctx.lineTo(cx - 10, cy); ctx.lineTo(cx, cy - 13 + b); ctx.lineTo(cx + 10, cy); ctx.lineTo(cx + 20, cy - 7 + b); ctx.lineTo(cx + 19, cy + 3); ctx.fill();
+  pell(ctx, cx, cy - 1, 4, 4, OL); pell(ctx, cx, cy - 1, 3, 3, m1); prect(ctx, cx - 1, cy - 3, 1, 1, '#ffffff');
+}
+function legendFrame(X, Y, Wd, Ht) {
+  ctx.globalAlpha = 0.3 + Math.sin(time * 4) * 0.12; ctx.fillStyle = '#ffd23a'; ctx.fillRect(X - 10, Y - 10, Wd + 20, Ht + 20); ctx.globalAlpha = 1;
+  ctx.fillStyle = OL; ctx.fillRect(X - 6, Y - 6, Wd + 12, Ht + 12); ctx.fillStyle = '#ffb02a'; ctx.fillRect(X - 4, Y - 4, Wd + 8, Ht + 8); ctx.fillStyle = '#fff27a'; ctx.fillRect(X - 4, Y - 4, Wd + 8, 2);
+  ctx.fillStyle = OL; ctx.fillRect(X - 1, Y - 1, Wd + 2, Ht + 2);
+  for (const [cx, cy] of [[X - 2, Y - 2], [X + Wd + 2, Y - 2], [X - 2, Y + Ht + 2], [X + Wd + 2, Y + Ht + 2]]) { pell(ctx, cx, cy, 6, 6, OL); pell(ctx, cx, cy, 4, 4, '#ffd23a'); prect(ctx, cx - 2, cy - 2, 2, 2, '#ffffff'); }
+}
+const SV_STAGE = { x: SV_WIN.x + 8, y: SV_WIN.y + 64, w: 148, h: 338 };
 function svDraw() {
-  const k = sv.k, R = RARITY[k.r], Wn = SV_WIN, own = owned.includes(k.id), t = time - sv.t0;
-  ctx.globalAlpha = 0.72; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
-  if (k.r >= 3) { ctx.globalAlpha = 0.3 + Math.sin(time * 4) * 0.12; ctx.fillStyle = R.col; ctx.fillRect(Wn.x - 9, Wn.y - 9, Wn.w + 18, Wn.h + 18); ctx.globalAlpha = 1; }
-  ctx.fillStyle = OL; ctx.fillRect(Wn.x - 4, Wn.y - 4, Wn.w + 8, Wn.h + 8); ctx.fillStyle = R.col; ctx.fillRect(Wn.x - 2, Wn.y - 2, Wn.w + 4, Wn.h + 4);
+  const k = sv.k, R = RARITY[k.r], Wn = SV_WIN, own = owned.includes(k.id), t = time - sv.t0, myth = k.r === 4, leg = k.r >= 3;
+  if (!sv.demo || sv.demo.k !== k || sv.demo.t > 11) sv.demo = svDemoNew(k);
+  sv.dT = sv.dT == null ? time : sv.dT; const dt = clamp(time - sv.dT, 0, 0.05); sv.dT = time;
+  for (let i = 0; i < 3; i++) svDemoStep(sv.demo, dt / 3);
+  ctx.globalAlpha = 0.78; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+  const pop = Math.min(1, t * 5), ps = 0.85 + 0.15 * (1 - Math.pow(1 - pop, 3)) + (t < 0.3 ? Math.sin(t / 0.3 * Math.PI) * 0.03 : 0);
+  ctx.save(); ctx.translate(W / 2, Wn.y + Wn.h / 2); ctx.scale(ps, ps); ctx.translate(-W / 2, -(Wn.y + Wn.h / 2));
+  if (myth) mythFrame(k, Wn.x, Wn.y, Wn.w, Wn.h);
+  else if (leg) legendFrame(Wn.x, Wn.y, Wn.w, Wn.h);
+  else { ctx.fillStyle = OL; ctx.fillRect(Wn.x - 4, Wn.y - 4, Wn.w + 8, Wn.h + 8); ctx.fillStyle = R.col; ctx.fillRect(Wn.x - 2, Wn.y - 2, Wn.w + 4, Wn.h + 4); }
   ctx.save(); ctx.beginPath(); ctx.rect(Wn.x, Wn.y, Wn.w, Wn.h); ctx.clip();
-  const g = ctx.createLinearGradient(0, Wn.y, 0, Wn.y + Wn.h); g.addColorStop(0, k.light || '#ffffff'); g.addColorStop(0.45, k.body || '#999999'); g.addColorStop(1, k.dark || '#222222'); ctx.fillStyle = g; ctx.fillRect(Wn.x, Wn.y, Wn.w, Wn.h);
-  ctx.globalAlpha = 0.13; ctx.fillStyle = '#fff'; for (let i = 0; i < 8; i++) { const a = time * 0.3 + i * Math.PI / 4, cx = Wn.x + 95, cy = Wn.y + 290; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a - 0.12) * 620, cy + Math.sin(a - 0.12) * 620); ctx.lineTo(cx + Math.cos(a + 0.12) * 620, cy + Math.sin(a + 0.12) * 620); ctx.fill(); } ctx.globalAlpha = 1;
-  for (let i = 0; i < 20; i++) { const x = Wn.x + hash(i * 5) * Wn.w, y = Wn.y + Wn.h - ((hash(i * 9) * Wn.h + time * (20 + (i % 4) * 10)) % Wn.h), r = 2 + (i % 3); ctx.globalAlpha = 0.5; pell(ctx, x, y, r, r, i % 2 ? (k.light || '#fff') : (k.scarf || '#ffd23a')); } ctx.globalAlpha = 1;
-  const hx = Wn.x + 92, hy = Wn.y + 290;   // большой герой слева, с анимацией
-  ctx.globalAlpha = 0.3; pell(ctx, hx, hy + 104, 70, 12, '#000'); ctx.globalAlpha = 1;
-  if (k.r >= 3) { ctx.globalAlpha = 0.25 + Math.sin(time * 3) * 0.1; pell(ctx, hx, hy, 86, 100, R.col); ctx.globalAlpha = 1; }
-  const cols = k.trail && k.trail.cols ? k.trail.cols : [k.light || '#fff', k.scarf || '#ffd23a'];
-  for (let i = 0; i < 6; i++) { const a = time * 1.6 + i * Math.PI / 3; prect(ctx, hx + Math.cos(a) * 88 - 3, hy + Math.sin(a) * 100 - 3, 6, 6, cols[i % cols.length]); }
-  const ph = t % 4, bob = Math.sin(time * 3) * 5 - (ph > 2.4 && ph < 2.9 ? 24 : 0);
-  heroSprite(k, ph > 2.4 && ph < 3 ? 'jump' : 'idle', time, false); ctx.drawImage(hcv, hx - 80, hy - 100 + bob, 160, 200);
+  if (leg) drawScene(k, Wn.x, Wn.y, Wn.w, Wn.h);
+  else {
+    const g = ctx.createLinearGradient(0, Wn.y, 0, Wn.y + Wn.h); g.addColorStop(0, k.light || '#ffffff'); g.addColorStop(0.45, k.body || '#999999'); g.addColorStop(1, k.dark || '#222222'); ctx.fillStyle = g; ctx.fillRect(Wn.x, Wn.y, Wn.w, Wn.h);
+    ctx.globalAlpha = 0.13; ctx.fillStyle = '#fff'; for (let i = 0; i < 8; i++) { const a = time * 0.3 + i * Math.PI / 4, cx = Wn.x + 82, cy = Wn.y + 250; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a - 0.12) * 620, cy + Math.sin(a - 0.12) * 620); ctx.lineTo(cx + Math.cos(a + 0.12) * 620, cy + Math.sin(a + 0.12) * 620); ctx.fill(); } ctx.globalAlpha = 1;
+  }
+  // шапка: имя и редкость на плашке
+  ctx.fillStyle = 'rgba(0,0,0,0.42)'; ctx.fillRect(Wn.x, Wn.y, Wn.w, 56); ctx.fillStyle = myth ? k.myth[0] : R.col; ctx.fillRect(Wn.x, Wn.y + 56, Wn.w, 2);
   ctx.restore();
   text(skinName(k), Wn.x + 14, Wn.y + 28, 2, '#ffffff', 'left', OL, Wn.w - 70);
-  ctx.fillStyle = OL; ctx.fillRect(Wn.x + 12, Wn.y + 36, 86, 16); ctx.fillStyle = R.col; ctx.fillRect(Wn.x + 14, Wn.y + 38, 82, 12); text(T('rarity')[k.r], Wn.x + 55, Wn.y + 48, 1, OL, 'center', null, 76);
+  ctx.fillStyle = OL; ctx.fillRect(Wn.x + 12, Wn.y + 36, 86, 16); ctx.fillStyle = myth ? hsl(time * 60, 90, 65) : R.col; ctx.fillRect(Wn.x + 14, Wn.y + 38, 82, 12); text(T('rarity')[k.r], Wn.x + 55, Wn.y + 48, 1, OL, 'center', null, 76);
+  // сцена героя: подиум, свечение и его сценка во весь рост
+  const S = SV_STAGE, hx = S.x + S.w / 2, fy = S.y + S.h - 44;
+  ctx.globalAlpha = 0.35; pell(ctx, hx, fy + 18, 64, 12, '#000'); ctx.globalAlpha = 1;
+  pell(ctx, hx, fy + 12, 60, 14, OL); pell(ctx, hx, fy + 10, 57, 11, myth ? k.myth[1] : leg ? '#c08a20' : (k.dark || '#555')); pell(ctx, hx, fy + 7, 55, 9, myth ? k.myth[0] : leg ? '#ffd23a' : (k.light || '#ddd'));
+  if (leg) { ctx.globalAlpha = 0.25 + Math.sin(time * 3) * 0.1; pell(ctx, hx, fy - 70, 70, 86, myth ? k.myth[0] : R.col); ctx.globalAlpha = 1; }
+  if (leg) { const r = { x: S.x, y: S.y, w: S.w, h: S.h }; ctx.save(); ctx.beginPath(); ctx.rect(S.x - 4, Wn.y + 58, S.w + 8, S.h + 10); ctx.clip(); cardFx(k, r, time, { x: hx - 64, y: fy - 150, s: 4 }, false); cardHero(k, r, time, { x: hx - 64, y: fy - 150, s: 4 }); cardFx(k, r, time, { x: hx - 64, y: fy - 150, s: 4 }, true); ctx.restore(); }
+  else { const ph = t % 4, bob = Math.sin(time * 3) * 3 - (ph > 2.4 && ph < 2.9 ? 24 : 0); heroSprite(k, ph > 2.4 && ph < 3 ? 'jump' : 'idle', time, false); blitHero(k, hx - 64, fy - 150 + bob, 128, 160); }
+  // настоящий геймплей справа
+  const G2 = SV_GP; ctx.fillStyle = OL; ctx.fillRect(G2.x - 3, G2.y - 3, G2.w + 6, G2.h + 6); ctx.fillStyle = myth ? k.myth[0] : R.col; ctx.fillRect(G2.x - 1, G2.y - 1, G2.w + 2, G2.h + 2);
+  svDemoDraw(sv.demo, G2.x, G2.y, G2.w, G2.h);
+  // что умеет герой
+  const feats = [tr('АУРА', 'AURA'), tr('ШЛЕЙФ', 'TRAIL'), tr('ПРЫЖОК', 'JUMP'), tr('СЦЕНКА', 'SCENE')].slice(0, k.r >= 3 ? 4 : k.r >= 2 ? 1 : 0);
+  if (myth) feats.push(tr('РАМКА', 'FRAME'));
+  feats.forEach((s, i) => { const bw = (Wn.w - 24 - (feats.length - 1) * 4) / feats.length, x = Wn.x + 12 + i * (bw + 4), y = Wn.y + 412; ctx.fillStyle = OL; ctx.fillRect(x, y, bw, 18); ctx.fillStyle = myth ? (i % 2 ? k.myth[1] : k.myth[0]) : R.col; ctx.fillRect(x + 2, y + 2, bw - 4, 14); text(s, x + bw / 2, y + 13, 1, OL, 'center', null, bw - 6); });
   const cx = Wn.x + Wn.w - 25, cy = Wn.y + 25; ctx.globalAlpha = 0.4 + Math.sin(time * 5) * 0.15; pell(ctx, cx, cy, 24, 24, '#ff6a5a'); ctx.globalAlpha = 1; pell(ctx, cx, cy, 20, 20, OL); pell(ctx, cx, cy, 17, 17, '#e8261a'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 7, cy - 7); ctx.lineTo(cx + 7, cy + 7); ctx.moveTo(cx + 7, cy - 7); ctx.lineTo(cx - 7, cy + 7); ctx.stroke();
-  svGameplay(k, SV_GP.x, SV_GP.y, SV_GP.w, SV_GP.h, (time - sv.t0) % 5);
   const py = SV_BUY.y - 22, pr = sv.pr, bad = time - sv.no < 0.5;
-  if (own) text(k.id === skinId ? tr('НАДЕТО', 'EQUIPPED') : tr('КУПЛЕНО', 'OWNED'), SV_BUY.x + 73, py + 6, 2, '#b8ffc8', 'center', OL);
-  else { if (pr.ruby) rubyIcon(SV_BUY.x + 40, py, 1.2); else if (pr.gems) gemIcon(SV_BUY.x + 40, py, 1.2); else coinIcon(SV_BUY.x + 40, py, 9); text(String(pr.ruby || pr.gems || pr.coins), SV_BUY.x + 58, py + 7, 2, bad || !canPay(pr) ? '#ff9a9a' : '#ffffff', 'left', OL); }
+  if (!own) {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(Wn.x + 8, py - 18, Wn.w - 16, 30); if (pr.ruby) rubyIcon(SV_BUY.x + 40, py, 1.2); else if (pr.gems) gemIcon(SV_BUY.x + 40, py, 1.2); else coinIcon(SV_BUY.x + 40, py, 9); text(String(pr.ruby || pr.gems || pr.coins), SV_BUY.x + 58, py + 7, 2, bad || !canPay(pr) ? '#ff9a9a' : '#ffffff', 'left', OL); }
   if (own) button(SV_BUY, k.id === skinId ? tr('НАДЕТО', 'EQUIPPED') : tr('ВЫБРАТЬ', 'EQUIP'), k.id === skinId ? '#777777' : '#3ce06a', k.id === skinId ? '#444444' : '#1a7a3a');
   else if (sv.confirm) { button(SV_NO, tr('ОТМЕНА', 'CANCEL'), '#e8261a', '#a01008'); button(SV_BUY, tr('ПОДТВЕРДИТЬ', 'CONFIRM'), '#3ce06a', '#1a7a3a'); }
   else button(SV_BUY, tr('КУПИТЬ', 'BUY'), canPay(pr) ? '#ffb02a' : '#8a7a6a', canPay(pr) ? '#c06a00' : '#5a4a3a');
+  ctx.restore();
 }
 
 let state = 'load';   // load | menu | shop | ach | set | play | dead | over
@@ -4727,10 +5046,7 @@ function reset() { zmReset(); const o = Math.random; mp.rng = mp.active ? mulber
 function reset0() {
   const first = makePole(110, -200, 0, 'log', 1, 0);
   poles = [first]; path = first; pathPrev = null;
-  p = {
-    x: first.x1 + PW / 2, y: -PH / 2, vx: 0, vy: 0, state: 'wall', side: -1, face: 1, dj: true, pole: first, stand: null,
-    spin: 0, rot: 0, trail: [], squash: 0, shield: 0, jet: 0, rocket: 0, x2: 0, slow: 0, mega: 0, ghost: 0, freeze: 0, feather: 0, gem2: 0, star: 0, wings: 0, revive: false, shieldPop: 0, zapT: 0, dk: null, jT: 0, magnet: 0, inv: 0, stick: 0, holdT: 0, kicksAir: 0, noGrab: 0,
-  };
+  p = newHero(first);
   birds = []; ents = []; parts = []; leaves = []; clone = null; pmenu = false; ally = null; ninjaT = 14;
   camY = -H + 150; camR = even(camY);
   minY = p.y;
@@ -4741,6 +5057,12 @@ function reset0() {
   birds.push({ x: 240, y: 0, t: 0, st: 'perch', vx: 0, vy: 0, dir: -1 });
   birds.push({ x: first.cx, y: first.y0, t: 1, st: 'perch', vx: 0, vy: 0, dir: 1 });
   generate();
+}
+function newHero(first) {
+  return {
+    x: first.x1 + PW / 2, y: -PH / 2, vx: 0, vy: 0, state: 'wall', side: -1, face: 1, dj: true, pole: first, stand: null,
+    spin: 0, rot: 0, trail: [], squash: 0, shield: 0, jet: 0, rocket: 0, x2: 0, slow: 0, mega: 0, ghost: 0, freeze: 0, feather: 0, gem2: 0, star: 0, wings: 0, revive: false, shieldPop: 0, zapT: 0, dk: null, jT: 0, magnet: 0, inv: 0, stick: 0, holdT: 0, kicksAir: 0, noGrab: 0,
+  };
 }
 
 const heightM = () => Math.max(0, Math.floor((-PH / 2 - minY) / PX_PER_M));
@@ -5788,12 +6110,21 @@ const LEG_JUMP = {
   samuraiham: ['petals', ['#ffb0d8', '#ffffff'], 'ghost'], nebula: ['stars', ['#ffffff', '#a06ae0', '#5ad8ff'], 'spin'],
   lavaknight: ['lava', ['#ff5a1a', '#ffd23a', '#3a2a2a'], 'stretch'], dreamsheep: ['rainbow', [], 'float'],
 };
-for (const k of SKINS) if (k.r === 4) { if (k.jump) LEG_JUMP[k.id] = k.jump; if (k.snd && LEG_SND[k.snd]) LEG_SND[k.id] = LEG_SND[k.snd]; }
+// у мификов свои прыжки: вспышка-нова, вихрь, телепорт, искажение времени, удар-землетрясение
+const MYTH_JUMP = { firephoenix: 'nova', frostphoenix: 'vortex', voidphoenix: 'blink', sunphoenix: 'nova', thunderlord: 'warp', abysslord: 'vortex', cosmicempress: 'blink', dragonemperor: 'quake', moongoddess: 'blink', timelord: 'warp', skykitsune: 'vortex', soulreaper: 'blink', diamondtitan: 'quake', starunicorn: 'vortex', infernodemon: 'nova', auroraangel: 'nova' };
+for (const k of SKINS) if (k.r === 4) { if (k.jump) LEG_JUMP[k.id] = [k.jump[0], k.jump[1], MYTH_JUMP[k.id] || k.jump[2]]; if (k.snd && LEG_SND[k.snd]) LEG_SND[k.id] = LEG_SND[k.snd]; }
 function legendJumpFx(sk, flip) {
   const J = LEG_JUMP[sk.id]; if (!J) return;
   p.jT = 0.4; p.jSt = J[2]; p.jCol = (J[1][0]) || '#ffffff';
   if (!SET.fx) return;
   const [kind, cols] = J, x = p.x, y = p.y + 10, n = flip ? 10 : 14;
+  if (sk.r === 4) {   // мифик: два кольца ударной волны в его цветах и россыпь искр
+    const [m1, m2] = sk.myth || ['#fff27a', '#ff5a1a'];
+    parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 0.45, max: 0.45, color: m1, size: flip ? 40 : 56, grav: 0, shape: 'wave' });
+    parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 0.32, max: 0.32, color: m2, size: flip ? 26 : 36, grav: 0, shape: 'wave' });
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; parts.push({ x: p.x, y: p.y, vx: Math.cos(a) * 190, vy: Math.sin(a) * 190, life: 0.35, max: 0.35, color: i % 2 ? m1 : '#ffffff', size: 3, grav: 0, shape: 'star' }); }
+    if (J[2] === 'quake') { if (SET.shake) shake = Math.max(shake, 0.15); for (let i = 0; i < 8; i++) parts.push({ x: p.x + rand(-10, 10), y: p.y + 14, vx: rand(-160, 160), vy: rand(-260, -80), life: 0.7, max: 0.7, color: i % 2 ? m1 : m2, size: 4, grav: 900, shape: 'diamond' }); }
+  }
   const col = i => cols.length ? cols[i % cols.length] : hsl(i * 50 + time * 300);
   const add = (o) => parts.push(Object.assign({ x, y, vx: rand(-80, 80), vy: rand(-40, 60), life: 0.6, max: 0.6, size: 4, grav: 0 }, o));
   for (let i = 0; i < n; i++) {
@@ -7542,8 +7873,10 @@ function drawHero0() {
     ctx.translate(p.sx + Math.sin(deadT * 6) * 8, p.sy - deadT * 70); ctx.scale(p.face, 1); ctx.drawImage(img, -32, -52, 64, 80); ctx.restore();
   }
   if (dead && p.vanish) return;   // легендарный герой разлетелся
-  if (!dead && idleT > 10 && IDLE[sk.id]) { drawIdleShow(sk, idleT - 10); return; }   // заскучал — своя сценка
-  heroSprite(sk, heroPose(), time, blinkT < 0);
+  const em = !dead && p.em && time - p.em.t0 >= 0 && time - p.em.t0 < EMO_DUR ? p.em : null, emT = em ? time - em.t0 : 0, emM = em ? emoMotion(em.id, emT) : null;
+  if (!em && !dead && idleT > 10 && IDLE[sk.id]) { drawIdleShow(sk, idleT - 10); return; }   // заскучал — своя сценка
+  if (em) emoFx(em.id, p.x, p.y - 12, 1, emT, false);
+  heroSprite(sk, emM ? emM.pose : heroPose(), time, blinkT < 0);
   if (dead && p.zapT > 0) {   // бьёт током: мигает скелет и молнии
     const img = Math.floor(time * 14) % 2 ? xraySprite() : hcv;
     ctx.save(); ctx.translate(even(p.x + rand(-2, 2)), even(p.y + 1)); ctx.scale(p.face, 1); ctx.drawImage(img, -32, -52, 64, 80); ctx.restore();
@@ -7561,6 +7894,7 @@ function drawHero0() {
     ctx.globalAlpha = a * skA(sk) * (p.ghost > 0 && !dead ? 0.45 + Math.sin(time * 8) * 0.1 : 1);
     ctx.translate(rot ? x : even(x), rot ? y : even(y));
     if (rot) ctx.rotate(rot);
+    if (main && emM) { ctx.translate(emM.x || 0, emM.y || 0); if (emM.rot) ctx.rotate(emM.rot * p.face); ctx.scale(emM.sx || 1, emM.sy || 1); }   // движение эмоции
     const sq = p.squash;
     ctx.scale(p.face * (1 + sq * 0.12), 1 - sq * 0.12);
     if (dead && p.dk === 'flat') { ctx.translate(0, 14); ctx.scale(1.45, 0.5); }   // расплющило
@@ -7571,6 +7905,11 @@ function drawHero0() {
       else if (p.jSt === 'spin' && !(p.spin > 0)) ctx.rotate(jq * Math.PI * 2);
       else if (p.jSt === 'wobble') { const w = Math.sin(jq * Math.PI * 4) * 0.18 * (1 - jq); ctx.scale(1 + w, 1 - w); }
       else if (p.jSt === 'float') ctx.scale(1 + 0.1 * b, 1 + 0.1 * b);
+      else if (p.jSt === 'nova') ctx.scale(1 + 0.22 * b, 1 + 0.22 * b);
+      else if (p.jSt === 'vortex' && !(p.spin > 0)) { ctx.rotate(jq * Math.PI * 4 * p.face); const s2 = 1 - 0.3 * b; ctx.scale(s2, s2); }
+      else if (p.jSt === 'blink') ctx.globalAlpha *= 0.12 + 0.88 * Math.abs(Math.cos(jq * Math.PI));
+      else if (p.jSt === 'quake') ctx.scale(1 + 0.28 * b, 1 - 0.22 * b);
+      else if (p.jSt === 'warp') { const ga = ctx.globalAlpha, s3 = 2 + b * 5; ctx.globalAlpha = ga * 0.55; ctx.drawImage(tintSprite((sk.myth || ['#ff2a6a'])[0], 0), -32 - s3, -52, 64, 80); ctx.drawImage(tintSprite((sk.myth || [0, '#2af0ff'])[1], 1), -32 + s3, -52, 64, 80); ctx.globalAlpha = ga; }
     }
     if (sk.glitch && SET.fx) {
       const s = Math.sin(time * 7) > 0.3 ? 3 : 1, ga = ctx.globalAlpha;
@@ -7578,7 +7917,8 @@ function drawHero0() {
       if (Math.random() < 0.25) { const yy = rand(-50, 20); ctx.drawImage(hcv, 0, (yy + 52) / 2, 32, 3, -32 + (Math.random() < 0.5 ? -6 : 6), yy, 64, 6); }
     }
     ctx.drawImage(hcv, -32, -52, 64, 80);
-    if (jq >= 0 && (p.jSt === 'flash' || p.jSt === 'float')) { ctx.globalAlpha = (1 - jq) * (p.jSt === 'flash' ? 0.7 : 0.35); ctx.drawImage(tintSprite(p.jCol, 0), -32, -52, 64, 80); }
+    if (main && emM) { const ga = ctx.globalAlpha; emoOverlay(em.id, 1, emT); ctx.globalAlpha = ga; }
+    if (jq >= 0 && (p.jSt === 'flash' || p.jSt === 'float' || p.jSt === 'nova')) { ctx.globalAlpha = (1 - jq) * (p.jSt === 'float' ? 0.35 : 0.7); ctx.drawImage(tintSprite(p.jSt === 'nova' ? '#ffffff' : p.jCol, 0), -32, -52, 64, 80); }
     if (dead && p.dk === 'ouch' && deadT < 0.35) { ctx.globalAlpha = 0.6; ctx.drawImage(tintSprite('#ff3a3a', 0), -32, -52, 64, 80); }
     ctx.restore();
   };
@@ -7599,7 +7939,7 @@ function drawHero0() {
     for (let k = 0; k < 3; k++) { const an = k / 3 * Math.PI * 2; for (let d = 6; d < 24; d += 4) prect(ctx, Math.cos(an) * d - 1, Math.sin(an) * d - 1, 2, 2, '#c8d0e0'); }
     ctx.restore();
   }
-  const shadow = (sk.trail && sk.trail.kind === 'shadow' && p.state === 'air') || (p.jSt === 'ghost' && p.jT > 0 && sk.r >= 3);
+  const shadow = (sk.trail && sk.trail.kind === 'shadow' && p.state === 'air') || ((p.jSt === 'ghost' || p.jSt === 'blink' || p.jSt === 'vortex') && p.jT > 0 && sk.r >= 3);
   if ((p.spin > 0 || shadow) && p.trail.length > 6) { put(p.trail[3].x, p.trail[3].y, p.trail[3].rot, 0.35); put(p.trail[6].x, p.trail[6].y, p.trail[6].rot, 0.18); }
   // фирменные движения героев в игре: паук ползает и летит на паутине, железный летит на реактивных ботинках,
   // ночной страж планирует на плаще, спартанец держится топором, сёрфер катится на доске
@@ -7634,7 +7974,9 @@ function drawHero0() {
   }
   if (p.inv > 0 && Math.floor(p.inv * 20) % 2) return;
   const crawl = mv === 'spider' && p.state === 'wall';   // паук ползёт по столбу, а не висит
+  if (em && em.id === 'ninja') for (let g = 3; g >= 1; g--) { const m = emoMotion('ninja', emT - g * 0.06); ctx.save(); ctx.translate(m.x || 0, 0); put(p.x, p.y + 1, p.rot, 0.2); ctx.restore(); }   // тени ниндзя
   put(p.x, p.y + 1 + (crawl ? Math.sin(time * 14) * 1.5 : 0), crawl ? -p.face * Math.PI / 2 : p.rot, 1, true);
+  if (em) emoFx(em.id, p.x, p.y - 12, 1, emT, true);
   if (mv === 'axe' && p.state === 'wall') {   // топор вогнан в столб, герой держится за рукоять
     const hx = p.x + p.face * 6, hy = p.y - 12, px2 = p.x + p.face * 16;
     ctx.strokeStyle = OL; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(px2, hy - 10); ctx.stroke();
@@ -7758,6 +8100,9 @@ const IDLE = {
   rubberpirate: ['eat', 'meat'], hunterborg: ['sharpen', '#c8d0e0'], sewerclown: ['balloon'], suithitman: ['sharpen', '#6a6a7a'], redmerc: ['eat', 'taco'],
   turtleblue: ['eat', 'pizza'], turtlered: ['eat', 'pizza'], turtleorange: ['eat', 'pizza'], turtlepurple: ['eat', 'pizza'], yellowhelper: ['eat', 'banana'],
   spacemarine: ['sharpen', '#8a9a7a'], ghostmask: ['phone'], electromouse: ['sleep', 'zap'], jason: ['sharpen', '#c8d0e0'], cheshire: ['grin'],
+  firephoenix: ['mythic'], frostphoenix: ['mythic'], voidphoenix: ['mythic'], sunphoenix: ['mythic'], thunderlord: ['mythic'], abysslord: ['mythic'],
+  cosmicempress: ['mythic'], dragonemperor: ['mythic'], moongoddess: ['mythic'], timelord: ['mythic'], skykitsune: ['mythic'], soulreaper: ['mythic'],
+  diamondtitan: ['mythic'], starunicorn: ['mythic'], infernodemon: ['mythic'], auroraangel: ['mythic'],
   assassin: ['eagle'], ngkai: ['spinjitzu'], ngjay: ['spinjitzu'], ngcole: ['spinjitzu'], ngzane: ['spinjitzu'], nglloyd: ['spinjitzu'], star7: ['juggle'],
 };
 function drawComic(x, y, open, rot, flip) {
@@ -7997,6 +8342,37 @@ function drawIdleShow(sk, t) {
       if (u > 0.92 && SET.fx) parts.push({ x: ex, y: ey, vx: f * rand(30, 120), vy: rand(-120, -20), life: 0.35, max: 0.35, color: Math.random() < 0.5 ? '#ffd23a' : '#ff8a1e', size: 2, grav: 500 });
       break;
     }
+    case 'mythic': {   // мифик заскучал: взлетает над светящимся кругом рун, вокруг кружит его стихия, на пике — вспышка силы
+      const [m1, m2] = sk.myth || ['#fff27a', '#ff5a1a'], up = clamp(t / 1.2, 0, 1), ph = (t - 1.2) % 4, lift = up * 18 + Math.sin(time * 2.4) * 3 * up;
+      const gx = ox, gy = oy + 26, rr = 10 + up * 22;
+      if (once('rise')) { tone(523, 1047, 0.5, 'sine', 0.04); tone(784, 1568, 0.6, 'triangle', 0.03, 0.15); }
+      ctx.globalAlpha = 0.25 * up; pell(ctx, gx, gy, rr + 6, (rr + 6) * 0.32, m1); ctx.globalAlpha = up;   // круг рун на земле
+      ctx.strokeStyle = m1; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(gx, gy, rr, rr * 0.3, 0, 0, 7); ctx.stroke();
+      ctx.strokeStyle = m2; ctx.beginPath(); ctx.ellipse(gx, gy, rr * 0.65, rr * 0.2, 0, 0, 7); ctx.stroke();
+      for (let i = 0; i < 8; i++) { const a = time * 1.5 + i * Math.PI / 4; P(gx + Math.cos(a) * rr - 1, gy + Math.sin(a) * rr * 0.3 - 1, 3, 3, i % 2 ? m2 : '#ffffff'); }
+      ctx.globalAlpha = 0.18 * up; P(gx - rr * 0.6, oy - 70, rr * 1.2, 96, m1); ctx.globalAlpha = 1;   // столб света
+      const sc = heroScene(sk).sc;   // стихия кружит вокруг
+      for (let i = 0; i < 6; i++) {
+        const a = time * 2 + i * Math.PI / 3, x = ox + Math.cos(a) * 30, y = oy - lift - 4 + Math.sin(a) * 12, c = i % 2 ? m1 : m2; ctx.globalAlpha = up;
+        if (sc === 'fire') { P(x - 1, y - 4, 3, 6, c); P(x, y - 6, 1, 3, '#fff27a'); }
+        else if (sc === 'ice') { P(x - 3, y, 7, 1, '#ffffff'); P(x, y - 3, 1, 7, '#ffffff'); P(x - 1, y - 1, 3, 3, c); }
+        else if (sc === 'sea') { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.stroke(); }
+        else if (sc === 'storm') { P(x, y - 4, 2, 3, c); P(x - 2, y - 1, 3, 2, c); P(x - 1, y + 1, 2, 3, c); }
+        else if (sc === 'tech' || sc === 'gold') { ctx.save(); ctx.translate(x, y); ctx.rotate(time * 4); P(-3, -1, 6, 2, c); P(-1, -3, 2, 6, c); ctx.restore(); }
+        else emoStar(x, y, 4, c);
+      }
+      ctx.globalAlpha = 1;
+      const peak = ph > 2 && ph < 2.6;
+      if (peak && once('pk' + Math.floor((t - 1.2) / 4))) {
+        spark(ox, oy - lift - 4, 22, [m1, m2, '#ffffff'], 200, 0.6, 4, 0, 'star');
+        parts.push({ x: ox, y: oy - lift - 4, vx: 0, vy: 0, life: 0.5, max: 0.5, color: m1, size: 70, grav: 0, shape: 'wave' });
+        tone(1047, 2093, 0.3, 'triangle', 0.035); noise(0.4, 0.03, 4000);
+      }
+      if (SET.fx && Math.random() < 0.3) parts.push({ x: ox + rand(-12, 12), y: oy + 10 - lift, vx: rand(-15, 15), vy: rand(-80, -30), life: 0.8, max: 0.8, color: Math.random() < 0.5 ? m1 : m2, size: 3, grav: -40 });
+      hero(peak ? 'cheer' : up < 1 ? 'jump' : 'raise', { dy: -lift, s: 1 + (peak ? Math.sin((ph - 2) / 0.6 * Math.PI) * 0.12 : 0) });
+      if (peak) { ctx.globalAlpha = 0.5 * Math.sin((ph - 2) / 0.6 * Math.PI); heroSprite(sk, 'cheer', time, false); ctx.save(); ctx.translate(even(ox), even(oy - lift)); ctx.scale(f, 1); ctx.drawImage(tintSprite('#ffffff', 0), -32, -52, 64, 80); ctx.restore(); ctx.globalAlpha = 1; }
+      break;
+    }
     case 'spinjitzu': {   // тренируется: вихрь кружитцу, потом стойка
       const cyc = t % 4, n = Math.floor(t / 4);
       if (cyc < 1.6) {
@@ -8147,7 +8523,7 @@ function drawWorld() {
   drawHero();
   if (ZB.on && ZB.rage > 0) zmEyes(p.x, p.y, p.face, 1);
   drawPieAim();
-  if (p.em && !emoDraw(p.x, p.y, p.em, mpSkin(skinId))) p.em = null;
+  if (p.em && !emoTag(p.x, p.y, p.em)) p.em = null;
   drawClone();
   drawAlly();
   for (const q of parts) drawParticle(q);
