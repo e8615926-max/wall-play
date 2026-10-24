@@ -1596,7 +1596,7 @@ Object.assign(SKINS.find(k => k.id === 'frostphoenix'), { snd: 'icequeen', myth:
 Object.assign(SKINS.find(k => k.id === 'voidphoenix'), { snd: 'void', myth: ['#e8d0ff', '#7a3aff'], cfx: ['void', '#a06ae0'], jump: ['smoke', ['#a06ae0', '#4a1aa0', '#e8d0ff'], 'ghost'] });
 Object.assign(SKINS.find(k => k.id === 'sunphoenix'), { snd: 'sungod', myth: ['#ffffff', '#ffd23a'], cfx: ['rays', '#ffb21a'], jump: ['crown', ['#ffd23a', '#ffffff'], 'flash'] });
 MYTHICS.push({ id: 'shirtless', snd: 'shogun', ruby: 14, nm: ['ГОЛЫЙ КЛИНОК', 'BARE BLADE'], body: '#e8b088', head: '#e8b088', dark: '#1a1a24', light: '#f8d0a8', ear: '#e8b088', ol: '#2a1408', ears: 'none', noScarf: true, noMuzzle: true,
-  parts: ['katanaBack', 'bareAbs', 'twinBelts', 'mythMask', 'topknot'], trail: { kind: 'wisp', cols: ['#e8261a', '#1a1a24', '#ffffff'] }, myth: ['#e8261a', '#ffffff'], cfx: ['petals', '#e8261a'], jump: ['petals', ['#e8261a', '#ffffff'], 'blink'], sfx: 'shadow', fx: 'shadow', vanish: true });
+  parts: ['bladeBack', 'bareAbs', 'battleScar', 'twinBelts', 'handWraps', 'mythMask', 'topknot'], trail: { kind: 'wisp', cols: ['#e8261a', '#1a1a24', '#ffffff'] }, myth: ['#e8261a', '#ffffff'], cfx: ['petals', '#e8261a'], jump: ['petals', ['#e8261a', '#ffffff'], 'blink'], sfx: 'shadow', fx: 'shadow', vanish: true });
 for (const k of MYTHICS) { k.r = 4; SKINS.push(k); }
 // четыре хомяка стихий
 SKINS.push(
@@ -1691,9 +1691,12 @@ Object.entries({ m500: [3, 0], m1000: [10, 1], zone5: [5, 0], legend: [5, 0], co
 const achName = a => a.nm ? tr(a.nm[0], a.nm[1]) : T('ach')[ACH.indexOf(a)];
 
 // ---------- Хранилище и настройки ----------
+// если localStorage недоступен (просмотр файла, приватный режим), всё держится в памяти — иначе ежедневные награды
+// и сундуки можно было брать бесконечно, потому что отметка «уже взял» нигде не сохранялась
+const memStore = {};
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('wk3_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('wk3_' + k, JSON.stringify(v)); } catch (e) {} if (store.onSet) store.onSet(); },
+  get(k, d) { let v = null; try { v = localStorage.getItem('wk3_' + k); } catch (e) {} if (v === null && ('wk3_' + k) in memStore) v = memStore['wk3_' + k]; try { return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { const s = JSON.stringify(v); memStore['wk3_' + k] = s; try { localStorage.setItem('wk3_' + k, s); } catch (e) {} if (store.onSet) store.onSet(); },
   onSet: null,
 };
 // ---------- Облачное сохранение ----------
@@ -2601,7 +2604,7 @@ const BACK_PARTS = new Set(['wingsAngel', 'wingsBat', 'wingsFairy', 'wingsButter
   'katanaBack', 'roundShield', 'heroCapeLong', 'frostAura', 'tailFeathers', 'shoulderCannon', 'speedLines', 'smokeWisps', 'lionMane', 'tailTuft',
   'accretionBack', 'wingsBee', 'jackalEars', 'smokeTail', 'skullFireBack',
   'quiver', 'gladShield', 'helmWheel', 'nineTails', 'waterAura', 'braids', 'mailBag', 'longScarf', 'sunHalo', 'starMane', 'backpack', 'darkAura', 'goldWings', 'lootSack', 'cottonPuffs', 'surfboard', 'branchArm', 'warBanner', 'protonPack', 'boltTail', 'greenCloak', 'dualKatana',
-  'rwCloak', 'rwKiAura', 'parrotWing', 'beetleShell', 'squirrelTail', 'beaverTail', 'axoGills', 'peacockFan', 'bugWings', 'glowBum', 'moonBack', 'auroraTail', 'jellyTentacles', 'mythWings', 'mythTail', 'reaperCloak']);
+  'rwCloak', 'rwKiAura', 'parrotWing', 'beetleShell', 'squirrelTail', 'beaverTail', 'axoGills', 'peacockFan', 'bugWings', 'glowBum', 'moonBack', 'auroraTail', 'jellyTentacles', 'mythWings', 'mythTail', 'reaperCloak', 'bombBasket', 'bladeBack']);
 function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
   const r = Math.round, ol = sk.ol, hx = r(Hd.x), hy = r(Hd.y), bx = r(B.x), by = r(B.y);
   const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(r(x), r(y), w, h); };
@@ -2784,6 +2787,35 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
       case 'mane': ['#ff3a3a', '#ffa02a', '#ffe03a', '#3ae05a', '#3ab0ff', '#a64aff'].forEach((col, i) => R(hx - 6 + i, hy - 7 + (i % 2) + Math.sin(t * 8 + i) * 0.8, 1, 4, col)); break;
       case 'mermaidTail': { O(B.x - 1, B.y + B.ry + 1, 3.5, 2.2, sk.body); const w = Math.sin(t * 6) > 0 ? 1 : 0; R(bx - 7, by + B.ry + 1 + w, 4, 3, ol); R(bx - 6, by + B.ry + 2 + w, 2, 1, sk.light); break; }
       case 'shellTop': R(bx - 3, by - 3, 3, 2, '#ff9ad8'); R(bx + 1, by - 3, 3, 2, '#ff9ad8'); break;
+      // ---- союзники-хомяки: бомбер, солдатик, бумерангер ----
+      case 'armyHelmet': {   // каска: купол, поля, ремешок под подбородком
+        const hc = sk.helm || '#4a6a2a';
+        c.save(); c.beginPath(); c.rect(0, -8, 32, hy - 2 + 8); c.clip(); E(Hd.x, Hd.y - 1, Hd.rx + 1.5, Hd.ry + 1.5, ol); E(Hd.x, Hd.y - 1, Hd.rx + 0.5, Hd.ry + 0.5, hc); c.restore();
+        R(hx - 9, hy - 3, 19, 2, ol); R(hx - 8, hy - 3, 17, 1, hc); R(hx - 4, hy - 7, 3, 1, '#ffffff'); R(hx + 7, hy - 2, 1, 6, ol);
+        if (sk.helmNet) for (let i = 0; i < 4; i++) R(hx - 5 + i * 3, hy - 7 + (i % 2), 1, 1, '#2a3a1a'); break;
+      }
+      case 'mudSpots': for (const [dx, dy, w2] of [[-4, 2, 2], [3, 4, 3], [-1, -4, 2]]) R(bx + dx, by + dy, w2, 1, '#6a4a2a'); R(hx - 4, hy + 2, 2, 1, '#6a4a2a'); R(hx + 1, hy - 4, 1, 1, '#6a4a2a'); break;
+      case 'uniform': {   // форма: рубашка с карманами и ремнём
+        const u = sk.uni || '#8a7a4a', u2 = sk.uni2 || '#5a4a2a';
+        c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry), 32, B.ry * 2 - 1); c.clip(); E(B.x, B.y, B.rx, B.ry, u); c.restore();
+        if (sk.camo) for (const [dx, dy] of [[-4, -3], [2, -1], [-2, 2], [3, 3]]) R(bx + dx, by + dy, 2, 2, u2);
+        R(bx - 4, by - 2, 3, 2, u2); R(bx + 2, by - 2, 3, 2, u2); R(bx - 5, by + 2, 11, 1, '#3a2a14'); R(bx, by + 2, 1, 1, '#ffd23a'); break;
+      }
+      case 'bombBasket': {   // плетёная корзина с бомбами за спиной
+        R(bx - 11, by - 7, 8, 9, ol); R(bx - 10, by - 6, 6, 7, '#c8903a'); for (let i = 0; i < 3; i++) R(bx - 10, by - 5 + i * 2, 6, 1, '#8a5a1a');
+        for (const [dx, dy] of [[-9, -9], [-6, -10], [-11, -8]]) { E(bx + dx + 0.5, by + dy + 0.5, 2.2, 2.2, ol); E(bx + dx + 0.5, by + dy + 0.5, 1.5, 1.5, '#2a2a34'); R(bx + dx, by + dy - 3, 1, 2, '#c8a878'); }
+        if (Math.sin(t * 12) > 0) R(bx - 6, by - 14, 1, 1, '#ffd23a'); break;
+      }
+      case 'heldBomb': if (sk.holding) { const x = r(A1.x + 1), y = r(A1.y - 3); E(x + 0.5, y + 0.5, 3, 3, ol); E(x + 0.5, y + 0.5, 2.2, 2.2, '#2a2a34'); R(x - 1, y - 1, 1, 1, '#8a8a9a'); R(x, y - 4, 1, 2, '#c8a878'); if (Math.sin(t * 20) > -0.2) R(x - 1, y - 6, 2, 2, '#ffd23a'); } break;
+      case 'rifle': { const x = r(A1.x), y = r(A1.y); R(x - 3, y - 1, 12, 3, ol); R(x - 2, y, 10, 1, '#5a3a1a'); R(x + 6, y - 1, 3, 2, '#3a3a44'); R(x - 4, y + 1, 3, 3, ol); R(x - 3, y + 1, 1, 2, '#5a3a1a'); break; }
+      case 'heldBoom': if (sk.holding) { const x = r(A1.x + 1), y = r(A1.y - 2); R(x - 1, y - 5, 3, 7, ol); R(x, y - 4, 1, 5, '#e8a050'); R(x - 1, y - 6, 6, 3, ol); R(x, y - 5, 4, 1, '#c8803a'); } break;
+      case 'bladeBack': {   // катана наискось за спиной: ножны снизу справа, рукоять с гардой торчит из-за левого плеча
+        const pt = i => [bx + 4 - i * 1.05, by + 8 - i * 1.6];
+        for (let i = 0; i < 17; i++) { const [x, y] = pt(i); R(x - 1, y - 1, 3, 3, ol); }
+        for (let i = 0; i < 17; i++) { const [x, y] = pt(i); R(x, y, 1, 1, i > 12 ? (i % 2 ? '#c81a1a' : '#1a1a24') : i === 12 ? '#ffd23a' : '#2a2a34'); }
+        const [gx, gy] = pt(12); R(gx - 2, gy, 5, 1, ol); R(gx - 1, gy, 3, 1, '#ffd23a');
+        if (Math.sin(t * 3) > 0.8) { const [x, y] = pt(16); R(x, y - 1, 1, 1, '#ffffff'); } break;
+      }
       // ---- голый клинок: пресс, маска, два пояса ----
       case 'bareAbs':   // пресс и грудь на голом теле
         R(bx - 3, by - 4, 3, 1, sk.dark === '#1a1a24' ? '#c8885a' : sk.dark); R(bx + 1, by - 4, 3, 1, '#c8885a');
@@ -2792,11 +2824,14 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
       case 'twinBelts':   // два пояса: красный кушак с хвостами и чёрный ремень с пряжкой
         R(bx - 6, by + 2, 13, 2, ol); R(bx - 5, by + 2, 11, 1, '#e8261a'); R(bx - 5, by + 4, 11, 2, ol); R(bx - 4, by + 4, 9, 1, '#2a2a34'); R(bx + 1, by + 4, 2, 2, '#ffd23a');
         for (let i = 0; i < 4; i++) R(bx - 6 - i, by + 3 + i + r(Math.sin(t * 10 + i) * 0.8), 1, 2, i % 2 ? '#a01008' : '#e8261a'); break;
+      case 'battleScar': R(bx + 2, by - 4, 1, 1, '#a0503a'); R(bx + 3, by - 3, 1, 1, '#a0503a'); R(bx + 4, by - 2, 1, 1, '#a0503a'); R(bx - 5, by - 5, 2, 1, '#ffffff'); break;
+      case 'handWraps': { const x = r(A1.x), y = r(A1.y); R(x - 2, y - 2, 4, 4, ol); R(x - 1, y - 1, 2, 2, '#f0f0e8'); R(x - 1, y, 2, 1, '#c8c8c0'); if (sk.wrapTail !== false) R(x - 3, y + 1 + (Math.sin(t * 10) > 0 ? 1 : 0), 2, 1, '#f0f0e8'); break; }
       case 'mythMask':   // маска ниндзя на нижнюю часть лица, глаза горят
-        c.save(); c.beginPath(); c.rect(0, hy + 1, 32, 20); c.clip(); E(Hd.x, Hd.y, Hd.rx + 0.5, Hd.ry + 0.5, '#1a1a24'); c.restore();
+        c.save(); c.beginPath(); c.rect(0, hy + 2, 32, 20); c.clip(); E(Hd.x + 1, Hd.y, Hd.rx, Hd.ry + 0.5, '#1a1a24'); c.restore();
         R(hx - 7, hy - 1, 15, 1, '#e8261a');
         if (!blink) { R(ex1, ey, 2, 2, '#ffffff'); R(ex2, ey, 2, 2, '#ffffff'); R(ex1 + 1, ey + 1, 1, 1, '#e8261a'); R(ex2 + 1, ey + 1, 1, 1, '#e8261a'); }
-        R(hx - 8, hy - 6, 2, 3, '#e8261a'); R(hx - 10, hy - 5 + (Math.sin(t * 9) > 0 ? 1 : 0), 2, 2, '#e8261a'); break;
+        for (let i = 0; i < 6; i++) { const w2 = Math.sin(t * 9 - i * 0.8) * (flying ? 1.6 : 0.8); R(hx - 8 - i * 1.6, hy - 5 + i * 0.6 + w2, 2, 1, ol); R(hx - 8 - i * 1.6, hy - 6 + i * 0.6 + w2, 2, 1, i % 2 ? '#a01008' : '#e8261a'); }   // хвосты повязки развеваются
+        break;
       // ---- хомяки стихий ----
       case 'elemCore': {   // знак стихии на груди светится
         const e2 = sk.elem, c1 = { fire: '#ffd23a', water: '#bff0ff', earth: '#9af07a', air: '#ffffff' }[e2], g = 0.6 + Math.sin(t * 5) * 0.4;
@@ -6964,7 +6999,8 @@ function die(reason) {
   const sk = curSkin(), fx = DEATH_FX[sk.fx || sk.special];
   if (fx) { for (const [col, n, spd, size, grav, shape] of fx) burst(p.x, p.y, n, col, spd, 0.9, size, grav, shape); flashT = 0.3; }
   else { burst(p.x, p.y, 22, '#ffffff', 260, 0.7, 4); burst(p.x, p.y, 14, sk.body, 200, 0.8, 6); }
-  p.vanish = !!sk.vanish && !zap; p.vanishLater = !!sk.vanish && zap;
+  p.vanish = !!sk.vanish && !zap; p.vanishLater = !!sk.vanish && zap; p.md = null;
+  if (sk.r === 4) mythDeathStart(sk, reason);   // мифик погибает по-своему
   skinSfx('die'); vib([60, 40, 120]);
   const m = heightM();
   p.newBest = m > best;
@@ -7401,8 +7437,8 @@ function update(dt) {
       p.zapT -= dt;
       if (SET.fx && Math.random() < dt * 40) parts.push({ x: p.x + rand(-20, 20), y: p.y + rand(-30, 20), vx: rand(-90, 90), vy: rand(-90, 90), life: 0.2, max: 0.2, color: Math.random() < 0.5 ? '#fff6a0' : '#7cf0ff', size: 2, grav: 0 });
       if (p.zapT <= 0) { p.vx = (p.x < W / 2 ? 1 : -1) * 100; p.vy = -420; burst(p.x, p.y, 14, '#3a3a4a', 160, 0.8, 6, -100); if (p.vanishLater) p.vanish = true; }
-    } else { p.vy += G * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.dk !== 'flat') p.rot += dt * 10; }
-    if (deadT > (p.dk === 'zap' ? 2 : 0.9) && state === 'dead' && !(mp.active && mpAlive())) state = 'over';
+    } else if (!p.md || p.md.v === 'fall') { p.vy += G * dt * (p.md ? 0.35 : 1); p.x += p.vx * dt; p.y += p.vy * dt; if (p.dk !== 'flat') p.rot += dt * 10; }
+    if (deadT > (p.md ? 2 : p.dk === 'zap' ? 2 : 0.9) && state === 'dead' && !(mp.active && mpAlive())) state = 'over';
   }
   if (state === 'play') {
     const target = p.y - H * 0.58;
@@ -8177,6 +8213,76 @@ function dizzyStars(x, y) {
     prect(ctx, sx - 3, sy - 1, 6, 2, '#ffd23a'); prect(ctx, sx - 1, sy - 3, 2, 6, '#ffd23a'); prect(ctx, sx - 1, sy - 1, 2, 2, '#ffffff');
   }
 }
+// ---------- Особые смерти мификов: у каждого своя, и разная от тока, удара сверху, падения и призрака ----------
+const MYTH_DEATH = { firephoenix: 'ash', sunphoenix: 'ash', dragonemperor: 'ash', infernodemon: 'ash', frostphoenix: 'shatter', diamondtitan: 'shatter',
+  voidphoenix: 'hole', cosmicempress: 'hole', moongoddess: 'hole', thunderlord: 'storm', abysslord: 'bubbles', soulreaper: 'souls',
+  skykitsune: 'light', starunicorn: 'light', auroraangel: 'light', timelord: 'clock', shirtless: 'slash' };
+function mythDeathStart(sk, reason) {
+  const zap = reason === 'zap' || reason === 'cloud', v = zap ? 'zap' : reason === 'cone' || reason === 'meteor' ? 'flat' : reason === 'fall' ? 'fall' : reason === 'ghost' ? 'soul' : 'hit';
+  p.md = { style: MYTH_DEATH[sk.id] || 'light', v, fired: {} };
+  p.zapT = 0; p.vanish = false; p.vanishLater = false;
+  if (v !== 'fall') { p.vx = 0; p.vy = 0; } else { p.vx = 0; p.vy = 120; }
+  flashT = 0.25;
+}
+function drawMythDeath(sk) {
+  const m = p.md, t = deadT, [c1, c2] = sk.myth || ['#ffffff', '#ffd23a'], once = k => m.fired[k] ? false : (m.fired[k] = true);
+  const x = p.x, y = p.y, pre = m.v === 'zap' ? 0.55 : m.v === 'flat' ? 0.35 : 0.2, u = t - pre;   // сначала — как погиб, потом — сам мифик
+  const spr = (o = {}) => {   // герой с поворотом, масштабом, оттенком и прозрачностью
+    heroSprite(sk, o.pose || 'fall', time, true);
+    ctx.save(); ctx.globalAlpha = o.a == null ? 1 : clamp(o.a, 0, 1); ctx.translate(even(x + (o.dx || 0)), even(y + (o.dy || 0))); if (o.rot) ctx.rotate(o.rot); ctx.scale(p.face * (o.sx || 1), o.sy || 1);
+    if (o.clip) { ctx.beginPath(); ctx.rect(-40, o.clip[0], 80, o.clip[1]); ctx.clip(); }
+    ctx.drawImage(hcv, -32, -52, 64, 80); if (o.tint) { ctx.globalAlpha *= o.ta; ctx.drawImage(tintSprite(o.tint, 0), -32, -52, 64, 80); } ctx.restore(); ctx.globalAlpha = 1;
+  };
+  if (u < 0) {   // начало: как именно погиб
+    if (m.v === 'zap') { const img = Math.floor(time * 16) % 2 ? xraySprite() : hcv; heroSprite(sk, 'fall', time, true); ctx.save(); ctx.translate(even(x + rand(-2, 2)), even(y)); ctx.scale(p.face, 1); ctx.drawImage(Math.floor(time * 16) % 2 ? xraySprite() : hcv, -32, -52, 64, 80); ctx.restore(); if (once('zz')) tone(110, 95, 0.5, 'sawtooth', 0.05); for (let k = 0; k < 2; k++) { ctx.strokeStyle = k ? c1 : '#fff6a0'; ctx.lineWidth = 2; ctx.beginPath(); let lx = x + rand(-26, 26), ly = y - 44; ctx.moveTo(lx, ly); for (let s2 = 0; s2 < 5; s2++) { lx += rand(-9, 9); ly += 16; ctx.lineTo(lx, ly); } ctx.stroke(); } }
+    else if (m.v === 'flat') { const q = clamp(t / 0.12, 0, 1); spr({ sx: 1 + 0.5 * q, sy: 1 - 0.5 * q, dy: 12 * q, tint: '#ffffff', ta: 0.3 }); if (once('ff')) { burst(x, y + 20, 14, '#ffffff', 160, 0.4, 4, 300); noise(0.2, 0.2, 0, 800); } }
+    else spr({ tint: c1, ta: 0.6 + Math.sin(time * 40) * 0.3, rot: m.v === 'fall' ? t * 6 : 0 });
+    return;
+  }
+  if (m.v === 'soul' && u < 1.6) { ctx.globalAlpha = 0.6 * (1 - u / 1.6); heroSprite(sk, 'idle', time, true); ctx.save(); ctx.translate(x + Math.sin(u * 6) * 8, y - u * 60); ctx.scale(p.face, 1); ctx.drawImage(tintSprite(c1, 0), -32, -52, 64, 80); ctx.restore(); ctx.globalAlpha = 1; }   // душа уходит вверх в его цвете
+  const S = m.style, sq = m.v === 'flat' ? { sx: 1.3, sy: 0.6, dy: 10 } : {};
+  if (S === 'ash') {   // сгорает: темнеет в языках пламени, рассыпается пеплом, из пепла вылетает искорка — возрождение
+    if (u < 0.9) { spr({ ...sq, tint: '#1a0a04', ta: u / 0.9 }); if (SET.fx && Math.random() < 0.8) parts.push({ x: x + rand(-14, 14), y: y + rand(-10, 20), vx: rand(-20, 20), vy: rand(-160, -60), life: 0.5, max: 0.5, color: [c1, c2, '#ff5a1a'][Math.floor(Math.random() * 3)], size: rand(3, 7), grav: -100 }); }
+    if (u >= 0.9 && once('ash')) { burst(x, y, 26, '#5a4a40', 120, 1, 5, 200); burst(x, y, 14, c2, 160, 0.6, 3, -60); noise(0.5, 0.12, 200, 2000); }
+    if (u >= 0.9) { ctx.globalAlpha = clamp(2 - u, 0, 1); pell(ctx, x, y + 22, 16, 5, '#3a3030'); pell(ctx, x - 3, y + 20, 8, 3, '#6a5a50'); ctx.globalAlpha = 1; }
+    if (u > 1.1 && u < 2.2) { const q = (u - 1.1) / 1.1; prect(ctx, x - 2, y + 16 - q * 90, 4, 4, '#fff27a'); ctx.globalAlpha = 1 - q; for (let i = 1; i < 6; i++) prect(ctx, x - 1, y + 16 - q * 90 + i * 5, 2, 2, c1); ctx.globalAlpha = 1; if (once('reb')) tone(523, 1568, 0.6, 'sine', 0.04); }
+  } else if (S === 'shatter') {   // замерзает, трескается и разлетается осколками
+    if (u < 0.6) { spr({ ...sq, tint: '#bff4ff', ta: 0.3 + u }); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < Math.floor(u * 10); i++) { const a2 = i * 2.4; ctx.moveTo(x, y - 6); ctx.lineTo(x + Math.cos(a2) * 18, y - 6 + Math.sin(a2) * 22); } ctx.stroke(); if (once('cr')) tone(2400, 1800, 0.2, 'sine', 0.04); }
+    else if (once('sh')) { burst(x, y - 4, 30, '#bff4ff', 300, 1, 5, 500, 'diamond'); burst(x, y - 4, 16, c1, 220, 0.8, 4, 400, 'diamond'); burst(x, y, 10, '#ffffff', 160, 0.5, 3, 0, 'star'); noise(0.4, 0.15, 3000); [3136, 2637, 2093].forEach((f, i) => tone(f, f * 0.8, 0.12, 'sine', 0.04, i * 0.05)); }
+  } else if (S === 'hole') {   // раскрывается чёрная дыра и затягивает героя, в конце — вспышка
+    const g = clamp(u / 0.4, 0, 1) * (u < 1.2 ? 1 : clamp(1 - (u - 1.2) / 0.2, 0, 1)), sc = clamp(1 - u / 1.1, 0, 1);
+    if (g > 0) { ctx.globalAlpha = 0.5; pell(ctx, x, y - 4, 30 * g, 30 * g, c1); ctx.globalAlpha = 1; pell(ctx, x, y - 4, 20 * g, 20 * g, '#06020f'); pell(ctx, x, y - 4, 12 * g, 12 * g, '#000000'); for (let i = 0; i < 10; i++) { const a2 = time * 6 + i * 0.63, rr = 26 * g - (time * 30 + i * 7) % (20 * g + 1); prect(ctx, x + Math.cos(a2) * rr - 1, y - 4 + Math.sin(a2) * rr - 1, 2, 2, i % 2 ? c2 : '#ffffff'); } }
+    if (sc > 0) spr({ ...sq, sx: sc, sy: sc, rot: u * 12, dy: -4 * (1 - sc), tint: c1, ta: 1 - sc });
+    if (u > 1.25 && once('pop')) { parts.push({ x, y: y - 4, vx: 0, vy: 0, life: 0.5, max: 0.5, color: c1, size: 90, grav: 0, shape: 'wave' }); burst(x, y - 4, 20, c2, 260, 0.6, 4, 0, 'star'); tone(80, 40, 0.5, 'sine', 0.2); }
+    if (once('hs')) tone(400, 60, 1.1, 'sawtooth', 0.04);
+  } else if (S === 'storm') {   // три молнии бьют в героя, он рассыпается помехами
+    for (const at of [0, 0.3, 0.6]) if (u > at && u < at + 0.12) { ctx.globalAlpha = 0.35; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, camR, W, H); ctx.globalAlpha = 1; ctx.strokeStyle = c1; ctx.lineWidth = 4; ctx.beginPath(); let lx = x + rand(-10, 10), ly = camR; ctx.moveTo(lx, ly); while (ly < y - 10) { lx += rand(-14, 14); ly += 24; ctx.lineTo(lx, ly); } ctx.lineTo(x, y - 10); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke(); if (once('b' + at)) { noise(0.25, 0.25, 1500); tone(900, 60, 0.3, 'sawtooth', 0.06); } }
+    if (u < 1) { heroSprite(sk, 'fall', time, true); for (let i = 0; i < 10; i++) { const off = u > 0.5 ? rand(-6, 6) * (u - 0.4) * 3 : 0; ctx.save(); ctx.translate(even(x + off), even(y)); ctx.scale(p.face, 1); ctx.globalAlpha = 1 - Math.max(0, u - 0.6) * 2.5; ctx.drawImage(hcv, 0, i * 4, 32, 4, -32, -52 + i * 8, 64, 8); ctx.restore(); } ctx.globalAlpha = 1; }
+    else if (once('st')) burst(x, y, 24, c1, 260, 0.5, 3, 0, 'star');
+  } else if (S === 'bubbles') {   // растворяется снизу вверх пузырями
+    const cut = clamp(u / 1.2, 0, 1); spr({ ...sq, clip: [-52, 80 * (1 - cut)], tint: c1, ta: 0.3 });
+    if (cut < 1 && SET.fx && Math.random() < 0.9) parts.push({ x: x + rand(-14, 14), y: y + 28 - 80 * cut, vx: rand(-20, 20), vy: rand(-140, -60), life: 0.8, max: 0.8, color: Math.random() < 0.5 ? '#ffffff' : c1, size: rand(4, 8), grav: -80, shape: 'ring' });
+    if (once('bb')) for (let i = 0; i < 8; i++) tone(500 + i * 120, 700 + i * 120, 0.06, 'sine', 0.03, i * 0.12);
+  } else if (S === 'souls') {   // тело тает в тень, вверх уходит призрак, коса падает и крутится
+    spr({ ...sq, tint: '#0a0a14', ta: Math.min(1, u * 2), a: 1 - u / 1.4 });
+    if (u < 1.6) { ctx.globalAlpha = 0.7 * (1 - u / 1.6); heroSprite(sk, 'idle', time, true); ctx.save(); ctx.translate(x + Math.sin(u * 5) * 10, y - u * 70); ctx.drawImage(tintSprite(c1, 0), -32, -52, 64, 80); ctx.restore(); ctx.globalAlpha = 1; }
+    const sy2 = y - 10 + Math.min(u, 0.8) * 50; ctx.save(); ctx.translate(x + 14, sy2); ctx.rotate(u * 9); prect(ctx, -1, -18, 3, 30, '#3a3a4a'); prect(ctx, -10, -20, 12, 3, '#d8e8ff'); ctx.restore();
+    if (once('so')) { tone(300, 100, 1, 'sine', 0.05); noise(0.6, 0.05, 0, 600); }
+  } else if (S === 'light') {   // столб света с неба, герой поднимается и тает в перья и звёзды
+    ctx.globalAlpha = 0.35 * clamp(1.4 - u, 0, 1); prect(ctx, x - 18, camR, 36, y - camR + 30, c1); ctx.globalAlpha = 0.6 * clamp(1.4 - u, 0, 1); prect(ctx, x - 6, camR, 12, y - camR + 30, '#ffffff'); ctx.globalAlpha = 1;
+    if (u < 1.2) spr({ ...sq, pose: 'cheer', dy: -u * 50, tint: '#ffffff', ta: u / 1.2, a: 1.2 - u * 0.6 });
+    if (SET.fx && u < 1.2 && Math.random() < 0.6) parts.push({ x: x + rand(-14, 14), y: y - u * 50 + rand(-20, 20), vx: rand(-30, 30), vy: rand(-90, -30), life: 0.8, max: 0.8, color: Math.random() < 0.5 ? '#ffffff' : c2, size: 5, grav: 0, shape: Math.random() < 0.5 ? 'feather' : 'star' });
+    if (once('li')) [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f, 0.5, 'sine', 0.03, i * 0.1));
+  } else if (S === 'clock') {   // время застывает: сепия, трещины, взрыв шестерёнок
+    if (u < 0.8) { spr({ ...sq, tint: '#c8a060', ta: 0.6 }); ctx.strokeStyle = '#3a2a10'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 4, 24, -Math.PI / 2, -Math.PI / 2 + u / 0.8 * Math.PI * 2); ctx.stroke(); if (Math.floor(u * 8) !== Math.floor((u - 1 / 60) * 8)) tone(1200, 1200, 0.03, 'square', 0.04); }
+    else if (once('ge')) { burst(x, y, 18, '#c8902a', 260, 0.9, 6, 500, 'gear'); burst(x, y, 10, c2, 200, 0.6, 5, 300, 'gear'); noise(0.3, 0.15, 800, 4000); tone(600, 100, 0.4, 'square', 0.04); }
+  } else if (S === 'slash') {   // удар катаной: белая черта, герой распадается на две половины, лепестки
+    if (u < 0.15) { spr(sq); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 30, y + 14); ctx.lineTo(x - 30 + (u / 0.15) * 60, y + 14 - (u / 0.15) * 50); ctx.stroke(); if (once('sl')) { noise(0.15, 0.2, 3000); tone(2000, 400, 0.15, 'sawtooth', 0.04); } }
+    else { const q = Math.min(1, (u - 0.15) / 0.8), a2 = 1 - Math.max(0, u - 0.9) * 2;
+      spr({ ...sq, clip: [-52, 40], dx: -q * 14, dy: -q * 10, rot: -q * 0.5, a: a2 }); spr({ ...sq, clip: [-12, 40], dx: q * 12, dy: q * 14, rot: q * 0.4, a: a2 });
+      if (once('pe')) burst(x, y - 4, 24, c1, 200, 1, 4, 60, 'leaf'); }
+  }
+}
 function drawHero0() {
   const sk = curSkin(), dead = state === 'dead' || state === 'over';
   if (dead && p.dk === 'soul' && deadT < 1.8) {   // душа улетает вверх
@@ -8185,6 +8291,7 @@ function drawHero0() {
     ctx.save(); ctx.globalAlpha = 0.55 * (1 - deadT / 1.8);
     ctx.translate(p.sx + Math.sin(deadT * 6) * 8, p.sy - deadT * 70); ctx.scale(p.face, 1); ctx.drawImage(img, -32, -52, 64, 80); ctx.restore();
   }
+  if (dead && p.md) { drawMythDeath(sk); return; }
   if (dead && p.vanish) return;   // легендарный герой разлетелся
   const em = !dead && p.em && time - p.em.t0 >= 0 && time - p.em.t0 < EMO_DUR ? p.em : null, emT = em ? time - em.t0 : 0, emM = em ? emoMotion(em.id, emT) : null;
   if (!em && !dead && idleT > 10 && IDLE[sk.id]) { drawIdleShow(sk, idleT - 10); return; }   // заскучал — своя сценка
@@ -10664,7 +10771,7 @@ const ALLIES = [
   { id: 'pup', r: 0, price: { coins: 3000 }, hp: 2, move: 'climb', ab: 'magnet', nm: ['ЩЕНОК ДЖЕК', 'PUP JACK'], d: ['ПРИТЯГИВАЕТ МОНЕТЫ ВОКРУГ СЕБЯ', 'PULLS IN COINS AROUND HIM'],
     sk: { id: 'pup', body: '#d0a060', dark: '#8a5a2a', light: '#fff0d8', ear: '#8a5a2a', earC: '#8a5a2a', ol: '#3a1a08', ears: 'side', nose: '#1a1a24', tail: 'bushy', tailTip: '#fff0d8', scarf: '#e8261a', scarfD: '#a01008', patch: undefined } },
   { id: 'robo', r: 1, price: { gems: 30 }, hp: 3, move: 'climb', ab: 'shield', nm: ['РОБО-ДРУГ', 'ROBO PAL'], d: ['КАЖДЫЕ 20 СЕКУНД ДАЁТ ТЕБЕ ЩИТ', 'GIVES YOU A SHIELD EVERY 20 S'],
-    sk: { id: 'robo', body: '#a8b0c8', dark: '#5a6080', light: '#e0e8f8', ear: '#a8b0c8', ol: '#141828', ears: 'none', eye: '#3af0ff', antenna: '#ff3a3a', noScarf: true, noMuzzle: true, parts: ['chestLights'] } },
+    sk: { id: 'robo', body: '#a8b0c8', dark: '#5a6080', light: '#e0e8f8', ear: '#a8b0c8', ol: '#141828', ears: 'none', noEyes: true, botEye: '#3af0ff', antenna: '#3af0ff', noScarf: true, noMuzzle: true, parts: ['botVisor', 'botPlates', 'chestLights', 'roboJaw'] } },
   { id: 'owl', r: 1, price: { gems: 40 }, hp: 2, move: 'fly', ab: 'dart', nm: ['СОВА МУДРА', 'WISE OWL'], d: ['ЛЕТИТ РЯДОМ И КИДАЕТ ПЕРЬЯ ВО ВРАГОВ', 'FLIES BY AND THROWS FEATHERS AT FOES'],
     sk: { id: 'owl', body: '#9a7048', dark: '#5a3a1a', light: '#f0dcb8', ear: '#5a3a1a', ol: '#2a1404', ears: 'cat', eye: '#1a1010', eyeRing: '#ffd23a', beak: true, noScarf: true, wing: '#6a4a2a', parts: ['wingsBat'] } },
   { id: 'keddy', r: 2, price: { gems: 60 }, hp: 3, move: 'climb', ab: 'kick', nm: null, d: null, sk: KEDDY },
@@ -10675,9 +10782,11 @@ const ALLIES = [
   { id: 'angel', r: 4, price: { ruby: 5 }, hp: 3, move: 'fly', ab: 'guard', nm: ['АНГЕЛ-ХРАНИТЕЛЬ', 'GUARDIAN ANGEL'], d: ['ОДИН РАЗ ЗА ЗАБЕГ СПАСАЕТ ОТ СМЕРТИ', 'SAVES YOU FROM DEATH ONCE PER RUN'],
     sk: { id: 'angel', ...HAM, body: '#fff6e8', head: '#fffaf0', dark: '#e0c8a0', light: '#ffffff', ear: '#ffe0f0', ol: '#4a3a1a', scarf: '#7ad8ff', scarfD: '#3a8ad8', acc: 'halo', parts: ['wingsAngel'] } },
   { id: 'boomer', r: 1, price: { gems: 35 }, hp: 2, move: 'climb', ab: 'boomerang', nm: ['БУМЕРАНГЕР', 'BOOMERANGER'], d: ['КИДАЕТ БУМЕРАНГ — ОН ВОЗВРАЩАЕТСЯ', 'THROWS A BOOMERANG THAT COMES BACK'],
-    sk: { id: 'boomer', ...HAM, body: '#c8803a', dark: '#7a4a1a', light: '#ffe0b0', scarf: '#ff3a3a', scarfD: '#a01010', acc: 'bandana', parts: ['vest'] } },
-  { id: 'bomber', r: 2, price: { gems: 70 }, hp: 2, move: 'climb', ab: 'bombs', form: 'bomber', nm: ['БОМБЕР', 'BOMBER'], d: ['КИДАЕТ БОМБЫ ПО ДУГЕ ВО ВРАГОВ', 'LOBS BOMBS AT FOES'] },
-  { id: 'soldier', r: 2, price: { gems: 90 }, hp: 3, move: 'climb', ab: 'army', form: 'soldier', nm: ['СОЛДАТИК', 'TOY SOLDIER'], d: ['ЗОВЁТ ИГРУШЕЧНЫЕ ТАНКИ, БОЙЦОВ И ВЕРТОЛЁТЫ', 'CALLS TOY TANKS, TROOPS AND CHOPPERS'] },
+    sk: { id: 'boomer', ...HAM, body: '#c8803a', dark: '#7a4a1a', light: '#ffe0b0', scarf: '#ff3a3a', scarfD: '#a01010', hat: '#8a5a2a', parts: ['vest', 'cowboyHat', 'heldBoom'] } },
+  { id: 'bomber', r: 2, price: { gems: 70 }, hp: 2, move: 'climb', ab: 'bombs', nm: ['БОМБЕР', 'BOMBER'], d: ['ДОСТАЁТ БОМБУ ИЗ КОРЗИНЫ И КИДАЕТ ВО ВРАГОВ', 'GRABS A BOMB FROM HIS BASKET AND THROWS IT'],
+    sk: { id: 'bomber', ...HAM, body: '#c89050', dark: '#4a3a2a', light: '#f0d0a0', ear: '#a86a3a', ol: '#2a1408', noScarf: true, helm: '#5a5a4a', uni: '#7a6a3a', uni2: '#4a3a1a', parts: ['bombBasket', 'uniform', 'mudSpots', 'mustache', 'armyHelmet', 'heldBomb'] } },
+  { id: 'soldier', r: 2, price: { gems: 90 }, hp: 3, move: 'climb', ab: 'army', nm: ['СОЛДАТИК', 'TOY SOLDIER'], d: ['ЗОВЁТ МИНИ-ХОМЯКОВ, ТАНКИ И ВЕРТОЛЁТЫ', 'CALLS MINI HAMSTERS, TANKS AND CHOPPERS'],
+    sk: { id: 'soldier', ...HAM, body: '#e8b070', dark: '#3a4a2a', light: '#ffe0b0', ear: '#c88a4a', ol: '#1a2410', noScarf: true, helm: '#4a6a2a', helmNet: true, uni: '#5a7a3a', uni2: '#3a5a2a', camo: true, parts: ['uniform', 'armyHelmet', 'rifle'] } },
   { id: 'eye', r: 3, price: { gems: 120 }, hp: 1, move: 'fly', ab: 'laser', form: 'eye', invuln: true, nm: ['ГЛАЗИК', 'WINGED EYE'], d: ['ЕГО НЕ УБИТЬ. ЛЕТИТ С ТОБОЙ И ЖЖЁТ ЛАЗЕРОМ', 'CAN NOT BE HURT. FLIES WITH YOU, SHOOTS LASERS'] },
   { id: 'cyberball', r: 3, price: { gems: 150 }, hp: 3, move: 'climb', ab: 'roll', form: 'ball', nm: ['КИБЕР-ШАР', 'CYBER BALL'], d: ['КАТИТСЯ И СБИВАЕТ ВСЕХ, В ПРЫЖКЕ — РОБОТ', 'ROLLS INTO FOES, TURNS INTO A ROBOT IN A JUMP'] },
   { id: 'carbot', r: 3, price: { gems: 160 }, hp: 3, move: 'climb', ab: 'blaster', form: 'car', nm: ['МАШИНА-ТРАНСФОРМЕР', 'TRANSFORMER CAR'], d: ['ЕЗДИТ МАШИНОЙ, СТАНОВИТСЯ РОБОТОМ И СТРЕЛЯЕТ', 'DRIVES, TRANSFORMS INTO A ROBOT AND SHOOTS'] },
@@ -10721,13 +10830,29 @@ const stepSound = () => { noise(0.04, 0.05, 200, 1200); tone(120, 80, 0.05, 'sin
 const ALLY_SKIP = new Set(['coin', 'gem', 'ruby', 'shield', 'magnet', 'cloud']);
 const activeEnemy = e => !ALLY_SKIP.has(e.type) && !e.kicked && !e.frozen && !((e.type === 'cone' && e.st !== 'fall') || (e.type === 'hawk' && e.st !== 'fly') || (e.type === 'ghost' && e.st !== 'chase') || (e.type === 'meteor' && e.st !== 'fall') || (e.type === 'piranha' && e.st !== 'jump'));
 const kickKind = type => ['snail', 'turret', 'cone'].includes(type) ? 'stomp' : ['spiky', 'orbit', 'pendulum', 'bouncer', 'meteor'].includes(type) ? 'spin' : 'fly';
+// ---- белые крылья глазика: пять перьев веером, контур, полосы между перьями, машут вверх-вниз ----
+const EYE_WING = [[0, 0], [3, -5], [8, -9], [14, -12], [19, -12], [21, -9], [18, -7], [21, -5], [18, -3], [20, 0], [16, 1], [17, 4], [12, 4], [11, 7], [6, 5], [2, 4]];
+function eyeWings(x, y, s, t) {
+  const a = Math.sin(t * 12) * 0.45 - 0.1;
+  for (const sd of [-1, 1]) {
+    const ox = x + sd * 8 * s, oy = y - 2 * s, ca = Math.cos(a), sa = Math.sin(a);
+    const poly = EYE_WING.map(([px, py]) => [px * ca - py * sa, px * sa + py * ca]);
+    const inside = (px, py) => { let q = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) q = !q; } return q; };
+    for (let py = -16; py < 10; py++) for (let px = -2; px < 24; px++) {
+      if (!inside(px + 0.5, py + 0.5)) continue;
+      const edge = !inside(px - 0.5, py + 0.5) || !inside(px + 1.5, py + 0.5) || !inside(px + 0.5, py - 0.5) || !inside(px + 0.5, py + 1.5);
+      const d = Math.hypot(px, py), line = !edge && d > 6 && ((Math.atan2(py, px) * 4.5 + 20) % 1.6) < 0.25;   // перья
+      ctx.fillStyle = edge ? OL : line ? '#b8c8e8' : d > 15 ? '#e0e8ff' : '#ffffff';
+      ctx.fillRect(Math.round(ox + sd * px * s), Math.round(oy + py * s), Math.ceil(s), Math.ceil(s));
+    }
+  }
+}
 // ---- союзники не в виде героя: свой пиксельный рисунок ----
 // o: face — куда смотрит, robot — в форме робота, rot — поворот (катится), look — куда смотрит глаз, walk — шагает, t — время
 function drawAllyForm(form, x, y, s, o) {
   const t = o.t || time, f = o.face || 1, P = (dx, dy, w, h, c) => prect(ctx, x + dx * s * f - (f < 0 ? w * s : 0), y + dy * s, w * s, h * s, c), E = (dx, dy, rx, ry, c) => pell(ctx, x + dx * s * f, y + dy * s, rx * s, ry * s, c);
   if (form === 'eye') {   // летающий глазик: белые крылья, глаз смотрит на врага
-    const fl = Math.sin(t * 14) * 4;
-    for (const sd of [-1, 1]) for (let i = 0; i < 4; i++) { const wx = sd * (11 + i * 4), wy = -4 - i * 2 + fl * (i + 1) * 0.3; pell(ctx, x + wx * s, y + wy * s, 4 * s, 6 * s, OL); pell(ctx, x + wx * s, y + wy * s, 3 * s, 5 * s, i === 3 ? '#e0e8ff' : '#ffffff'); }
+    eyeWings(x, y, s, t);
     ctx.globalAlpha = 0.25 + Math.sin(t * 4) * 0.1; pell(ctx, x, y, 16 * s, 16 * s, '#fff6a0'); ctx.globalAlpha = 1;
     pell(ctx, x, y, 11 * s, 11 * s, OL); pell(ctx, x, y, 10 * s, 10 * s, '#ffffff');
     for (const [vx, vy] of [[-7, 3], [6, -5], [5, 6]]) prect(ctx, x + vx * s, y + vy * s, 2 * s, 1 * s, '#ff9aa8');
@@ -10761,27 +10886,45 @@ function drawAllyForm(form, x, y, s, o) {
     P(-5, -4, 10, 11, OL); P(-4, -3, 8, 9, g1); P(-4, -3, 2, 9, g3); P(-4, 2, 8, 1, g2);
     E(0, -8, 5, 5, OL); E(0, -8, 4, 4, g1); P(-6, -12, 12, 3, OL); P(-5, -12, 10, 2, g2); P(-3, -14, 6, 3, OL); P(-2, -14, 4, 2, g1);
     P(1, -9, 2, 2, OL); P(4, -2, 12, 3, OL); P(5, -1, 10, 1, g2); P(5, 0, 3, 3, OL);   // глаз и винтовка
-  } else if (form === 'car') {   // машина-трансформер: красная машинка, в прыжке — робот
+  } else if (form === 'car') {   // машина-трансформер: спорткар с антикрылом и дисками; робот — двери-наплечники, колёса на ногах, рука-пушка
     if (o.robot) {
-      const k = o.robot;
-      P(-8, -4, 16, 14, OL); P(-7, -3, 14, 12, '#e8261a'); P(-5, -2, 10, 5, '#7ad8ff'); P(-5, -2, 3, 5, '#bff0ff');   // грудь — лобовое стекло
-      for (const sd of [-1, 1]) { E(sd * 10, -4, 4, 4, OL); E(sd * 10, -4, 3, 3, '#3a3a44'); P(sd * 10 - 2, 0, 4, 8 * k, OL); P(sd * 10 - 1, 1, 2, 7 * k, '#2a4ab0'); P(sd * 4 - 2, 10, 4, 8 * k, OL); P(sd * 4 - 1, 10, 2, 7 * k, '#2a4ab0'); }
-      P(-4, -12, 8, 8, OL); P(-3, -11, 6, 6, '#2a4ab0'); P(-2, -9, 4, 2, '#3af0ff'); P(-1, -14, 2, 3, '#c8c8d8');
+      const k = o.robot, sw = Math.sin(t * 10) * 1.5, shot = o.shot;
+      for (const sd of [-1, 1]) { P(sd * 4 - 2, 9, 5, 9 * k, OL); P(sd * 4 - 1, 10, 3, 8 * k, '#2a4ab0'); E(sd * 4, 12, 3, 3, OL); E(sd * 4, 12, 2, 2, '#3a3a44'); P(sd * 4 - 3, 9 + 9 * k, 6, 3, OL); }   // ноги с колёсами-коленями
+      P(-9, -6, 18, 16, OL); P(-8, -5, 16, 14, '#e8261a'); P(-8, -5, 16, 2, '#ff6a5a'); P(-6, -3, 12, 5, '#7ad8ff'); P(-6, -3, 4, 5, '#bff0ff'); P(-5, 4, 10, 3, '#3a3a44'); for (let i = 0; i < 4; i++) P(-4 + i * 2.5, 5, 1, 1, '#c8c8d8');   // грудь: стекло и решётка
+      P(-14, -7, 6, 8, OL); P(-13, -6, 4, 6, '#e8261a'); P(8, -7, 6, 8, OL); P(9, -6, 4, 6, '#e8261a');   // двери-наплечники
+      P(-13, 1 + sw, 4, 8, OL); P(-12, 2 + sw, 2, 6, '#2a4ab0');   // рука
+      P(9, 0, 4, 5, OL); P(10, 1, 2, 3, '#2a4ab0'); P(10, 4, 9, 4, OL); P(11, 5, 7, 2, '#5a5a6a'); if (shot) { E(20, 6, 4, 4, '#3af0ff'); E(20, 6, 2, 2, '#ffffff'); }   // рука-пушка
+      P(-5, -15, 10, 9, OL); P(-4, -14, 8, 7, '#2a4ab0'); P(-4, -11, 8, 2, '#3af0ff'); P(-1, -17, 2, 3, '#c8c8d8'); P(-5, -16, 2, 2, '#c8c8d8'); P(3, -16, 2, 2, '#c8c8d8');   // голова
     } else {
       const wr = (o.rot || 0);
-      P(-13, -2, 26, 8, OL); P(-12, -1, 24, 6, '#e8261a'); P(-12, -1, 24, 2, '#ff6a5a'); P(-6, -7, 12, 6, OL); P(-5, -6, 10, 4, '#7ad8ff'); P(-1, -6, 1, 4, '#e8261a');
-      P(10, 0, 3, 2, '#ffd23a'); P(-13, 0, 2, 2, '#ff3a3a');
-      for (const dx of [-8, 8]) { E(dx, 6, 4, 4, OL); E(dx, 6, 3, 3, '#3a3a44'); prect(ctx, x + dx * s * f + Math.cos(wr + dx) * 2 * s - s, y + 6 * s + Math.sin(wr + dx) * 2 * s - s, 2 * s, 2 * s, '#c8c8d8'); }
+      P(-15, -3, 30, 9, OL); P(-14, -2, 28, 7, '#e8261a'); P(-14, -2, 28, 2, '#ff6a5a'); P(-14, 3, 28, 1, '#a01008');   // кузов
+      P(-7, -8, 13, 6, OL); P(-6, -7, 11, 5, '#7ad8ff'); P(-6, -7, 3, 5, '#bff0ff'); P(-1, -7, 1, 5, '#e8261a');   // стёкла
+      P(-16, -7, 3, 5, OL); P(-18, -8, 6, 2, OL); P(-17, -8, 4, 1, '#e8261a');   // антикрыло
+      P(12, 0, 3, 2, '#ffd23a'); ctx.globalAlpha = 0.25; P(15, -1, 8, 4, '#fff6a0'); ctx.globalAlpha = 1; P(-15, 0, 2, 2, '#ff3a3a');   // фары
+      for (let i = 0; i < 2; i++) { const q = (t * 2 + i / 2) % 1; ctx.globalAlpha = (1 - q) * 0.5; E(-17 - q * 8, 3 - q * 3, 2 + q * 2, 2 + q * 2, '#c8c8d8'); } ctx.globalAlpha = 1;   // выхлоп
+      for (const dx of [-9, 9]) { E(dx, 6, 5, 5, OL); E(dx, 6, 4, 4, '#2a2a34'); E(dx, 6, 2, 2, '#c8c8d8'); prect(ctx, x + dx * s * f + Math.cos(wr + dx) * 3 * s - s, y + 6 * s + Math.sin(wr + dx) * 3 * s - s, 2 * s, 2 * s, '#ffffff'); }
     }
-  } else if (form === 'tank' || form === 'trooper' || form === 'heli') {   // игрушечные войска солдатика
-    const g1 = '#5ab03a', g2 = '#3a8a2a';
-    if (form === 'tank') { P(-9, 0, 18, 6, OL); P(-8, 1, 16, 4, g2); for (const dx of [-6, -2, 2, 6]) P(dx - 1, 3, 2, 2, '#2a4a1a'); P(-6, -5, 12, 6, OL); P(-5, -4, 10, 4, g1); P(4, -4, 10, 2, OL); }
-    else if (form === 'trooper') { P(-2, 0, 4, 6, OL); P(-1, 1, 2, 4, g1); E(0, -3, 3, 3, OL); E(0, -3, 2, 2, g1); P(-3, -6, 6, 2, g2); P(2, 0, 5, 1, OL); }
-    else { const r2 = Math.sin(t * 40) * 10; P(-6, -3, 12, 7, OL); P(-5, -2, 10, 5, g1); P(1, -2, 4, 3, '#bff0ff'); P(-14, -1, 8, 2, OL); P(-15, -4, 2, 5, OL); P(-1, -6, 2, 3, OL); prect(ctx, x - Math.abs(r2) * s, y - 7 * s, Math.abs(r2) * 2 * s, 1 * s, OL); P(-4, 4, 8, 1, OL); }
+  } else if (form === 'trooper') {   // мини-хомяк в каске с винтовкой
+    heroSprite(MINI_TROOP, o.walk === false ? 'idle' : 'run', t * 1.3, false);
+    ctx.save(); ctx.translate(x, y + 6 * s); ctx.scale(f * s * 0.5, s * 0.5); ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
+  } else if (form === 'tank') {   // игрушечный танк: гусеницы крутятся, башня с хомяком-командиром, дуло вперёд
+    const g1 = '#5ab03a', g2 = '#3a8a2a', g3 = '#2a5a1a', wr = Math.floor(t * 12) % 2;
+    P(-13, 2, 26, 8, OL); P(-12, 3, 24, 6, g3); for (let i = 0; i < 6; i++) P(-11 + i * 4 + wr, 4, 2, 4, '#1a3a0a'); P(-12, 3, 24, 1, g2);
+    P(-10, -3, 20, 6, OL); P(-9, -2, 18, 4, g1); P(-9, -2, 18, 1, '#8ad05a');
+    P(-6, -8, 12, 6, OL); P(-5, -7, 10, 4, g2); P(5, -7, 12, 3, OL); P(6, -6, 10, 1, g3); P(16, -7, 2, 3, OL);
+    E(-1, -11, 4, 3.5, OL); E(-1, -11, 3, 2.5, '#e8b070'); P(-4, -14, 7, 2, OL); P(-3, -14, 5, 1, '#4a6a2a'); P(0, -12, 1, 1, OL);
+  } else if (form === 'heli') {   // игрушечный вертолёт: два винта, пилот-хомяк в кабине
+    const g1 = '#5ab03a', g2 = '#3a8a2a', rr = Math.abs(Math.sin(t * 40)) * 12;
+    prect(ctx, x - (rr + 1) * s, y - 11 * s, (rr + 1) * 2 * s, 2 * s, OL); P(-1, -10, 2, 3, OL);
+    P(-9, -7, 16, 11, OL); P(-8, -6, 14, 9, g1); P(-8, -6, 14, 2, '#8ad05a'); P(1, -6, 6, 5, '#bff0ff'); E(4, -3, 2.5, 2.5, '#e8b070'); P(3, -5, 3, 1, '#4a6a2a');
+    P(-20, -3, 12, 3, OL); P(-19, -2, 10, 1, g2); P(-22, -7, 3, 8, OL); const tr2 = Math.abs(Math.sin(t * 50)) * 4; P(-21, -5 - tr2 / 2, 1, tr2 + 1, '#ffffff');
+    P(-6, 4, 2, 3, OL); P(3, 4, 2, 3, OL); P(-8, 7, 15, 1, OL);
+
   }
 }
 
 // союзник целиком: у одних — спрайт героя, у других — свой рисунок
+const MINI_TROOP = { id: 'minitroop', ...HAM, body: '#e8b070', dark: '#3a4a2a', light: '#ffe0b0', ear: '#c88a4a', ol: '#1a2410', noScarf: true, helm: '#4a6a2a', uni: '#5a7a3a', uni2: '#3a5a2a', camo: true, parts: ['uniform', 'armyHelmet', 'rifle'] };
 function allyArt(A, x, y, sc, pose, o = {}) {
   if (A.form) { drawAllyForm(A.form, x, y - 14 * sc, sc, { t: time, face: o.face || 1, robot: o.robot || 0, rot: o.rot || 0, walk: pose === 'run', look: o.look || 0 }); return; }
   heroSprite(A.sk, pose, time + (o.ph || 0), false); ctx.save(); ctx.translate(x, y); if (o.rot) ctx.rotate(o.rot); ctx.scale((o.face || 1) * sc, sc); ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
@@ -10883,17 +11026,20 @@ function allyAbility(dt) {
   else if (A.ab === 'laser' && a.abT <= 0) {   // глазик: лазер
     const e = allyFoe(220); if (e) { a.abT = 1.4; a.efx.push({ k: 'laser', t: 0, max: 0.25, x: e.x, y: e.y }); tone(1900, 500, 0.18, 'sawtooth', 0.03); allyKill(e, '#ff3a3a', tr('ПИУ!', 'PEW!')); }
   } else if (A.ab === 'bombs' && a.abT <= 0) {   // бомбер: бомба по дуге
-    const e = allyFoe(180); if (e) { a.abT = 2.2; a.face = e.x > a.x ? 1 : -1; a.efx.push({ k: 'lob', t: 0, max: 0.6, x0: a.x, y0: a.y - 10, x1: e.x, y1: e.y }); tone(400, 700, 0.1, 'triangle', 0.04); }
+    const e = allyFoe(180); if (e) { a.abT = 2.2; a.face = e.x > a.x ? 1 : -1; a.wind = 0.35; a.windE = e; noise(0.06, 0.05, 2000); tone(1400, 1400, 0.04, 'square', 0.03); }   // достаёт бомбу из корзины
   } else if (A.ab === 'boomerang' && a.abT <= 0) {   // бумеранг улетает и возвращается
-    const e = allyFoe(180); if (e) { a.abT = 1.9; a.face = e.x > a.x ? 1 : -1; a.efx.push({ k: 'boom', t: 0, max: 1, x0: a.x, y0: a.y - 8, tx: e.x, ty: e.y }); noise(0.2, 0.05, 2000, 6000); }
+    const e = allyFoe(180); if (e) { a.abT = 1.9; a.thr = 0.3; a.face = e.x > a.x ? 1 : -1; a.efx.push({ k: 'boom', t: 0, max: 1, x0: a.x + a.face * 8, y0: a.y - 20, tx: e.x, ty: e.y }); noise(0.2, 0.05, 2000, 6000); }
   } else if (A.ab === 'blaster' && a.abT <= 0) {   // трансформер: становится роботом и стреляет
     const e = allyFoe(200); if (e) { a.abT = 1.6; a.robT = 0.8; a.face = e.x > a.x ? 1 : -1; const d = Math.hypot(e.x - a.x, e.y - a.y) || 1; a.efx.push({ k: 'bolt', t: 0, max: 1, x: a.x, y: a.y - 10, vx: (e.x - a.x) / d * 480, vy: (e.y - a.y + 10) / d * 480 }); tone(300, 900, 0.08, 'square', 0.04); tone(900, 300, 0.1, 'square', 0.03, 0.08); }
   } else if (A.ab === 'army' && a.abT <= 0) {   // солдатик зовёт войска
-    a.abT = 6; a.units = a.units || [];
+    a.abT = 6; a.units = a.units || []; a.thr = 0.6;
     for (const type of ['tank', 'trooper', 'heli']) a.units.push({ type, x: a.x + rand(-10, 10), y: a.y, vx: 0, vy: type === 'heli' ? -60 : -300, t: 0, life: 6, next: 0.3 });
     [523, 659, 784].forEach((f2, i) => tone(f2, f2, 0.08, 'square', 0.035, i * 0.08)); a.pops.push({ s: tr('В АТАКУ!', 'CHARGE!'), t: 0, x: a.x, y: a.y - 40 });
   }
   if (a.robT > 0) a.robT -= dt;
+  if (a.thr > 0) a.thr -= dt;
+  if (a.wind > 0) { a.wind -= dt; if (a.wind <= 0) { const e = a.windE; a.thr = 0.3;   // бросок
+    a.efx.push({ k: 'lob', t: 0, max: 0.6, x0: a.x + a.face * 10, y0: a.y - 24, x1: e && ents.includes(e) ? e.x : a.x + a.face * 80, y1: e && ents.includes(e) ? e.y : a.y }); tone(400, 700, 0.1, 'triangle', 0.04); noise(0.08, 0.05, 1500, 5000); } }
   if (a.units) for (let i = a.units.length - 1; i >= 0; i--) {   // игрушечные войска сами ищут врагов
     const u = a.units[i]; u.t += dt; u.life -= dt;
     let tg = null, td = 1e9; for (const e of ents) { if (!activeEnemy(e) || e.y < camY - 20 || e.y > camY + H) continue; const d = Math.hypot(e.x - u.x, e.y - u.y); if (d < td) { td = d; tg = e; } }
@@ -10912,7 +11058,8 @@ function allyAbility(dt) {
     if (f.k === 'bolt') { f.x += f.vx / 60; f.y += f.vy / 60;
       for (const e of ents.slice()) if (activeEnemy(e) && Math.hypot(e.x - f.x, e.y - f.y) < (e.r || 10) + 8) { allyKill(e, '#3af0ff', tr('ДЗЫНЬ!', 'ZING!')); f.t = f.max; } }
     if (f.k === 'dart' && !f.hit && f.t > 0.22) { f.hit = true; if (ents.includes(f.e)) { burst(f.e.x, f.e.y, 8, '#f0dcb8', 120, 0.4, 5, 100, 'feather'); allyKill(f.e, '#ffd23a', tr('ТЮК!', 'POK!')); } }
-    if (f.k === 'fire') { if (SET.fx) for (let i = 0; i < 2; i++) parts.push({ x: a.x + a.face * 14, y: a.y - 8, vx: a.face * rand(160, 260), vy: rand(-50, 50), life: 0.35, max: 0.35, color: ['#ffd23a', '#ff8a1e', '#ff3a1a'][i % 3], size: rand(4, 7), grav: -100 });
+    if (f.k === 'fire') { const mx = a.x + a.face * 13, my = a.y - 12, tg = f.e && ents.includes(f.e) ? f.e : null, ang = tg ? Math.atan2(tg.y - my, tg.x - mx) : (a.face > 0 ? 0 : Math.PI), sp2 = rand(200, 300);   // струя изо рта
+      if (SET.fx) for (let i = 0; i < 3; i++) parts.push({ x: mx, y: my, vx: Math.cos(ang + rand(-0.2, 0.2)) * sp2, vy: Math.sin(ang + rand(-0.2, 0.2)) * sp2, life: 0.35, max: 0.35, color: ['#ffd23a', '#ff8a1e', '#ff3a1a'][i % 3], size: rand(4, 7), grav: -100 });
       if (!f.hit && f.t > 0.2) { f.hit = true; if (ents.includes(f.e)) allyKill(f.e, '#ff8a1e', tr('ПШШ!', 'FWOOSH!')); } }
   }
 }
@@ -11011,6 +11158,7 @@ function drawAllyFx(a) {
     const q = f.t / f.max;
     if (f.k === 'beam') { ctx.globalAlpha = 1 - q; ctx.strokeStyle = '#7af0ff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(a.x, a.y - 30); ctx.lineTo(p.x, p.y - 4); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke(); }
     else if (f.k === 'dart') { const e = f.e, u = Math.min(1, f.t / 0.22), x = lerp(f.x0, e.x, u), y = lerp(f.y0, e.y, u); ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(e.y - f.y0, e.x - f.x0)); prect(ctx, -6, -1, 12, 3, OL); prect(ctx, -5, -1, 10, 2, '#f0dcb8'); prect(ctx, -7, -3, 4, 7, '#9a7048'); ctx.restore(); }
+    else if (f.k === 'fire') { const mx = a.x + a.face * 13, my = a.y - 12; ctx.globalAlpha = 0.8; pell(ctx, mx, my, 5 + Math.random() * 2, 4, '#ffd23a'); pell(ctx, mx, my, 3, 2, '#ffffff'); }   // пасть горит
     else if (f.k === 'laser') { ctx.globalAlpha = 1 - q; ctx.strokeStyle = '#ff3a3a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(f.x, f.y); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke(); pell(ctx, f.x, f.y, 8, 8, '#ffd23a'); }
     else if (f.k === 'lob') { const u = Math.min(1, f.t / f.max), x = lerp(f.x0, f.x1, u), y = lerp(f.y0, f.y1, u) - Math.sin(u * Math.PI) * 60; pell(ctx, x, y, 6, 6, OL); pell(ctx, x, y, 5, 5, '#2a2a34'); prect(ctx, x - 1, y - 9, 2, 4, '#c8a878'); if (Math.sin(time * 30) > 0) prect(ctx, x - 2, y - 12, 4, 4, '#ffd23a'); }
     else if (f.k === 'boom' && f.x != null) { ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.t * 22); prect(ctx, -9, -2, 12, 5, OL); prect(ctx, -2, -9, 5, 12, OL); prect(ctx, -8, -1, 10, 3, '#c8803a'); prect(ctx, -1, -8, 3, 10, '#e8a050'); ctx.restore(); }
@@ -11025,20 +11173,23 @@ function drawAlly() {
   if (a.def.form) {   // свой рисунок: шар и машина крутятся и превращаются в робота, глазик машет крыльями
     const F = a.def.form, j = a.st === 'jump' ? Math.min(1, a.t / a.dur) : 0, long = a.st === 'jump' && Math.abs(a.tx - a.fx) > 70;
     const robot = F === 'ball' ? (long ? clamp(Math.sin(j * Math.PI) * 2, 0, 1) : 0) : F === 'car' ? (a.robT > 0 || long ? 1 : 0) : 0;
+    if ((robot > 0.5) !== !!a.wasRobot) { a.wasRobot = robot > 0.5; burst(a.x, a.y - 6, 12, F === 'car' ? '#e8261a' : '#3af0ff', 140, 0.35, 3, 0); parts.push({ x: a.x, y: a.y - 6, vx: 0, vy: 0, life: 0.3, max: 0.3, color: '#ffffff', size: 30, grav: 0, shape: 'wave' });
+      [0, 0.05, 0.1, 0.15].forEach((d, i) => tone(a.wasRobot ? 300 + i * 150 : 900 - i * 150, a.wasRobot ? 360 + i * 150 : 840 - i * 150, 0.04, 'square', 0.03, d)); }   // «чк-чк-чк» превращения
     let rot = F === 'ball' ? (a.rr || 0) : F === 'car' && !robot ? (a.rr || 0) * 3 : 0;
     ctx.save(); ctx.globalAlpha = a.inv > 0 && Math.sin(time * 30) > 0 ? 0.4 : 1;
     if (a.def.r >= 3) { ctx.globalAlpha *= 0.2; pell(ctx, a.x, a.y - 6, 22, 22, RARITY[a.def.r].col); ctx.globalAlpha = a.inv > 0 && Math.sin(time * 30) > 0 ? 0.4 : 1; }
     const onWall = a.st === 'wall' && (F === 'car' || F === 'ball') && !robot;
     if (onWall && F === 'car') { ctx.translate(a.x, a.y); ctx.rotate(-a.side * Math.PI / 2); ctx.translate(-a.x, -a.y); }   // машина едет по столбу
-    drawAllyForm(F, a.x, a.y - (F === 'eye' ? 0 : 6), 1.1, { t: time, face: a.face, robot, rot, walk: a.run || a.st === 'wall', look: a.look || 0 });
+    drawAllyForm(F, a.x, a.y - (F === 'eye' ? 0 : 6), 1.1, { t: time, face: a.face, robot, rot, walk: a.run || a.st === 'wall', look: a.look || 0, shot: a.robT > 0.6 });
     ctx.restore(); ctx.globalAlpha = 1;
     drawAllyFx(a);
     if (!a.def.invuln) for (let i = 0; i < a.def.hp; i++) heart(a.x - (a.def.hp - 1) * 7 + i * 14, a.y - 40, i < a.hp);
     for (const q of a.pops) { ctx.globalAlpha = clamp(1 - q.t, 0, 1); text(q.s, q.x, q.y - q.t * 30, 2, '#ffd23a', 'center', OL); } ctx.globalAlpha = 1;
     return;
   }
-  const S = a.def.sk, k = a.kick, fly = a.def.move === 'fly';
-  const pose = k ? (k.kind === 'spin' ? 'tuck' : 'jump') : a.win > 0 ? 'raise' : fly ? (a.efx.length ? 'raise' : 'jump') : a.st === 'wall' ? 'cling' : a.st === 'ground' ? (a.run ? 'run' : 'idle') : a.flip && a.rot ? 'tuck' : 'jump';
+  const k = a.kick, fly = a.def.move === 'fly';
+  const S = a.def.id === 'bomber' ? (a.wind > 0 ? { ...a.def.sk, holding: true } : a.def.sk) : a.def.id === 'boomer' ? (a.efx.some(f => f.k === 'boom') ? a.def.sk : { ...a.def.sk, holding: true }) : a.def.sk;
+  const pose = k ? (k.kind === 'spin' ? 'tuck' : 'jump') : a.win > 0 || a.wind > 0 || a.thr > 0 ? (a.thr > 0 && a.def.id !== 'soldier' ? 'cheer' : 'raise') : fly ? (a.efx.length ? 'raise' : 'jump') : a.st === 'wall' ? 'cling' : a.st === 'ground' ? (a.run ? 'run' : 'idle') : a.flip && a.rot ? 'tuck' : 'jump';
   if (a.def.ab === 'guard' && !a.used) { ctx.globalAlpha = 0.25 + Math.sin(time * 4) * 0.1; pell(ctx, a.x, a.y - 6, 26, 26, '#fff6a0'); ctx.globalAlpha = 1; }
   if (a.def.r >= 3) { ctx.globalAlpha = 0.2; pell(ctx, a.x, a.y - 6, 22, 22, RARITY[a.def.r].col); ctx.globalAlpha = 1; }
   heroSprite(S, pose, time + 0.5, false);
@@ -11300,24 +11451,47 @@ const tDailyReady = () => store.get('tentDay', -1) !== dayNum();
 // сундук в своём стиле: ежедневный — с лентой и солнцем, сил — с зельем, монстров — с зубами и глазами, королевский — золотой с рубинами
 function tchestArt(kind, x, y, s, open, t) {
   const P = (dx, dy, w, h, c) => prect(ctx, x + dx * s, y + dy * s, w * s, h * s, c);
-  const C = { daily: ['#3a8ad8', '#1a4a8a', '#ffffff', '#ffd23a'], power: ['#7a3ad0', '#3a1a6a', '#e0c0ff', '#9aff6a'], monster: ['#2a3a1a', '#0e1a0a', '#9aff4a', '#ff3a3a'], royal: ['#ffb02a', '#a06a00', '#fff6a0', '#ff2a4a'] }[kind];
-  P(-24, -6, 48, 28, OL); P(-22, -4, 44, 24, C[0]); P(-22, 12, 44, 8, C[1]);
-  for (const dx of [-22, 18]) P(dx, -4, 4, 24, kind === 'royal' ? '#fff6a0' : '#c8a060');   // окантовка
-  P(-22, 4, 44, 3, kind === 'monster' ? '#4a6a2a' : '#ffd23a');
-  const ly = open ? -26 : -18, lh = open ? 14 : 14;
-  P(-24, ly - 2, 48, lh + 2, OL); P(-22, ly, 44, lh - 2, C[0]); P(-22, ly, 44, 3, C[2]);
-  if (kind === 'monster') {   // зубы по краю крышки и горящие глаза
-    for (let i = 0; i < 6; i++) { P(-20 + i * 7, ly + lh - 2, 4, 4, '#f0f0e0'); P(-19 + i * 7, ly + lh + 2, 2, 2, '#f0f0e0'); }
-    if (!open) { const bl = Math.sin(t * 2) > 0.95; P(-12, -1, 6, bl ? 1 : 5, C[3]); P(6, -1, 6, bl ? 1 : 5, C[3]); P(-11, 0, 2, 2, '#ffffff'); P(7, 0, 2, 2, '#ffffff'); }
-    if (Math.sin(t * 3) > 0) { P(-16, 20, 3, 4 + (t * 6) % 4, '#9aff4a'); } P(10, 20, 3, 3, '#9aff4a');
-    for (const s2 of [-1, 1]) { P(s2 * 26 - (s2 < 0 ? 4 : 0), 2, 4, 3, OL); P(s2 * 29 - (s2 < 0 ? 3 : 0), 4, 3, 6, OL); }   // когти
+  const C = { daily: ['#3a8ad8', '#1a4a8a', '#7ac8ff', '#ffd23a', '#c8d8e8'], power: ['#7a3ad0', '#3a1a6a', '#b07af0', '#9aff6a', '#c8b0e0'], monster: ['#3a4a2a', '#141c0c', '#5a6a3a', '#ff3a3a', '#6a6a5a'], royal: ['#ffb02a', '#a06a00', '#fff27a', '#ff2a4a', '#fff6c8'] }[kind];
+  const [c0, cD, cL, cA, metal] = C;
+  ctx.globalAlpha = 0.25 + Math.sin(t * 3) * 0.08; pell(ctx, x, y + 4 * s, 34 * s, 26 * s, kind === 'monster' ? '#5aff3a' : cL); ctx.globalAlpha = 1;   // свечение вокруг
+  pell(ctx, x, y + 24 * s, 26 * s, 4 * s, 'rgba(0,0,0,0.35)');   // тень
+  // корпус: доски с прожилками, свет сверху, тень снизу
+  P(-24, -6, 48, 30, OL); P(-22, -4, 44, 26, c0);
+  for (const dy of [3, 10, 17]) P(-22, dy, 44, 1, cD);
+  for (const [dx, dy] of [[-16, -1], [6, 6], [-8, 13], [12, 0]]) P(dx, dy, 5, 1, cL);
+  P(-22, -4, 44, 2, cL); P(-22, 19, 44, 3, cD);
+  // металлические уголки с заклёпками
+  for (const [dx, dy] of [[-22, -4], [16, -4], [-22, 15], [16, 15]]) { P(dx, dy, 6, 7, metal); P(dx + (dx < 0 ? 1 : 3), dy + (dy < 0 ? 1 : 4), 2, 2, '#ffffff'); P(dx + (dx < 0 ? 4 : 0), dy + (dy < 0 ? 5 : 0), 2, 2, OL); }
+  // крышка: открытая откинута назад и видно, как изнутри бьёт свет
+  if (open) {
+    P(-24, -30, 48, 14, OL); P(-22, -28, 44, 10, cD); P(-22, -28, 44, 2, c0); P(-22, -18, 44, 2, metal);
+    ctx.globalAlpha = 0.7 + Math.sin(t * 8) * 0.2; P(-20, -8, 40, 5, '#fff6c0'); ctx.globalAlpha = 0.35; for (let i = 0; i < 5; i++) { const w = 4, dx = -18 + i * 9; P(dx, -40 - Math.sin(t * 4 + i) * 4, w, 34, '#fff6c0'); } ctx.globalAlpha = 1;
   } else {
-    P(-4, open ? 2 : -2, 8, 10, '#ffd23a'); P(-2, open ? 4 : 0, 4, 4, OL);   // замок
-    if (kind === 'daily') { P(-2, ly - 6, 4, 6, '#ff3a5a'); P(-9, ly - 8, 7, 4, '#ff3a5a'); P(2, ly - 8, 7, 4, '#ff3a5a'); P(-2, ly, 4, lh - 2, '#ff3a5a'); P(-2, -4, 4, 24, '#ff3a5a'); }
-    if (kind === 'power') { const b = Math.sin(t * 4) * 1; P(-16, -2 + b, 6, 8, OL); P(-15, -1 + b, 4, 6, C[3]); P(-14, -4 + b, 2, 2, '#c8b090'); P(10, -2 - b, 6, 8, OL); P(11, -1 - b, 4, 6, '#ff5ab0'); P(12, -4 - b, 2, 2, '#c8b090'); }
-    if (kind === 'royal') { for (const dx of [-16, 12]) { P(dx, 0, 5, 5, OL); P(dx + 1, 1, 3, 3, C[3]); } P(-10, ly - 8, 20, 8, OL); P(-9, ly - 6, 18, 5, '#ffd23a'); for (const dx of [-9, -2, 5]) P(dx, ly - 10, 4, 4, '#ffd23a'); P(-1, ly - 5, 2, 2, C[3]); }
+    P(-24, -20, 48, 16, OL); P(-22, -18, 44, 12, c0); P(-22, -18, 44, 3, cL); P(-22, -8, 44, 2, metal); P(-20, -16, 40, 1, cD);
   }
-  if (Math.sin(t * 5 + x) > 0.75) { P(18, ly - 4, 1, 4, '#ffffff'); P(16.5, ly - 2.5, 4, 1, '#ffffff'); }
+  const ly = open ? -30 : -20;
+  if (kind === 'monster') {   // зубы, язык, горящие глаза, когти и слизь
+    for (let i = 0; i < 7; i++) { P(-21 + i * 6, open ? -18 : -6, 4, 4, '#f0f0e0'); P(-20 + i * 6, open ? -14 : -2, 2, 2, '#f0f0e0'); }
+    if (open) { P(-8, -8, 16, 6, '#c81a3a'); P(-4, -6, 8, 6, '#ff5a7a'); }
+    else { const bl = Math.sin(t * 2) > 0.95; for (const dx of [-13, 6]) { P(dx, -15, 7, bl ? 1 : 5, OL); if (!bl) { P(dx + 1, -14, 5, 3, cA); P(dx + 2, -14, 2, 1, '#ffffff'); } } }
+    P(-14, 22, 3, 4 + (t * 6) % 5, '#9aff4a'); P(9, 22, 2, 3, '#9aff4a'); P(-2, 22, 2, 2 + (t * 4) % 3, '#9aff4a');
+    for (const sd of [-1, 1]) { P(sd > 0 ? 24 : -28, 4, 4, 3, OL); P(sd > 0 ? 27 : -30, 6, 3, 6, OL); P(sd > 0 ? 25 : -27, 5, 2, 1, '#e8e8d8'); }
+  } else {
+    P(-5, open ? -10 : -6, 10, 12, OL); P(-4, open ? -9 : -5, 8, 10, '#ffd23a'); P(-4, open ? -9 : -5, 8, 2, '#fff6a0'); P(-1, open ? -6 : -2, 2, 4, OL);   // замок со скважиной
+    if (kind === 'daily') {   // лента с бантом и солнце
+      P(-2, -4, 4, 26, '#ff3a5a'); P(-2, -4, 1, 26, '#ff8aa0'); if (!open) { P(-2, -18, 4, 12, '#ff3a5a'); P(-11, -24, 9, 6, OL); P(2, -24, 9, 6, OL); P(-10, -23, 7, 4, '#ff3a5a'); P(3, -23, 7, 4, '#ff3a5a'); P(-2, -24, 4, 6, '#c81a3a'); }
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + t; P(14 + Math.cos(a) * 5 - 0.5, 6 + Math.sin(a) * 5 - 0.5, 1, 1, '#ffd23a'); } P(12, 4, 4, 4, '#ffd23a');
+    }
+    if (kind === 'power') {   // окошко с бурлящим зельем
+      P(10, 0, 9, 11, OL); P(11, 1, 7, 9, '#2a0a4a'); const lv = 4 + Math.sin(t * 3) * 1; P(11, 10 - lv, 7, lv, cA); for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; P(12 + i * 2, 9 - q * 7, 1, 1, '#ffffff'); }
+      P(-19, 1, 8, 9, OL); P(-18, 2, 6, 7, '#2a0a4a'); P(-18, 5, 6, 4, '#ff5ab0');
+    }
+    if (kind === 'royal') {   // корона на крышке и рубины по бокам
+      for (const dx of [-17, 12]) { P(dx, 2, 6, 6, OL); P(dx + 1, 3, 4, 4, cA); P(dx + 1, 3, 2, 1, '#ffd0d6'); }
+      if (!open) { P(-10, ly - 9, 20, 10, OL); P(-9, ly - 6, 18, 6, '#ffd23a'); for (const dx of [-9, -2, 5]) { P(dx, ly - 11, 4, 6, OL); P(dx + 1, ly - 10, 2, 4, '#ffd23a'); } P(-1, ly - 5, 2, 2, cA); P(-7, ly - 5, 2, 2, '#7ad8ff'); P(5, ly - 5, 2, 2, '#3ce06a'); }
+    }
+  }
+  if (Math.sin(t * 5 + x) > 0.75) { P(18, ly - 4, 1, 5, '#ffffff'); P(16, ly - 2, 5, 1, '#ffffff'); }
 }
 function drawTent() {
   ctx.fillStyle = '#2a1040'; ctx.fillRect(0, 0, W, H);
@@ -11711,11 +11885,16 @@ function drawWheelAt(def, cx, cy, rot) {
     else if (sg.kind === 'emote') emoIcon(sg.id, 0, -2, 1.1);
     else if (sg.kind === 'power') { text(tr('СИЛА', 'POWER'), 0, 2, 1, '#ffffff', 'center', OL, 60); text('x3', 0, 16, 2, '#ffffff', 'center', OL); }
     else {   // герой: тёмный силуэт героя этой редкости, за ним свечение редкости
-      const pool = SKINS.filter(k => k.r === sg.r), k = pool[(i * 7 + wi * 3) % pool.length];
-      ctx.globalAlpha = 0.55 + Math.sin(time * 6 + i) * 0.25; pell(ctx, 0, -6, 15, 15, RARITY[sg.r].col); ctx.globalAlpha = 1;
-      heroSprite(k, 'idle', 0, false); ctx.drawImage(tintSprite(OL, 0), -14, -24, 28, 35);
-      ctx.drawImage(tintSprite(sg.r >= 3 ? '#3a2a5a' : '#2a2a3a', 1), -13, -23, 26, 33);
-      text('?', 1, 0, 2, RARITY[sg.r].col, 'center', OL); text(T('one')[sg.r], 0, 20, 1, '#ffffff', 'center', OL, 64);
+      // живой герой этой редкости: машет, подпрыгивает, крутит сальто; раз в 2.5 секунды — другой (сначала те, кого ещё нет)
+      const all = SKINS.filter(k => k.r === sg.r), free = all.filter(k => !owned.includes(k.id)), pool = free.length ? free : all;
+      const slot = Math.floor((time + i * 0.37) / 2.5), k = pool[(slot * 7 + i * 13 + wi * 5) % pool.length], ph = (time + i * 0.37) % 2.5;
+      ctx.globalAlpha = 0.55 + Math.sin(time * 6 + i) * 0.25; pell(ctx, 0, -6, 16, 16, RARITY[sg.r].col); ctx.globalAlpha = 1;
+      const pose = ph < 0.8 ? 'idle' : ph < 1.3 ? 'jump' : ph < 1.7 ? 'tuck' : ph < 2.2 ? 'cheer' : 'idle', hop = ph > 0.8 && ph < 1.7 ? Math.sin((ph - 0.8) / 0.9 * Math.PI) * 6 : 0;
+      heroSprite(k, pose, time + i, false);
+      ctx.save(); ctx.translate(0, -8 - hop); if (pose === 'tuck') ctx.rotate((ph - 1.3) / 0.4 * Math.PI * 2);
+      ctx.drawImage(tintSprite(OL, 0), -15, -21, 30, 38); ctx.globalAlpha = skA(k); ctx.drawImage(hcv, -14, -20, 28, 35); ctx.globalAlpha = 1; ctx.restore();
+      if (ph < 0.12) { ctx.globalAlpha = 1 - ph / 0.12; pell(ctx, 0, -6, 14, 14, '#ffffff'); ctx.globalAlpha = 1; }   // вспышка при смене героя
+      text(T('one')[sg.r], 0, 20, 1, '#ffffff', 'center', OL, 64);
     }
     ctx.restore();
   });
