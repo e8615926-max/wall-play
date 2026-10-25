@@ -253,8 +253,8 @@
   const emblem = document.getElementById('emblem');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  window.__introOn = false; document.getElementById('intro').remove(); return;
   if (location.hash === '#nointro') { window.__introOn = false; document.getElementById('intro').remove(); return; }   // для автотестов
+  window.__introOn = true;
   /* ================= Particles ================= */
   const cv = document.getElementById('fx');
   const g2 = cv.getContext('2d');
@@ -1330,7 +1330,7 @@ const MORE_SKINS4 = [
   { id: 'gingerbread', r: 2, cost: 4100, body: '#b8703a', dark: '#7a4418', light: '#e8a870', ear: '#b8703a', ol: '#3a1a08', ears: 'none', noMuzzle: true, noScarf: true, parts: ['icing', 'gumdrops'], trail: { kind: 'dot', cols: ['#ffffff', '#ff5a8a', '#3ce06a'] } },
   { id: 'icecream', r: 2, cost: 4200, body: '#e8a050', dark: '#a86a20', light: '#ffd890', ear: '#ffb0d8', ol: '#4a2a10', ears: 'none', noScarf: true, parts: ['coneBody', 'scoops'], trail: { kind: 'drip', cols: ['#ffb0d8', '#7ad8ff', '#fff0c0'] } },
   { id: 'lollipop', r: 2, cost: 4300, body: '#ff8ac8', dark: '#c84a90', light: '#ffe0f0', ear: '#ffffff', ol: '#5a1a3a', scarf: '#ffffff', scarfD: '#ff3a8a', parts: ['candyHat', 'bigLolly'], trail: { kind: 'dot', cols: ['#ff3a8a', '#ffffff'] } },
-  { id: 'gummybear', r: 2, cost: 4400, body: '#ff3a4a', dark: '#b01a2a', light: '#ff9aa0', ear: '#ff3a4a', ol: '#5a0a14', alpha: 0.82, noScarf: true, parts: ['gummyShine', 'gummyBelly'], trail: { kind: 'drip', cols: ['#ff3a4a', '#ffd23a', '#3ce06a'] } },
+  { id: 'gummybear', r: 2, cost: 4400, nm: ['ЖЕЛЕЙНЫЙ МИШКА', 'JELLY BEAR'], body: '#5ae05a', dark: '#1a9a2a', light: '#c0ffb0', ear: '#5ae05a', ol: '#0a3a0a', alpha: 0.82, noScarf: true, parts: ['gummyShine', 'gummyBelly'], trail: { kind: 'drip', cols: ['#ff3a4a', '#ffd23a', '#3ce06a'] } },
   { id: 'candyking', r: 3, gems: 120, body: '#ffb0d8', dark: '#e05aa0', light: '#fff0f8', ear: '#ff8ac8', ol: '#5a1a3a', cape: true, scarf: '#ff3a8a', scarfD: '#ffffff', parts: ['candyCrown', 'caneScepter', 'sprinklesOn'], trail: { kind: 'dot', cols: ['#ff3a8a', '#3ab0ff', '#ffe03a', '#3ce06a'] }, sfx: 'rainbow', fx: 'rainbow' },
   { id: 'sugarfairy', r: 3, gems: 115, body: '#ffd0ec', dark: '#e08ac0', light: '#ffffff', ear: '#ffb0d8', ol: '#6a2a5a', ears: 'cat', scarf: '#7ad8ff', scarfD: '#ff8ac8', parts: ['wingsFairy', 'tiara', 'sugarWand', 'cottonPuffs'], trail: { kind: 'star', cols: ['#ffffff', '#ffb0d8', '#7ad8ff'] }, sfx: 'rainbow', fx: 'rainbow' },
   // разные
@@ -1351,13 +1351,13 @@ const MORE_SKINS4 = [
   { id: 'robocat', r: 2, cost: 5100, body: '#a8b0c0', dark: '#5a6078', light: '#e0e8f8', ear: '#ffd23a', ol: '#1a2238', ears: 'cat', whiskers: true, tail: 'thin', metal: '#a8b0c0', visor: '#ff8a1e', noEyes: true, scarf: '#ff8a1e', scarfD: '#c05a10', parts: ['armor', 'visor', 'chestLights'], trail: { kind: 'spark', cols: ['#ff8a1e', '#ffffff'] } },
   { id: 'griffin', r: 3, gems: 125, body: '#e0a040', head: '#ffffff', dark: '#a06a20', light: '#fff0c0', ear: '#ffffff', ol: '#3a2008', ears: 'none', beak: true, tail: 'bushy', scarf: '#c01a3a', scarfD: '#800a1a', parts: ['goldWings', 'griffinCrest'], trail: { kind: 'star', cols: ['#ffd23a', '#ffffff'] }, sfx: 'king', fx: 'gold' },
   { id: 'emperor', r: 3, gems: 135, body: '#3a2a6a', head: '#ffd8b8', dark: '#1a1040', light: '#8a7ad0', ear: '#ffd8b8', ol: '#0a0420', ears: 'none', cape: true, scarf: '#a64aff', scarfD: '#ffd23a', parts: ['shoulderPads', 'emperorCrown', 'starScepter', 'starsAround'], trail: { kind: 'star', cols: ['#ffd23a', '#a64aff', '#ffffff'] }, sfx: 'astro', fx: 'galaxy' },
-  { id: 'alicorn', r: 3, gems: 130, body: '#ffffff', dark: '#d8c8f0', light: '#fff0fa', ear: '#ffb0e0', ol: '#4a3a6a', ears: 'cat', horn: '#ffd23a', scarf: '#ff5ab0', scarfD: '#3ab0ff', parts: ['wingsAngel', 'mane'], trail: { kind: 'rainbow' }, sfx: 'rainbow', fx: 'rainbow' },
+  { id: 'alicorn', r: 3, gems: 130, body: '#c8a0ff', dark: '#7a4ad0', light: '#f0e0ff', ear: '#ffd23a', ol: '#2a0a5a', ears: 'cat', horn: '#ffd23a', scarf: '#ffd23a', scarfD: '#c08a10', parts: ['goldWings', 'starMane'], trail: { kind: 'rainbow' }, sfx: 'rainbow', fx: 'rainbow' },
   { id: 'lavadragon', r: 3, gems: 140, body: '#3a1a1a', dark: '#1a0a0a', light: '#ff8a1e', ear: '#3a1a1a', ol: '#0a0404', ears: 'none', tail: 'dino', spike: '#ff8a1e', wing: '#5a1a10', horns: '#ffd23a', eye: '#ffd23a', scarf: '#ff5a1a', scarfD: '#c02a0a', look: 'lava', parts: ['wingsBat', 'spikes', 'lavaCracks'], trail: { kind: 'ember', cols: ['#ff3a1a', '#ff8a1e', '#ffd23a'] }, sfx: 'fire', fx: 'lava', vanish: true },
   { id: 'goldninja', r: 3, gems: 125, body: '#ffd23a', dark: '#c08a10', light: '#fff6a0', ear: '#ffd23a', ol: '#4a3000', ears: 'none', noMuzzle: true, noEyes: true, special: 'ninja', scarf: '#ffffff', scarfD: '#e8d8a0', look: 'gold', parts: ['katanaBack', 'dragonAura'], trail: { kind: 'star', cols: ['#ffd23a', '#ffffff'] }, sfx: 'shadow', fx: 'gold', vanish: true },
 ];
 SKINS.push(...MORE_SKINS4);
 const MORE_SKINS5 = [
-  { id: 'pizzaiolo', r: 1, cost: 1440, ...HAM, noScarf: true, parts: ['chefHat', 'mustache', 'pizzaPeel'] },
+  { id: 'pizzaiolo', r: 1, cost: 1440, ...HAM, body: '#d8d0c8', dark: '#8a8078', light: '#fff8f0', ear: '#ffb0c0', ol: '#2a2420', scarf: '#3aa83a', scarfD: '#1a6a1a', parts: ['chefHat', 'pizzaPeel'] },
   { id: 'violinist', r: 1, cost: 1460, body: '#3a3a4a', head: '#f0d8b8', dark: '#1a1a24', light: '#8a8a9a', ear: '#f0d8b8', ol: '#14141e', ears: 'cat', scarf: '#ffffff', scarfD: '#c8c8d8', parts: ['bowtie', 'violin'] },
   { id: 'photographer', r: 1, cost: 1480, ...HAM, acc: 'cap', scarf: '#3ab0ff', scarfD: '#1a70c0', parts: ['camera'] },
   { id: 'cabinboy', r: 1, cost: 1500, ...HAM, noScarf: true, parts: ['sailorCollar', 'sailorHat', 'telescope'] },
@@ -1420,7 +1420,7 @@ const MORE_SKINS6 = [
   { id: 'cyberninja', r: 3, gems: 140, body: '#1a1a2a', dark: '#0a0a14', light: '#3a3a5a', ear: '#1a1a2a', ol: '#3af0ff', ears: 'none', noMuzzle: true, noEyes: true, special: 'ninja', scarf: '#3af0ff', scarfD: '#ff3af0', parts: ['energyKatana', 'kunai', 'scanline'], trail: { kind: 'spark', cols: ['#3af0ff', '#ff3af0'] }, sfx: 'cyborg', fx: 'cyborg', vanish: true },
   { id: 'leviathan', r: 3, gems: 150, body: '#1a6a8a', dark: '#0a3a4a', light: '#7af0e0', ear: '#1a6a8a', ol: '#04141a', ears: 'none', tail: 'dino', spike: '#7af0e0', scarf: '#7af0e0', scarfD: '#1a8a8a', parts: ['spikes', 'finTop', 'sharkTeeth', 'waterAura'], trail: { kind: 'bubble', cols: ['#ffffff', '#7af0e0'] }, sfx: 'crab', fx: 'crab' },
   { id: 'unicornking', r: 3, gems: 150, body: '#ffffff', dark: '#d8c8f0', light: '#fff0fa', ear: '#ffb0e0', ol: '#4a3a6a', ears: 'cat', horn: '#ffd23a', cape: true, scarf: '#a64aff', scarfD: '#ffd23a', parts: ['mane', 'crownGold', 'ermine', 'scepter'], trail: { kind: 'rainbow' }, sfx: 'rainbow', fx: 'rainbow' },
-  { id: 'titan', r: 3, gems: 155, body: '#5a6078', dark: '#2a3048', light: '#a8b0c0', ear: '#5a6078', ol: '#0a0e1a', ears: 'none', metal: '#8a90a8', visor: '#ff3a3a', noEyes: true, noMuzzle: true, noScarf: true, parts: ['jetpack', 'armor', 'visor', 'shoulderCannon', 'chestLights'], trail: { kind: 'spark', cols: ['#ff8a1e', '#ffd23a'] }, sfx: 'cyborg', fx: 'cyborg' },
+  { id: 'titan', r: 3, gems: 155, body: '#c8802a', dark: '#6a3a10', light: '#ffd08a', ear: '#c8802a', ol: '#1a0a00', ears: 'none', metal: '#e0a040', visor: '#ff3a3a', noEyes: true, noMuzzle: true, noScarf: true, parts: ['jetpack', 'armor', 'visor', 'shoulderCannon', 'chestLights'], trail: { kind: 'spark', cols: ['#ff8a1e', '#ffd23a'] }, sfx: 'cyborg', fx: 'cyborg' },
   { id: 'vampirelord', r: 3, gems: 145, body: '#d8c8f0', dark: '#3a1a4a', light: '#f4ecff', ear: '#a87ac8', ol: '#1a0a20', ears: 'cat', cape: true, eyeGlow: '#ff2a2a', noEyes: true, scarf: '#1a0a20', scarfD: '#c01a3a', parts: ['slickHair', 'fangs', 'glowEyes', 'batsAround'], trail: { kind: 'smoke', cols: ['#8a1a3a', '#3a1a4a'] }, sfx: 'fire', fx: 'galaxy', vanish: true },
   { id: 'pumpkinking', r: 3, gems: 135, body: '#1a1a24', dark: '#0a0a10', light: '#3a3a4a', ear: '#ff8a1e', ol: '#3a1a08', ears: 'none', noEyes: true, noMuzzle: true, cape: true, scarf: '#7a3aff', scarfD: '#3a1a8a', parts: ['pumpkin', 'pumpkinFlame', 'scythe'], trail: { kind: 'ember', cols: ['#ff8a1e', '#7a3aff'] }, sfx: 'fire', fx: 'lava' },
   { id: 'rainbowdragon', r: 3, gems: 155, body: '#ff8ac8', dark: '#c04a90', light: '#fff0f8', ear: '#ff8ac8', ol: '#4a1a3a', ears: 'none', tail: 'dino', spike: '#3ab0ff', wing: '#a64aff', horns: '#ffffff', scarf: '#ffe03a', scarfD: '#3ce06a', parts: ['wingsFairy', 'spikes', 'mane'], trail: { kind: 'rainbow' }, sfx: 'rainbow', fx: 'rainbow' },
@@ -1439,7 +1439,7 @@ const MORE_SKINS7 = [
   { id: 'ironhero', r: 3, gems: 155, body: '#b01a1a', dark: '#6a0a0a', light: '#e85a3a', ear: '#b01a1a', ol: '#1a0404', ears: 'none', noEyes: true, noMuzzle: true, noScarf: true, parts: ['ironMask', 'arcReactor', 'goldPlates'], trail: { kind: 'spark', cols: ['#7af0ff', '#ffd23a'] }, sfx: 'cyborg', fx: 'gold', move: 'iron' },
   { id: 'greengiant', r: 3, gems: 130, body: '#5ab03a', dark: '#2a6a1a', light: '#a8e07a', ear: '#5ab03a', ol: '#0a2a04', ears: 'none', noScarf: true, parts: ['muscles', 'purpleShorts', 'hulkHair', 'angryBrow'], trail: { kind: 'dot', cols: ['#5ab03a', '#7a3ab0'] }, sfx: 'fire', fx: 'stone' },
   { id: 'youngwizard', r: 3, gems: 120, body: '#1a1a24', head: '#ffd8b8', dark: '#0a0a14', light: '#3a3a4a', ear: '#ffd8b8', ol: '#0a0a14', ears: 'none', acc: 'glasses', scarf: '#a01a1a', scarfD: '#ffd23a', parts: ['robeEdge', 'messyHair', 'boltScar', 'wand'], trail: { kind: 'star', cols: ['#ffd23a', '#ffffff'] }, sfx: 'astro', fx: 'galaxy' },
-  { id: 'iceracer', r: 3, gems: 130, body: '#1a2a3a', head: '#f4f8ff', dark: '#0a1420', light: '#3a5a7a', ear: '#f4f8ff', ol: '#05080a', ears: 'none', noEyes: true, noMuzzle: true, noScarf: true, eye: '#7ad8ff', fireC: ['#ffffff', '#bfe8ff', '#7ad8ff', '#2a5aff'], parts: ['skullFireBack', 'jacket', 'chain', 'skullFace', 'skullFire'], trail: { kind: 'ember', cols: ['#ffffff', '#7ad8ff', '#3a8aff'] }, sfx: 'ice', fx: 'ice', vanish: true, fireWheel: true },
+  { id: 'iceracer', r: 3, gems: 130, body: '#bfe8ff', head: '#f4f8ff', dark: '#3a7ab0', light: '#ffffff', ear: '#f4f8ff', ol: '#0a2a4a', ears: 'none', noEyes: true, noMuzzle: true, noScarf: true, eye: '#2a5aff', fireC: ['#ffffff', '#bfe8ff', '#7ad8ff', '#2a5aff'], parts: ['skullFireBack', 'racingSuit', 'skullFace', 'skullFire', 'skiGoggles'], trail: { kind: 'ember', cols: ['#ffffff', '#7ad8ff', '#3a8aff'] }, sfx: 'ice', fx: 'ice', vanish: true, fireWheel: true },
   { id: 'f1racer', r: 3, gems: 140, body: '#e8261a', dark: '#a01008', light: '#ff8a6a', ear: '#e8261a', ol: '#2a0404', ears: 'none', metal: '#e8261a', visor: '#1a1a24', noEyes: true, noMuzzle: true, noScarf: true, parts: ['racingSuit', 'helmetRound', 'racingStripe', 'visor'], trail: { kind: 'smoke', cols: ['#c8c8c8', '#8a8a8a'] }, sfx: 'cyborg', fx: 'fire' },
   { id: 'ghosthunter', r: 2, cost: 900, ...HAM, noScarf: true, parts: ['jumpsuit', 'protonPack', 'protonBeam'], trail: { kind: 'spark', cols: ['#ff8a1e', '#7ad8ff'] } },
   { id: 'shieldcaptain', r: 3, gems: 130, body: '#2a5ad8', head: '#ffd8b8', dark: '#1a3a8a', light: '#8ab0ff', ear: '#ffd8b8', ol: '#0a1430', ears: 'none', noScarf: true, parts: ['starChest', 'capHelmet', 'starShield'], trail: { kind: 'star', cols: ['#ffffff', '#e8261a', '#2a5ad8'] }, sfx: 'king', fx: 'gold' },
@@ -1587,31 +1587,36 @@ const MYTHICS = [
   { id: 'soulreaper', snd: 'phantom', ruby: 12, nm: ['ЖНЕЦ ДУШ', 'SOUL REAPER'], body: '#1a2240', dark: '#0a1020', light: '#262e52', ear: '#1a2240', ol: '#000000', ears: 'none', ghost: true, noEyes: true, noMuzzle: true, noScarf: true, parts: ['reaperCloak', 'reaperCowl', 'reaperScythe', 'soulOrbs'], trail: { kind: 'wisp', cols: ['#7af0ff', '#3a6aff', '#ffffff'] }, myth: ['#7af0ff', '#3a4ab0'], cfx: ['souls', '#7af0ff'], jump: ['souls', ['#7af0ff', '#bff8ff'], 'ghost'], sfx: 'ice', fx: 'galaxy', vanish: true },
   { id: 'diamondtitan', snd: 'gemgolem', ruby: 16, nm: ['АЛМАЗНЫЙ ТИТАН', 'DIAMOND TITAN'], body: '#9ae8ff', head: '#c8f4ff', dark: '#3a9ac8', light: '#ffffff', ear: '#9ae8ff', ol: '#0a3a5a', ears: 'none', look: 'crystal', noScarf: true, parts: ['crystalSpikes', 'gemOrbit', 'crownGold'], trail: { kind: 'star', cols: ['#ffffff', '#9ae8ff', '#ff8ac8'] }, myth: ['#9ae8ff', '#ff8ac8'], cfx: ['crystals', 'prism'], jump: ['crystals', ['#9ae8ff', '#ffffff', '#ff8ac8'], 'flash'], sfx: 'ice', fx: 'crystal' },
   { id: 'starunicorn', snd: 'unicornking', ruby: 18, nm: ['ЗВЁЗДНЫЙ ЕДИНОРОГ', 'STAR UNICORN'], body: '#fff0fa', dark: '#e0b0d8', light: '#ffffff', ear: '#ffb0e0', ol: '#4a1a4a', ears: 'cat', horn: '#ffd23a', special: 'rainbow', tail: 'bushy', scarf: '#ff5ab0', scarfD: '#c01f7a', parts: ['wingsAngel', 'starMane', 'rainbowBelt'], trail: { kind: 'rainbow' }, myth: ['#ff8ac8', '#7ad8ff'], cfx: ['rainbow'], jump: ['rainbow', [], 'spin'], sfx: 'rainbow', fx: 'rainbow' },
-  { id: 'infernodemon', snd: 'demonlord', ruby: 15, nm: ['ДЕМОН ИНФЕРНО', 'INFERNO DEMON'], body: '#5a0a0a', head: '#8a1a10', dark: '#2a0000', light: '#ff5a1a', ear: '#8a1a10', ol: '#100000', ears: 'none', eye: '#ffd23a', acc: 'horns', tail: 'devil', noScarf: true, parts: ['wingsBat', 'hellFlames', 'darkSword', 'lavaCracks'], trail: { kind: 'ember', cols: ['#ff3a1a', '#ff8a1e', '#1a0a10'] }, myth: ['#ff3a1a', '#1a0a10'], cfx: ['hellfire', '#e8261a', '#ff8a1e'], jump: ['fire', ['#e8261a', '#1a0a10', '#ff8a1e'], 'flash'], sfx: 'fire', fx: 'fire', fireWheel: true, fireC: ['#ffd23a', '#ff5a1a', '#c01a0a', '#2a0000'] },
-  { id: 'auroraangel', snd: 'archangel', ruby: 20, nm: ['АНГЕЛ СИЯНИЯ', 'AURORA ANGEL'], ...HAM, body: '#fff6e0', head: '#fffaf0', dark: '#e0c890', light: '#ffffff', ear: '#ffe0f0', ol: '#4a3a1a', scarf: '#7af0d0', scarfD: '#3aa8a0', cape: true, parts: ['wingsAngel', 'haloRing', 'lightSword', 'auroraRibbon'], trail: { kind: 'rainbow' }, myth: ['#7af0d0', '#fff6a0'], cfx: ['holy', '#fff6a0'], jump: ['feathers', ['#ffffff', '#7af0d0', '#fff6a0'], 'float'], sfx: 'king', fx: 'king' },
+  { id: 'infernodemon', snd: 'demonlord', ruby: 15, nm: ['ДЕМОН ИНФЕРНО', 'INFERNO DEMON'], body: '#2a2a30', head: '#3a3a42', dark: '#101014', light: '#ff8a1e', ear: '#3a3a42', ol: '#000000', ears: 'none', eye: '#ff3a1a', acc: 'horns', tail: 'devil', noScarf: true, parts: ['wingsFire', 'hellFlames', 'lavaCracks'], trail: { kind: 'ember', cols: ['#ff3a1a', '#ff8a1e', '#1a0a10'] }, myth: ['#ff3a1a', '#1a0a10'], cfx: ['hellfire', '#e8261a', '#ff8a1e'], jump: ['fire', ['#e8261a', '#1a0a10', '#ff8a1e'], 'flash'], sfx: 'fire', fx: 'fire', fireWheel: true, fireC: ['#ffd23a', '#ff5a1a', '#c01a0a', '#2a0000'] },
+  { id: 'auroraangel', snd: 'archangel', ruby: 20, nm: ['АНГЕЛ СИЯНИЯ', 'AURORA ANGEL'], ...HAM, body: '#c8fff0', head: '#e0fff8', dark: '#4ab8a8', light: '#ffffff', ear: '#a0f0ff', ol: '#0a3a3a', ears: 'long', scarf: '#c8a0ff', scarfD: '#7a4ad0', cape: true, parts: ['mythWings', 'haloRing', 'auroraRibbon', 'starsAround'], trail: { kind: 'rainbow' }, myth: ['#7af0d0', '#fff6a0'], cfx: ['holy', '#fff6a0'], jump: ['feathers', ['#ffffff', '#7af0d0', '#fff6a0'], 'float'], sfx: 'king', fx: 'king' },
 ];
 // фениксам тоже — свои цвета ореола, сценка, прыжок и звук
 Object.assign(SKINS.find(k => k.id === 'firephoenix'), { snd: 'phoenix', myth: ['#fff27a', '#ff5a1a'], cfx: ['flames', '#ff3a1a', '#ffd23a'], jump: ['fire', ['#ff3a1a', '#ffd23a', '#ffffff'], 'flash'] });
 Object.assign(SKINS.find(k => k.id === 'frostphoenix'), { snd: 'icequeen', myth: ['#ffffff', '#5ad0ff'], cfx: ['snow', '#ffffff'], jump: ['snow', ['#ffffff', '#7ad8ff'], 'stretch'] });
 Object.assign(SKINS.find(k => k.id === 'voidphoenix'), { snd: 'void', myth: ['#e8d0ff', '#7a3aff'], cfx: ['void', '#a06ae0'], jump: ['smoke', ['#a06ae0', '#4a1aa0', '#e8d0ff'], 'ghost'] });
 Object.assign(SKINS.find(k => k.id === 'sunphoenix'), { snd: 'sungod', myth: ['#ffffff', '#ffd23a'], cfx: ['rays', '#ffb21a'], jump: ['crown', ['#ffd23a', '#ffffff'], 'flash'] });
-MYTHICS.push({ id: 'shirtless', snd: 'shogun', ruby: 14, nm: ['АТАМАТАШИ', 'ATAMATASHI'], body: '#e8b088', head: '#e8b088', dark: '#1a1a24', light: '#f8d0a8', ear: '#e8b088', ol: '#2a1408', ears: 'none', noScarf: true,
+MYTHICS.push({ id: 'shirtless', snd: 'shogun', ruby: 14, nm: ['АТАМАТАШИ', 'ATAMATASHI'], body: '#e8b088', head: '#e8b088', dark: '#1a1a24', light: '#f8d0a8', ear: '#e8b088', ol: '#2a1408', ears: 'none', noScarf: true, noEyes: true,
   parts: ['bladeBack', 'bareAbs', 'battleScar', 'twinBelts', 'fightGloves', 'eyeMask', 'topknot'], trail: { kind: 'wisp', cols: ['#e8261a', '#1a1a24', '#ffffff'] }, myth: ['#e8261a', '#ffffff'], cfx: ['petals', '#e8261a'], jump: ['petals', ['#e8261a', '#ffffff'], 'blink'], sfx: 'shadow', fx: 'shadow', vanish: true });
 
 // ещё десять мификов: у каждого свои цвета ореола, сценка, прыжок, шлейф, звук и смерть
 MYTHICS.push(
   { id: 'iceking', snd: 'icequeen', ruby: 13, nm: ['КОРОЛЬ ЛЬДА', 'ICE KING'], body: '#bfe8ff', head: '#d8f4ff', dark: '#5a9ad8', light: '#ffffff', ear: '#9ad8ff', ol: '#0a2a5a', ears: 'cat', eye: '#3a7aff', scarf: '#ffffff', scarfD: '#9ad8ff', cape: true, parts: ['iceCrown', 'frostAura', 'iceHands', 'frostBreath'], trail: { kind: 'snow', cols: ['#ffffff', '#bff8ff'] }, myth: ['#bff8ff', '#3a7aff'], cfx: ['blizzard', '#ffffff'], jump: ['snow', ['#ffffff', '#bff8ff', '#3a7aff'], 'vortex'], sfx: 'ice', fx: 'ice' },
   { id: 'sunpharaoh', snd: 'sungod', ruby: 15, nm: ['СОЛНЕЧНЫЙ ФАРАОН', 'SUN PHARAOH'], ...HAM, body: '#e8b060', head: '#f0c070', dark: '#a0702a', light: '#fff0c0', ear: '#ffd23a', ol: '#2a1800', ears: 'none', noScarf: true, parts: ['sunHalo', 'nemes', 'goldCollar', 'eyeKohl', 'crook'], trail: { kind: 'spark', cols: ['#ffd23a', '#ffffff', '#3a6aff'] }, myth: ['#ffd23a', '#3a6aff'], cfx: ['sand', '#ffd23a', '#3a6aff'], jump: ['crown', ['#ffd23a', '#ffffff'], 'nova'], sfx: 'king', fx: 'gold' },
-  { id: 'neonshinobi', snd: 'cybersamurai', ruby: 14, nm: ['НЕОНОВЫЙ ШИНОБИ', 'NEON SHINOBI'], body: '#2a2a3a', head: '#3a3a4a', dark: '#14141e', light: '#5a5a6a', ear: '#2a2a3a', ol: '#000008', ears: 'cat', noEyes: true, noMuzzle: true, scarf: '#ff3af0', scarfD: '#a01aa0', parts: ['cyberHelmet', 'energyKatana', 'speedLines', 'scanline'], trail: { kind: 'shadow', cols: ['#ff3af0', '#3af0ff'] }, myth: ['#ff3af0', '#3af0ff'], cfx: ['neon', '#ff3af0', '#3af0ff'], jump: ['bolts', ['#ff3af0', '#3af0ff', '#ffffff'], 'blink'], sfx: 'slash', fx: 'shadow', vanish: true },
-  { id: 'forestking', snd: 'forestspirit', ruby: 12, nm: ['ДУХ ЛЕСА', 'FOREST SPIRIT'], ...HAM, body: '#7ac85a', head: '#8ad86a', dark: '#3a7a2a', light: '#d8ffb0', ear: '#5ab03a', ol: '#0a2a08', scarf: '#ffd23a', scarfD: '#c8a010', parts: ['leafCrown', 'mossSpots', 'spiritEyes', 'branchArm', 'spores'], trail: { kind: 'dot', cols: ['#9af07a', '#fff27a'] }, myth: ['#9af07a', '#fff27a'], cfx: ['leaves', '#9af07a', '#fff27a'], jump: ['petals', ['#9af07a', '#fff27a', '#ffffff'], 'float'], sfx: 'wolf', fx: 'leaf' },
+  { id: 'neonshinobi', snd: 'shadowninja', ruby: 14, nm: ['НЕОНОВЫЙ ШИНОБИ', 'NEON SHINOBI'], body: '#e8e8f8', head: '#f4f4ff', dark: '#8a8ab0', light: '#ffffff', ear: '#e8e8f8', ol: '#1a0a2a', ears: 'cat', noMuzzle: true, scarf: '#ff3af0', scarfD: '#a01aa0', parts: ['shadowMask', 'dualKatana', 'kunai', 'speedLines'], trail: { kind: 'shadow', cols: ['#ff3af0', '#3af0ff'] }, myth: ['#ff3af0', '#3af0ff'], cfx: ['neon', '#ff3af0', '#3af0ff'], jump: ['bolts', ['#ff3af0', '#3af0ff', '#ffffff'], 'blink'], sfx: 'slash', fx: 'shadow', vanish: true },
+  { id: 'forestking', snd: 'mushking', ruby: 12, nm: ['ДРЕВНИЙ ЭНТ', 'ANCIENT ENT'], ...HAM, body: '#8a6a3a', head: '#9a7a48', dark: '#4a3418', light: '#d8b880', ear: '#5ab03a', ol: '#1a0e04', noScarf: true, parts: ['barkLines', 'leafCrown', 'mossSpots', 'branchArm', 'spores'], trail: { kind: 'dot', cols: ['#9af07a', '#fff27a'] }, myth: ['#9af07a', '#fff27a'], cfx: ['leaves', '#9af07a', '#fff27a'], jump: ['petals', ['#9af07a', '#fff27a', '#ffffff'], 'float'], sfx: 'wolf', fx: 'leaf' },
   { id: 'galaxywolf', snd: 'werewolf', ruby: 16, nm: ['ГАЛАКТИЧЕСКИЙ ВОЛК', 'GALAXY WOLF'], body: '#2a2a6a', head: '#3a3a8a', dark: '#14143a', light: '#a0b0ff', ear: '#5ad8ff', ol: '#04041a', ears: 'cat', look: 'galaxy', eye: '#5ad8ff', tail: 'bushy', tailTip: '#ffffff', noScarf: true, parts: ['starMane', 'voidEyes', 'starsAround'], trail: { kind: 'star', cols: ['#ffffff', '#5ad8ff', '#a06ae0'] }, myth: ['#5ad8ff', '#a06ae0'], cfx: ['stars', '#5ad8ff', '#a06ae0'], jump: ['stars', ['#ffffff', '#5ad8ff', '#a06ae0'], 'warp'], sfx: 'wolf', fx: 'galaxy' },
   { id: 'glitchking', snd: 'glitch', ruby: 13, nm: ['ГЛИТЧ-КОРОЛЬ', 'GLITCH KING'], ...HAM, body: '#7a3aff', head: '#8a4aff', dark: '#3a1a8a', light: '#3af0ff', ear: '#ff3af0', ol: '#0a0420', scarf: '#3af0ff', scarfD: '#1a8aa0', parts: ['crownGold', 'pixelNoise', 'scanline', 'glowEyes'], trail: { kind: 'spark', cols: ['#3af0ff', '#ff3af0', '#ffffff'] }, myth: ['#3af0ff', '#ff3af0'], cfx: ['glitch', '#3af0ff'], jump: ['gears', ['#3af0ff', '#ff3af0', '#ffffff'], 'blink'], sfx: 'cyborg', fx: 'zap' },
-  { id: 'bloodvampire', snd: 'reaper', ruby: 15, nm: ['ВАМПИР КРОВАВОЙ ЛУНЫ', 'BLOOD MOON VAMPIRE'], body: '#d8d0e0', head: '#e8e0f0', dark: '#5a1a2a', light: '#ffffff', ear: '#d8d0e0', ol: '#1a0008', ears: 'cat', eye: '#e8261a', scarf: '#e8261a', scarfD: '#7a0a10', cape: true, parts: ['fangs', 'slickHair', 'batsAround', 'darkAura'], trail: { kind: 'smoke', cols: ['#e8261a', '#1a0a10'] }, myth: ['#e8261a', '#1a0a1a'], cfx: ['moon', '#e8261a'], jump: ['smoke', ['#e8261a', '#1a0a10', '#ffffff'], 'ghost'], sfx: 'shadow', fx: 'shadow', vanish: true },
+  { id: 'bloodvampire', snd: 'reaper', ruby: 15, nm: ['ВАМПИР КРОВАВОЙ ЛУНЫ', 'BLOOD MOON VAMPIRE'], body: '#6a0a1a', head: '#8a1a2a', dark: '#2a0008', light: '#ff8a9a', ear: '#8a1a2a', ol: '#100004', ears: 'cat', eye: '#ffd23a', wing: '#2a0008', scarf: '#ffd23a', scarfD: '#a01008', cape: true, parts: ['wingsBat', 'fangs', 'crownGold', 'darkAura'], trail: { kind: 'smoke', cols: ['#e8261a', '#1a0a10'] }, myth: ['#e8261a', '#1a0a1a'], cfx: ['moon', '#e8261a'], jump: ['smoke', ['#e8261a', '#1a0a10', '#ffffff'], 'ghost'], sfx: 'shadow', fx: 'shadow', vanish: true },
   { id: 'griffinknight', snd: 'paladin', ruby: 17, nm: ['РЫЦАРЬ ГРИФОНА', 'GRIFFIN KNIGHT'], ...HAM, body: '#f0d090', head: '#f8e0a8', dark: '#a07a3a', light: '#ffffff', ear: '#ffd23a', ol: '#2a1a04', scarf: '#3a6aff', scarfD: '#1a3a9a', cape: true, parts: ['goldWings', 'griffinCrest', 'shoulderPads', 'lightSword', 'roundShield'], trail: { kind: 'wisp', cols: ['#ffd23a', '#ffffff'] }, myth: ['#ffd23a', '#3a6aff'], cfx: ['feathers', '#ffd23a', '#ffffff'], jump: ['feathers', ['#ffd23a', '#ffffff', '#3a6aff'], 'quake'], sfx: 'king', fx: 'king' },
   { id: 'bloomqueen', snd: 'fairy', ruby: 12, nm: ['КОРОЛЕВА ЦВЕТОВ', 'BLOOM QUEEN'], ...HAM, body: '#ffd0e8', head: '#ffe0f0', dark: '#d07aa8', light: '#ffffff', ear: '#ff8ac8', ol: '#4a1a3a', scarf: '#9af07a', scarfD: '#3aa83a', parts: ['wingsFairy', 'flowerCrown', 'wand', 'spores'], trail: { kind: 'wisp', cols: ['#ff8ac8', '#9af07a', '#ffffff'] }, myth: ['#ff8ac8', '#9af07a'], cfx: ['petals', '#ff8ac8', '#9af07a'], jump: ['petals', ['#ff8ac8', '#ffffff', '#9af07a'], 'float'], sfx: 'rainbow', fx: 'rainbow' },
-  { id: 'shadowwarlock', snd: 'necromancer', ruby: 16, nm: ['ЧЕРНОКНИЖНИК ТЕНЕЙ', 'SHADOW WARLOCK'], body: '#3a2a4a', head: '#4a3a5a', dark: '#1a0a2a', light: '#7a6a8a', ear: '#3a2a4a', ol: '#06000e', ears: 'none', eye: '#5aff6a', noScarf: true, parts: ['necroHood', 'skullStaff', 'greenFlames', 'darkAura'], trail: { kind: 'smoke', cols: ['#5aff6a', '#1a0a2a'] }, myth: ['#5aff6a', '#7a3aff'], cfx: ['souls', '#5aff6a'], jump: ['souls', ['#5aff6a', '#bfffc0'], 'ghost'], sfx: 'shadow', fx: 'galaxy', vanish: true },
+  { id: 'shadowwarlock', snd: 'void', ruby: 16, nm: ['КОРОЛЬ КОШМАРОВ', 'NIGHTMARE KING'], body: '#14143a', head: '#1a1a4a', dark: '#06061a', light: '#5a5aa0', ear: '#14143a', ol: '#000008', ears: 'none', noScarf: true, parts: ['voidHorns', 'voidEyes', 'smokeTail', 'darkSword'], trail: { kind: 'smoke', cols: ['#5aff6a', '#1a0a2a'] }, myth: ['#5aff6a', '#7a3aff'], cfx: ['souls', '#5aff6a'], jump: ['souls', ['#5aff6a', '#bfffc0'], 'ghost'], sfx: 'shadow', fx: 'galaxy', vanish: true },
 );
 for (const k of MYTHICS) { k.r = 4; SKINS.push(k); }
+// хомяк-циклоп и хомяк ELDAR STUDIO
+SKINS.push(
+  { id: 'cyclops', r: 3, gems: 95, nm: ['ХОМЯК-ЦИКЛОП', 'CYCLOPS HAMSTER'], ...HAM, body: '#b08ad8', dark: '#6a4a9a', light: '#f0e0ff', ear: '#ff9ad0', ol: '#1a0a3a', noEyes: true, scarf: '#ffd23a', scarfD: '#c08a10', parts: ['smallHorns', 'cyclopsEye'], trail: { kind: 'star', cols: ['#ffffff', '#b08ad8', '#ffd23a'] }, cfx: ['stars', '#b08ad8', '#ffd23a'], sfx: 'astro', fx: 'galaxy' },
+  { id: 'eldarham', r: 3, gems: 100, nm: ['ХОМЯК ELDAR', 'ELDAR HAMSTER'], ...HAM, noScarf: true, eldar: true, parts: ['eldarBoard', 'eldarTee', 'brownHair'], trail: { kind: 'spark', cols: ['#ffffff', '#e9eaec', '#9ea1a6'] }, cfx: ['rays', '#e9eaec', '#9ea1a6'], sfx: 'king', fx: 'king' },
+);
 // четыре хомяка стихий
 SKINS.push(
   { id: 'firehamster', r: 3, gems: 120, nm: ['ОГНЕННЫЙ ХОМЯК', 'FIRE HAMSTER'], ...HAM, body: '#ff6a1a', dark: '#c02a0a', light: '#ffd23a', ear: '#ffd23a', ol: '#3a0800', scarf: '#ffd23a', scarfD: '#ff8a1e', look: 'lava', parts: ['fireCrest', 'emberAura', 'elemCore'], elem: 'fire', trail: { kind: 'ember', cols: ['#ff3a1a', '#ff8a1e', '#ffd23a'] }, cfx: ['flames', '#ff3a1a', '#ffd23a'], sfx: 'fire', fx: 'fire' },
@@ -1624,6 +1629,7 @@ for (const k of SKINS) {
   const h = [...k.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
   if (k.r === 1) k.cost = 200 + h % 6 * 50;
   else if (k.r === 2) k.cost = 700 + h % 7 * 100;
+  else if (k.r === 3 && !k.gems && !k.ruby) k.cost = Math.max(3000, k.cost || 0);   // легенды за монеты — не дешевле 3000
 }
 // улучшенные герои: оружие, питомцы, свои анимации
 const MORE_PARTS = {
@@ -2364,7 +2370,13 @@ const HUE_CACHE = new Map();
 function hueColor(col, deg) {
   const key = deg + col; let v = HUE_CACHE.get(key); if (v !== undefined) return v;
   v = col;
-  const m = /^#([0-9a-f]{6})$/i.exec(col);
+  let src = col, alpha = null;
+  if (!/^#[0-9a-f]{6}$/i.test(src)) {   // hsl(), rgba(), #abc — приводим к #rrggbb через холст, прозрачность сохраняем
+    NCX.fillStyle = '#000000'; NCX.fillStyle = col; src = NCX.fillStyle;
+    const ra = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(src);
+    if (ra) { alpha = ra[4]; src = '#' + [ra[1], ra[2], ra[3]].map(q => (+q).toString(16).padStart(2, '0')).join(''); }
+  }
+  const m = /^#([0-9a-f]{6})$/i.exec(src);
   if (m) {
     const n = parseInt(m[1], 16), r = (n >> 16) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dl = mx - mn;
     const s = dl ? dl / (1 - Math.abs(2 * l - 1)) : 0;
@@ -2372,14 +2384,18 @@ function hueColor(col, deg) {
     if (!(s < 0.28 || l < 0.12 || l > 0.93 || (h > 8 && h < 46 && (l > 0.68 || (s < 0.62 && l > 0.32))))) {   // серое, чёрное, белое и кожа — как есть
       const h2 = (h + deg) % 360, c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h2 / 60) % 2 - 1)), mm = l - c / 2, k = Math.floor(h2 / 60);
       const [r2, g2, b2] = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][k];
-      v = '#' + [r2, g2, b2].map(q => Math.round((q + mm) * 255).toString(16).padStart(2, '0')).join('');
+      const rgb = [r2, g2, b2].map(q => Math.round((q + mm) * 255));
+      v = alpha != null ? 'rgba(' + rgb.join(',') + ',' + alpha + ')' : '#' + rgb.map(q => q.toString(16).padStart(2, '0')).join('');
     }
   }
   if (HUE_CACHE.size > 4000) HUE_CACHE.clear(); HUE_CACHE.set(key, v); return v;
 }
-const FS = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'fillStyle');
+const NCX = document.createElement('canvas').getContext('2d');
 let hueNow = 0;
-Object.defineProperty(hctx, 'fillStyle', { get() { return FS.get.call(this); }, set(v) { FS.set.call(this, hueNow && typeof v === 'string' ? hueColor(v.toLowerCase(), hueNow) : v); } });
+for (const prop of ['fillStyle', 'strokeStyle']) {   // и заливка, и обводка
+  const D = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, prop);
+  Object.defineProperty(hctx, prop, { get() { return D.get.call(this); }, set(v) { D.set.call(this, hueNow && typeof v === 'string' ? hueColor(v.toLowerCase(), hueNow) : v); } });
+}
 function heroSprite(sk, pose, t, blink) {
   hueNow = sk.hue || 0;
   try { heroSprite0(sk, pose, t, blink); } finally { hueNow = 0; }
@@ -2621,7 +2637,7 @@ function drawAcc(c, sk, t, Hd, ex1, ex2, ey) {
 // детали особых героев: шляпы, шлемы, крылья, панцири, щупальца…
 const FIRE_C = ['#fff27a', '#ffb21a', '#ff5a1a', '#c01a0a'];
 const WING_CACHE = new Map();   // готовые крылья мифических фениксов по углу взмаха   // цвета огня: от ядра к краю
-const BACK_PARTS = new Set(['wingsOwl', 'wingsAngel', 'wingsBat', 'wingsFairy', 'wingsButterfly', 'wingsFire', 'shell', 'spikes', 'windKey', 'jetpack', 'mermaidHair',
+const BACK_PARTS = new Set(['eldarBoard', 'wingsOwl', 'wingsAngel', 'wingsBat', 'wingsFairy', 'wingsButterfly', 'wingsFire', 'shell', 'spikes', 'windKey', 'jetpack', 'mermaidHair',
   'katanaBack', 'roundShield', 'heroCapeLong', 'frostAura', 'tailFeathers', 'shoulderCannon', 'speedLines', 'smokeWisps', 'lionMane', 'tailTuft',
   'accretionBack', 'wingsBee', 'jackalEars', 'smokeTail', 'skullFireBack',
   'quiver', 'gladShield', 'helmWheel', 'nineTails', 'waterAura', 'braids', 'mailBag', 'longScarf', 'sunHalo', 'starMane', 'backpack', 'darkAura', 'goldWings', 'lootSack', 'cottonPuffs', 'surfboard', 'branchArm', 'warBanner', 'protonPack', 'boltTail', 'greenCloak', 'dualKatana',
@@ -2854,23 +2870,39 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
         R(bx - 6, by + 2, 13, 2, ol); R(bx - 5, by + 2, 11, 1, '#e8261a'); R(bx - 5, by + 4, 11, 2, ol); R(bx - 4, by + 4, 9, 1, '#2a2a34'); R(bx + 1, by + 4, 2, 2, '#ffd23a');
         for (let i = 0; i < 4; i++) R(bx - 6 - i, by + 3 + i + r(Math.sin(t * 10 + i) * 0.8), 1, 2, i % 2 ? '#a01008' : '#e8261a'); break;
       case 'battleScar': R(bx + 2, by - 4, 1, 1, '#a0503a'); R(bx + 3, by - 3, 1, 1, '#a0503a'); R(bx + 4, by - 2, 1, 1, '#a0503a'); R(bx - 5, by - 5, 2, 1, '#ffffff'); break;
-      case 'handWraps': { const x = r(A1.x), y = r(A1.y); R(x - 2, y - 2, 4, 4, ol); R(x - 1, y - 1, 2, 2, '#f0f0e8'); R(x - 1, y, 2, 1, '#c8c8c0'); if (sk.wrapTail !== false) R(x - 3, y + 1 + (Math.sin(t * 10) > 0 ? 1 : 0), 2, 1, '#f0f0e8'); break; }
-      case 'eyeMask': {   // повязка-маска на глаза: чёрная лента через лицо, прорези с горящими глазами, длинные красные хвосты
+      case 'eyeMask': {   // глухая повязка на глаза: чёрная лента через лицо без прорезей, длинные красные хвосты
         c.save(); c.beginPath(); c.rect(0, ey - 2, 32, 5); c.clip(); E(Hd.x, Hd.y, Hd.rx + 0.5, Hd.ry + 0.5, '#1a1a24'); c.restore();
         R(hx - 7, ey - 2, 16, 1, '#e8261a'); R(hx - 7, ey + 3, 16, 1, '#a01008');
-        if (!blink) { R(ex1 - 1, ey, 3, 2, '#ffffff'); R(ex2, ey, 3, 2, '#ffffff'); R(ex1, ey + 1, 1, 1, '#e8261a'); R(ex2 + 1, ey + 1, 1, 1, '#e8261a'); R(ex1 - 1, ey - 1, 2, 1, '#1a1a24'); R(ex2 + 1, ey - 1, 2, 1, '#1a1a24'); }
-        else { R(ex1 - 1, ey + 1, 3, 1, '#e8261a'); R(ex2, ey + 1, 3, 1, '#e8261a'); }
+        R(hx - 6, ey, 14, 1, '#2a2a36');   // глаз не видно — только блик на ткани
         R(hx - 9, ey, 2, 2, ol);   // узел на затылке
         for (let i = 0; i < 7; i++) { const w2 = Math.sin(t * 9 - i * 0.8) * (flying ? 1.8 : 0.9); R(hx - 10 - i * 1.6, ey + i * 0.5 + w2, 2, 1, ol); R(hx - 10 - i * 1.6, ey - 1 + i * 0.5 + w2, 2, 1, i % 2 ? '#a01008' : '#e8261a'); }
         break;
       }
       case 'fightGloves': { const x = r(A1.x), y = r(A1.y); R(x - 2, y - 2, 5, 5, ol); R(x - 1, y - 1, 3, 3, '#1a1a24'); R(x - 1, y + 1, 3, 1, '#e8261a'); R(x, y - 1, 1, 1, '#5a5a6a'); R(x - 3, y + 2, 2, 2, ol); R(x - 2, y + 2, 1, 1, '#e8261a'); break; }   // чёрные перчатки с красной манжетой
-      case 'mythMask':   // маска ниндзя на нижнюю часть лица, глаза горят
-        c.save(); c.beginPath(); c.rect(0, hy + 2, 32, 20); c.clip(); E(Hd.x + 1, Hd.y, Hd.rx, Hd.ry + 0.5, '#1a1a24'); c.restore();
-        R(hx - 7, hy - 1, 15, 1, '#e8261a');
-        if (!blink) { R(ex1, ey, 2, 2, '#ffffff'); R(ex2, ey, 2, 2, '#ffffff'); R(ex1 + 1, ey + 1, 1, 1, '#e8261a'); R(ex2 + 1, ey + 1, 1, 1, '#e8261a'); }
-        for (let i = 0; i < 6; i++) { const w2 = Math.sin(t * 9 - i * 0.8) * (flying ? 1.6 : 0.8); R(hx - 8 - i * 1.6, hy - 5 + i * 0.6 + w2, 2, 1, ol); R(hx - 8 - i * 1.6, hy - 6 + i * 0.6 + w2, 2, 1, i % 2 ? '#a01008' : '#e8261a'); }   // хвосты повязки развеваются
+      case 'cyclopsEye': {   // один большой глаз посреди лица: белок, радужка, зрачок оглядывается, моргает веком
+        const cx = (ex1 + ex2) / 2 + 1, lk = r(Math.sin(t * 0.9) * 1.2);
+        E(cx, ey + 1, 3.6, 3.6, ol);
+        if (blink) { E(cx, ey + 1, 2.8, 2.8, sk.body); R(cx - 3, ey + 1, 6, 1, ol); R(cx - 2, ey + 2, 1, 1, ol); R(cx + 1, ey + 2, 1, 1, ol); }
+        else { E(cx, ey + 1, 2.8, 2.8, '#ffffff'); E(cx + lk, ey + 1, 1.8, 2, '#3ae0a0'); E(cx + lk, ey + 1, 1, 1.2, '#1a1010'); R(cx + lk - 1, ey - 1, 1, 1, '#ffffff'); R(cx - 2, ey - 2, 4, 1, sk.dark); }
         break;
+      }
+      case 'brownHair': {   // каштановые волосы: шапка волос, чёлка на лоб, вихры сверху, блики
+        const hc = '#6a3a1a', hl = '#a0683a';
+        c.save(); c.beginPath(); c.rect(0, -8, 32, hy - 3 + 8); c.clip(); E(Hd.x, Hd.y, Hd.rx + 0.8, Hd.ry + 0.8, ol); E(Hd.x, Hd.y, Hd.rx, Hd.ry, hc); c.restore();
+        R(hx - 1, hy - 4, 7, 2, hc); R(hx + 3, hy - 3, 3, 1, hc); R(hx - 7, hy - 4, 2, 4, hc);   // чёлка и висок
+        for (const [dx, h2] of [[-4, 3], [-1, 4], [2, 3], [5, 2]]) { R(hx + dx, hy - 7 - h2, 2, h2 + 1, ol); R(hx + dx, hy - 6 - h2, 1, h2, hc); }   // вихры
+        R(hx - 3, hy - 6, 4, 1, hl); R(hx + 2, hy - 7, 2, 1, hl); break;
+      }
+      case 'eldarTee': {   // чёрная футболка с серебряным логотипом ELDAR: клинок-«E»
+        c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, B.ry * 2 - 2); c.clip(); E(B.x, B.y, B.rx + 0.5, B.ry + 0.5, '#1a1a22'); c.restore();
+        R(bx - 2, by - 3, 4, 1, '#e9eaec'); R(bx - 2, by - 2, 1, 4, '#cfd0d2'); R(bx - 2, by, 3, 1, '#e9eaec'); R(bx - 2, by + 2, 4, 1, '#9ea1a6'); R(bx, by - 1, 3, 1, '#ffffff');   // знак «E» с клинком
+        R(bx - 5, by - 4, 2, 2, '#1a1a22'); R(bx + 4, by - 4, 2, 2, '#1a1a22'); R(bx - 5, by + 4, 11, 1, '#3a3a44'); break;   // рукава и низ
+      }
+      case 'eldarBoard': {   // деревянная табличка ELDAR STUDIO на спине (в игре она крупная и читается)
+        R(bx - 4, by - 6, 1, 8, '#3a2410');
+        R(bx - 13, by - 9, 10, 8, ol); R(bx - 12, by - 8, 8, 6, '#c8903a'); R(bx - 12, by - 8, 8, 1, '#e8b060');
+        R(bx - 11, by - 6, 2, 3, '#1a1a24'); R(bx - 11, by - 6, 1, 1, '#1a1a24'); R(bx - 8, by - 6, 2, 1, '#1a1a24'); R(bx - 8, by - 5, 1, 1, '#1a1a24'); R(bx - 7, by - 4, 1, 1, '#1a1a24'); R(bx - 8, by - 3, 2, 1, '#1a1a24'); break;   // «ES»
+      }
       // ---- хомяки стихий ----
       case 'elemCore': {   // знак стихии на груди светится
         const e2 = sk.elem, c1 = { fire: '#ffd23a', water: '#bff0ff', earth: '#9af07a', air: '#ffffff' }[e2], g = 0.6 + Math.sin(t * 5) * 0.4;
@@ -2915,11 +2947,6 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
         const [w1, w2, w3] = sk.wc || FIRE_C, fe = [0, 1, 2].map(i => ({ an: -Math.PI / 2 - 0.25 - i * 0.45 + Math.sin(t * 5 + i) * 0.08, L: 7 - i }));
         for (const { an, L } of fe) for (let d = 0; d <= L; d++) R(hx - 1 + Math.cos(an) * d - 1, hy - 5 + Math.sin(an) * d - 1, 3, 3, ol);
         fe.forEach(({ an, L }, i) => { for (let d = 0; d <= L; d++) R(hx - 1 + Math.cos(an) * d, hy - 5 + Math.sin(an) * d, 1, 1, d > L - 2 ? w1 : i === 1 ? w2 : w3); });
-        break;
-      }
-      case 'featherCollar': {
-        const [w1, w2, w3] = sk.wc || FIRE_C;
-        for (let i = 0; i < 6; i++) { const x = bx - 5 + i * 2; stri(c, x, by - 5, 3, ol, 1); stri(c, x, by - 5, 3, i % 2 ? w2 : w3); R(x, by - 5, 1, 1, w1); }
         break;
       }
       case 'iceCrown': for (const [dx, h] of [[-4, 4], [-1, 7], [2, 5], [5, 3]]) { stri(c, hx + dx, hy - 6 - h, h + 1, ol, 1); stri(c, hx + dx, hy - 6 - h, h + 1, '#bff4ff'); R(hx + dx, hy - 5 - h, 1, 1, '#ffffff'); } if (Math.sin(t * 6) > 0.7) R(hx - 1, hy - 14, 1, 1, '#ffffff'); break;
@@ -4960,7 +4987,6 @@ const mpH = () => mp.active ? Math.max(heightM(), ...mp.part.map(i => mp.pl[i] &
 const pies = []; let aim = null, splatT = 0;
 function pieSprite(x, y, s) { ctx.save(); ctx.translate(x, y); ctx.scale(s, s); pell(ctx, 0, 2, 11, 8, OL); pell(ctx, 0, 2, 9, 6, '#c8741a'); pell(ctx, 0, -1, 9, 5, '#fff2c8'); pell(ctx, 0, -1, 7, 3, '#ffffff'); pell(ctx, 2, -4, 3, 3, OL); pell(ctx, 2, -4, 2, 2, '#e8261a'); ctx.restore(); }
 function pieDir() { if (!aim || !aim.moved) return null; const dx = aim.x - p.x, dy = aim.y - (p.y - camR), l = Math.hypot(dx, dy); if (l < 30) return null; return { dx: dx / l, dy: dy / l, k: clamp(l / 230, 0.3, 1) }; }
-function pieStart(pt) { aim = { sx: pt.x, sy: pt.y, x: pt.x, y: pt.y, moved: false }; sfx.click(); }
 function pieFire() {
   const a = aim, d = pieDir(); aim = null;
   if (!d) { if (a && !a.moved) { press(); release(); } return; }
@@ -5116,10 +5142,10 @@ function svWith(D, fn) {
   const o = { p, poles, path, pathPrev, birds, ents, parts, leaves, camY, camR, minY, state, skinId, idleT, held, clone, ally, shake, aim, paused, pmenu, coinsRun, flips };
   p = D.p; poles = D.poles; path = D.path; pathPrev = D.pathPrev; birds = D.birds; ents = D.ents; parts = D.parts; leaves = D.leaves;
   camY = D.camY; camR = D.camR; minY = D.minY; state = 'play'; skinId = D.k.id; idleT = 0; held = false; clone = null; ally = D.ally || null; shake = 0; aim = null; paused = false; pmenu = false; coinsRun = D.coins; flips = 0;
-  const keep = { bank, gems, rubies, flashT, shake: o.shake, rubiesRun, gemsRun };
+  const keep = { bank, gems, rubies, flashT, shake: o.shake, rubiesRun, gemsRun, combo, comboT };
   quiet = true;
   try { fn(); } finally {
-    quiet = false; bank = keep.bank; gems = keep.gems; rubies = keep.rubies; flashT = keep.flashT; rubiesRun = keep.rubiesRun; gemsRun = keep.gemsRun;
+    quiet = false; bank = keep.bank; gems = keep.gems; rubies = keep.rubies; flashT = keep.flashT; rubiesRun = keep.rubiesRun; gemsRun = keep.gemsRun; combo = keep.combo; comboT = keep.comboT;
     Object.assign(D, { p, poles, path, pathPrev, birds, ents, parts, leaves, camY, camR, minY, coins: coinsRun, ally });
     ({ p, poles, path, pathPrev, birds, ents, parts, leaves, camY, camR, minY, state, skinId, idleT, held, clone, ally, shake, aim, paused, pmenu, coinsRun, flips } = o);
   }
@@ -5130,7 +5156,7 @@ function svDemoNew(k, allyDef) {
   const hero = newHero(first); hero.y = y0 - 60;
   Object.assign(D, { poles: [first], path: first, pathPrev: null, p: hero, birds: [], ents: [], parts: [], leaves: [], camY: hero.y - H * 0.62, camR: even(hero.y - H * 0.62) });
   D.minY = D.p.y;
-  svWith(D, () => { const o = Math.random; try { generate(); } finally { Math.random = o; } ents = ents.filter(e => !['shield', 'magnet', 'ruby'].includes(e.type)); if (allyDef) spawnAlly(allyDef); });
+  svWith(D, () => { const o = Math.random; try { generate(); } finally { Math.random = o; } ents = ents.filter(e => !['shield', 'magnet', 'ruby'].includes(e.type)); if (allyDef) { spawnAlly(allyDef); if (ally && ally.st === 'ground' && p.pole) { const q = p.pole; ally.st = 'wall'; ally.pole = q; ally.side = q.cx > p.x ? 1 : -1; ally.x = ally.side > 0 ? q.x0 - PW / 2 : q.x1 + PW / 2; ally.y = clamp(p.y + 30, q.y0 + PH / 2, q.y1 - PH / 2); ally.face = -ally.side; } } });
   return D;
 }
 const svSpot = (q, f) => ({ x: f > 0 ? q.x1 + PW / 2 : q.x0 - PW / 2 });
@@ -5641,27 +5667,42 @@ const zc = (b, key) => b.t > 0 ? mix(b.z[key], b.n[key], b.t) : b.z[key];
 function colAt(wy) {
   return { c: W / 2 + Math.sin(wy * 0.004) * 40 + Math.sin(wy * 0.011) * 18, hw: 92 + Math.sin(wy * 0.007) * 28 + Math.sin(wy * 0.019) * 10 };
 }
+// крона рисуется плитками по 256 точек и кэшируется: каждый кадр — пара готовых картинок вместо сотен эллипсов
+const BUSH_TILE = 256, bushTiles = new Map();
 function drawBushColumn(b, skyCol) {
-  const bush = zc(b, 'bush'), bushD = zc(b, 'bushD'), bushL = zc(b, 'bushL');
-  const off = even(camR * 0.85);
-  const step = 14, first = Math.floor((off - 40) / step), lastK = Math.ceil((off + H + 40) / step);
-  for (let k = first; k <= lastK; k++) {
-    const wy = k * step, { c, hw } = colAt(wy), sy = wy - off;
-    for (const s of [-1, 1]) { const r = 9 + hash2(k, s + 3) * 7; pell(ctx, c + s * (hw + hash2(k, s) * 6) + s * 2, sy + 3, r + 2, r + 2, bushD); }
-  }
-  ctx.fillStyle = bush; ctx.beginPath();
-  for (let sy = -8; sy <= H + 8; sy += 8) { const { c, hw } = colAt(sy + off); ctx.lineTo(even(c - hw), sy); }
-  for (let sy = H + 8; sy >= -8; sy -= 8) { const { c, hw } = colAt(sy + off); ctx.lineTo(even(c + hw), sy); }
-  ctx.fill();
-  for (let k = first; k <= lastK; k++) {
-    const wy = k * step, { c, hw } = colAt(wy), sy = wy - off;
-    for (const s of [-1, 1]) {
-      const r = 9 + hash2(k, s + 3) * 7, ex = c + s * (hw + hash2(k, s) * 6);
-      pell(ctx, ex, sy, r, r, bush);
-      if (hash2(k, s + 21) < 0.45) pell(ctx, ex + s * 2, sy - 4, r * 0.5, r * 0.35, bushL);
+  const bush = zc(b, 'bush'), bushD = zc(b, 'bushD'), bushL = zc(b, 'bushL'), off = even(camR * 0.85), k = cv.width / W;
+  if (b.t > 0) { bushColumn(ctx, bush, bushD, bushL, skyCol, off, H); return; }   // на смене карты цвета плывут — рисуем напрямую
+  const key = bush + bushD + bushL + skyCol + k;
+  if (bushTiles.key !== key) { bushTiles.clear(); bushTiles.key = key; }
+  for (let T = Math.floor(off / BUSH_TILE); T * BUSH_TILE < off + H; T++) {
+    let tc = bushTiles.get(T);
+    if (!tc) {
+      tc = document.createElement('canvas'); tc.width = Math.round(W * k); tc.height = Math.round(BUSH_TILE * k);
+      const g = tc.getContext('2d'); g.scale(k, k); bushColumn(g, bush, bushD, bushL, skyCol, T * BUSH_TILE, BUSH_TILE);
+      bushTiles.set(T, tc); if (bushTiles.size > 10) bushTiles.delete(bushTiles.keys().next().value);
     }
-    if (hash2(k, 11) < 0.25) pell(ctx, c + (hash2(k, 12) - 0.5) * hw * 1.3, sy, 8, 6, bushL);
-    if (hash2(k, 13) < 0.07) { const hx = c + (hash2(k, 14) - 0.5) * hw; pell(ctx, hx, sy, 11, 9, bushD); pell(ctx, hx, sy, 8, 6, skyCol); }
+    ctx.drawImage(tc, 0, T * BUSH_TILE - off, W, BUSH_TILE);
+  }
+}
+function bushColumn(c, bush, bushD, bushL, skyCol, off, hh) {
+  const step = 14, first = Math.floor((off - 40) / step), lastK = Math.ceil((off + hh + 40) / step);
+  for (let k = first; k <= lastK; k++) {
+    const wy = k * step, { c: cx, hw } = colAt(wy), sy = wy - off;
+    for (const s of [-1, 1]) { const r = 9 + hash2(k, s + 3) * 7; pell(c, cx + s * (hw + hash2(k, s) * 6) + s * 2, sy + 3, r + 2, r + 2, bushD); }
+  }
+  c.fillStyle = bush; c.beginPath();
+  for (let sy = -8; sy <= hh + 8; sy += 8) { const { c: cx, hw } = colAt(sy + off); c.lineTo(even(cx - hw), sy); }
+  for (let sy = hh + 8; sy >= -8; sy -= 8) { const { c: cx, hw } = colAt(sy + off); c.lineTo(even(cx + hw), sy); }
+  c.fill();
+  for (let k = first; k <= lastK; k++) {
+    const wy = k * step, { c: cx, hw } = colAt(wy), sy = wy - off;
+    for (const s of [-1, 1]) {
+      const r = 9 + hash2(k, s + 3) * 7, ex = cx + s * (hw + hash2(k, s) * 6);
+      pell(c, ex, sy, r, r, bush);
+      if (hash2(k, s + 21) < 0.45) pell(c, ex + s * 2, sy - 4, r * 0.5, r * 0.35, bushL);
+    }
+    if (hash2(k, 11) < 0.25) pell(c, cx + (hash2(k, 12) - 0.5) * hw * 1.3, sy, 8, 6, bushL);
+    if (hash2(k, 13) < 0.07) { const hx = cx + (hash2(k, 14) - 0.5) * hw; pell(c, hx, sy, 11, 9, bushD); pell(c, hx, sy, 8, 6, skyCol); }
   }
 }
 
@@ -7042,6 +7083,11 @@ function grab(s, side) {
 }
 function land(s) {
   if (s.kind === 'jelly') { jellyBounce(s, 0); p.vy = -800; return; }
+  if ((s.kind === 'portal' && s.link) || s.kind === 'exit') {   // на портал не встаёшь сверху: он сразу переносит (а за выход — хватаешься сбоку)
+    const sd = p.x < s.cx ? 1 : -1;
+    if (s.kind === 'exit') { p.x = sd > 0 ? s.x0 - PW / 2 : s.x1 + PW / 2; p.y = s.y0 + PH / 2 + 4; }
+    grab(s, sd); return;
+  }
   if (s.kind === 'spring') { p.vy = -900; p.squash = 1; s.wob = 1; sfx.spring(); return; }
   p.state = 'ground'; p.stand = s; p.pole = null;
   if (p.vx) p.face = Math.sign(p.vx);
@@ -7154,7 +7200,7 @@ function updatePoles(dt) {
         const cols = ['#d0a070', '#7a4a24', '#f0c890'];
         for (let y = pl.y0; y < pl.y1; y += 14) {
           const sd = hash2(y, pl.seed) > 0.5 ? 1 : -1;
-          parts.push({ x: pl.cx + rand(-3, 3), y: y + 7, vx: sd * rand(20, 90), vy: rand(-140, -20), life: rand(0.9, 1.3), max: 1.3, color: cols[(y / 14 | 0) % 3], size: 0, w: rand(8, 14), h: rand(9, 14), rot: rand(-0.3, 0.3), vr: sd * rand(3, 9), grav: 1100, shape: 'chunk', fade: true });
+          parts.push({ x: pl.cx + rand(-3, 3), y: y + 7, vx: sd * rand(20, 90), vy: rand(-140, -20), life: rand(0.9, 1.3), max: 1.3, color: cols[Math.abs(y / 14 | 0) % 3], size: 0, w: rand(8, 14), h: rand(9, 14), rot: rand(-0.3, 0.3), vr: sd * rand(3, 9), grav: 1100, shape: 'chunk', fade: true });
           burst(pl.cx, y, 2, '#d0a070', 120, 0.9, 4, 900);
         }
         for (let j = 0; j < 10; j++) parts.push({ x: pl.cx + rand(-12, 12), y: rand(pl.y0, pl.y1), vx: rand(-40, 40), vy: rand(-30, 10), life: 0.8, max: 0.8, color: '#e8d0b0', size: rand(8, 13), grav: -20 });   // пыль
@@ -7368,11 +7414,11 @@ function updateEnts(dt) {
       burst(e.x, e.y, 6, '#ffe24a', 120, 0.4, 4, 0);
       sfx.coin(); ents.splice(i, 1);
     } else if (e.type === 'ruby') {
-      rubies++; rubiesRun++; store.set('rubies', rubies); flashT = 0.18; unlock('ruby');
+      rubies++; rubiesRun++; if (!quiet) store.set('rubies', rubies); flashT = 0.18; unlock('ruby');
       burst(e.x, e.y, 22, '#ff2a4a', 220, 0.7, 5, 0, 'star'); burst(e.x, e.y, 10, '#ffffff', 160, 0.5, 4, 0, 'star');
       sfx.ach(); sfx.gem(); ents.splice(i, 1);
     } else if (e.type === 'gem') {
-      const gn = p.gem2 > 0 ? 2 : 1; gems += gn; gemsRun += gn; store.set('gems', gems);
+      const gn = p.gem2 > 0 ? 2 : 1; gems += gn; gemsRun += gn; if (!quiet) store.set('gems', gems);
       burst(e.x, e.y, 10, '#7ad8ff', 140, 0.5, 4, 0, 'star');
       sfx.gem(); ents.splice(i, 1);
     } else if (e.type === 'shield' || e.type === 'magnet') {
@@ -7445,31 +7491,6 @@ const LOAD_STEPS = [
   () => { for (const n of T('zones')) textCanvas(n, 2, '#ffffff', OL); },
   () => { for (const t of T('tips')) textCanvas(t, 2, '#ffffff', OL); },
 ];
-// красивая надпись ELDAR на загрузке — полупрозрачная, с мягким свечением и бликом
-function drawEldar(y) {
-  ctx.save();
-  ctx.font = 'italic 700 46px Georgia, "Palatino Linotype", "Book Antiqua", "Times New Roman", serif';
-  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
-  const word = 'ELDAR', gap = 9, ws = [...word].map(ch => ctx.measureText(ch).width);
-  const total = ws.reduce((a, b) => a + b, 0) + gap * (word.length - 1);
-  const sweep = ((time * 0.45) % 1.6 - 0.3) * W;
-  const g = ctx.createLinearGradient(sweep - 50, 0, sweep + 50, 0);
-  g.addColorStop(0, 'rgba(255,255,255,0.62)'); g.addColorStop(0.5, 'rgba(255,255,255,0.98)'); g.addColorStop(1, 'rgba(255,255,255,0.62)');
-  let x = W / 2 - total / 2;
-  [...word].forEach((ch, i) => {
-    const fy = y + Math.sin(time * 2 + i * 0.8) * 2;
-    ctx.shadowColor = 'rgba(255,255,255,0.85)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = g; ctx.fillText(ch, x, fy);
-    ctx.shadowBlur = 0; ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.strokeText(ch, x, fy);
-    x += ws[i] + gap;
-  });
-  // тонкие линии с ромбиками по бокам
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  const lx0 = W / 2 - total / 2 - 14, lx1 = W / 2 + total / 2 + 14, ly = y - 14;
-  ctx.fillRect(lx0 - 30, ly, 30, 1); ctx.fillRect(lx1, ly, 30, 1);
-  for (const dx of [lx0 - 34, lx1 + 34]) { ctx.save(); ctx.translate(dx, ly + 0.5); ctx.rotate(Math.PI / 4); ctx.fillRect(-2.5, -2.5, 5, 5); ctx.restore(); }
-  ctx.restore();
-}
 // звук конца загрузки: волшебное арпеджио, колокольчик и мягкий аккорд
 sfx.ready = () => {
   if (!audio()) return;
@@ -7710,8 +7731,18 @@ function drawPoleBody(pl) {
   }
 }
 
+let groundCv = null;   // земля не меняется — рисуется один раз в картинку
 function drawGround() {
   if (-camR > H + 20) return;
+  const k = cv.width / W, key = ZONES[0].grass + k;
+  if (!groundCv || groundCv.key !== key) {
+    groundCv = document.createElement('canvas'); groundCv.width = Math.round(W * k); groundCv.height = Math.round((H + 16) * k); groundCv.key = key;
+    const g = groundCv.getContext('2d'), sv = ctx; g.scale(k, k); g.translate(0, 8); ctx = g;
+    try { drawGround0(); } finally { ctx = sv; }
+  }
+  ctx.drawImage(groundCv, 0, -8, W, H + 16);
+}
+function drawGround0() {
   const z = ZONES[0];
   prect(ctx, 0, 12, W, H, '#b8552e');
   for (let gy = 0; gy < 8; gy++) for (let gx = -1; gx < 11; gx++) {
@@ -8323,7 +8354,7 @@ function dizzyStars(x, y) {
 const MYTH_DEATH = { firephoenix: 'ash', sunphoenix: 'ash', dragonemperor: 'ash', infernodemon: 'ash', frostphoenix: 'shatter', diamondtitan: 'shatter',
   voidphoenix: 'hole', cosmicempress: 'hole', moongoddess: 'hole', thunderlord: 'storm', abysslord: 'bubbles', soulreaper: 'souls',
   skykitsune: 'light', starunicorn: 'light', auroraangel: 'light', timelord: 'clock', shirtless: 'slash',
-  iceking: 'shatter', sunpharaoh: 'light', neonshinobi: 'slash', forestking: 'light', galaxywolf: 'hole', glitchking: 'shatter', bloodvampire: 'souls', griffinknight: 'light', bloomqueen: 'light', shadowwarlock: 'souls' };
+  iceking: 'shatter', sunpharaoh: 'light', neonshinobi: 'slash', forestking: 'light', galaxywolf: 'hole', glitchking: 'shatter', bloodvampire: 'souls', griffinknight: 'light', bloomqueen: 'light', shadowwarlock: 'hole' };
 function mythDeathStart(sk, reason) {
   const zap = reason === 'zap' || reason === 'cloud', v = zap ? 'zap' : reason === 'cone' || reason === 'meteor' ? 'flat' : reason === 'fall' ? 'fall' : reason === 'ghost' ? 'soul' : 'hit';
   p.md = { style: MYTH_DEATH[sk.id] || 'light', v, fired: {} };
@@ -8390,6 +8421,18 @@ function drawMythDeath(sk) {
       if (once('pe')) burst(x, y - 4, 24, c1, 200, 1, 4, 60, 'leaf'); }
   }
 }
+// табличка ELDAR STUDIO на спине хомяка ELDAR: крупная, надпись не зеркалится, покачивается на ремешках
+function eldarSign(face) {
+  ctx.save(); ctx.scale(face, 1);
+  const x = -face * 38, y = -18 + Math.sin(time * 3) * 1, w = 46, h = 24;
+  ctx.fillStyle = '#3a2410'; ctx.fillRect(x + face * 23, y - 4, 12 * face, 2); ctx.fillRect(x + face * 23, y + 6, 14 * face, 2);   // ремешки к спине
+  ctx.fillStyle = OL; ctx.fillRect(x - w / 2 - 2, y - h / 2 - 2, w + 4, h + 4);
+  ctx.fillStyle = '#c8903a'; ctx.fillRect(x - w / 2, y - h / 2, w, h); ctx.fillStyle = '#e8b060'; ctx.fillRect(x - w / 2, y - h / 2, w, 3);
+  ctx.fillStyle = '#a06a2a'; ctx.fillRect(x - w / 2 + 3, y + 1, w - 6, 1); ctx.fillRect(x - w / 2 + 6, y + 8, w - 14, 1);   // волокна дерева
+  for (const [dx, dy] of [[-w / 2 + 3, -h / 2 + 3], [w / 2 - 4, -h / 2 + 3]]) { ctx.fillStyle = '#5a5a6a'; ctx.fillRect(x + dx, y + dy, 2, 2); }   // гвоздики
+  text('ELDAR', x, y - 1, 1, '#1a1a24', 'center', null, w - 4); text('STUDIO', x, y + 9, 1, '#7a1a1a', 'center', null, w - 4);
+  ctx.restore();
+}
 function drawHero0() {
   const sk = curSkin(), dead = state === 'dead' || state === 'over';
   if (dead && p.dk === 'soul' && deadT < 1.8) {   // душа улетает вверх
@@ -8443,6 +8486,7 @@ function drawHero0() {
       ctx.globalAlpha = ga * 0.5; ctx.drawImage(tintSprite('#ff2a6a', 0), -32 - s, -52, 64, 80); ctx.drawImage(tintSprite('#2af0ff', 1), -32 + s, -52, 64, 80); ctx.globalAlpha = ga;
       if (Math.random() < 0.25) { const yy = rand(-50, 20); ctx.drawImage(hcv, 0, (yy + 52) / 2, 32, 3, -32 + (Math.random() < 0.5 ? -6 : 6), yy, 64, 6); }
     }
+    if (main && sk.eldar && !dead) eldarSign(p.face);
     ctx.drawImage(hcv, -32, -52, 64, 80);
     if (main && emM) { const ga = ctx.globalAlpha; emoOverlay(em.id, 1, emT); ctx.globalAlpha = ga; }
     if (jq >= 0 && (p.jSt === 'flash' || p.jSt === 'float' || p.jSt === 'nova')) { ctx.globalAlpha = (1 - jq) * (p.jSt === 'float' ? 0.35 : 0.7); ctx.drawImage(tintSprite(p.jSt === 'nova' ? '#ffffff' : p.jCol, 0), -32, -52, 64, 80); }
@@ -9303,9 +9347,9 @@ function priceDraw(cx, y, pr, k = 1, col = OL) {
 }
 function drawMenu() {
   drawLogo(92);
-  coinIcon(24, 250); text(String(bank), 36, 260, 2, '#ffffff', 'left', null, 70);
-  gemIcon(116, 250, 0.8); text(String(gems), 130, 260, 2, '#bfeaff', 'left', null, 56);
-  rubyIcon(196, 250, 0.7); text(String(rubies), 210, 260, 2, '#ffc0c8', 'left', null, 50);
+  coinIcon(24, 250); text(String(bank), 36, 260, 2, '#ffffff', 'left', OL, 70);
+  gemIcon(116, 250, 0.8); text(String(gems), 130, 260, 2, '#bfeaff', 'left', OL, 56);
+  rubyIcon(196, 250, 0.7); text(String(rubies), 210, 260, 2, '#ffc0c8', 'left', OL, 50);
   trophyIcon(270, 250); text(best + T('m'), 284, 260, 2, '#ffffff', 'left', null, 72);
   button(BTN.shop, T('heroes'), '#ff3d7f', '#c01f5a');
   button(BTN.store, T('shop'), '#ffb02a', '#c06a00');
@@ -10859,9 +10903,9 @@ function updateClone(dt) {
     if ((e.type === 'cone' && e.st !== 'fall') || (e.type === 'hawk' && e.st !== 'fly') || (e.type === 'ghost' && e.st !== 'chase') || (e.type === 'meteor' && e.st !== 'fall') || (e.type === 'piranha' && e.st !== 'jump')) continue;
     if (Math.hypot(e.x - c.x, e.y - c.y) > (e.r || 8) + 10) continue;
     if (e.type === 'coin') { coinsRun += p.x2 > 0 ? 2 : 1; burst(e.x, e.y, 6, '#ffe24a', 120, 0.4, 4, 0); sfx.coin(); ents.splice(i, 1); continue; }
-    else if (e.type === 'gem') { const gn = p.gem2 > 0 ? 2 : 1; gems += gn; gemsRun += gn; store.set('gems', gems); burst(e.x, e.y, 10, '#7ad8ff', 140, 0.5, 4, 0, 'star'); sfx.gem(); ents.splice(i, 1); }
+    else if (e.type === 'gem') { const gn = p.gem2 > 0 ? 2 : 1; gems += gn; gemsRun += gn; if (!quiet) store.set('gems', gems); burst(e.x, e.y, 10, '#7ad8ff', 140, 0.5, 4, 0, 'star'); sfx.gem(); ents.splice(i, 1); }
     else if (e.type === 'shield' || e.type === 'magnet') { if (e.type === 'shield') p.shield = 1; else p.magnet = 8; burst(e.x, e.y, 12, '#6fd3ff', 140, 0.5, 4, 0); sfx.power(); ents.splice(i, 1); }
-    else if (e.type === 'ruby') { rubies++; rubiesRun++; store.set('rubies', rubies); unlock('ruby'); burst(e.x, e.y, 16, '#ff2a4a', 200, 0.6, 5, 0, 'star'); ents.splice(i, 1); }   // раньше рубин «убивал» клона
+    else if (e.type === 'ruby') { rubies++; rubiesRun++; if (!quiet) store.set('rubies', rubies); unlock('ruby'); burst(e.x, e.y, 16, '#ff2a4a', 200, 0.6, 5, 0, 'star'); ents.splice(i, 1); }   // раньше рубин «убивал» клона
     else if (cloneHurt()) return;
   }
   if (c.y > camY + H + 60) clone = null;
@@ -10917,7 +10961,7 @@ let ally = null, allyScene = { last: -1 };
 const VOWEL = { a: [800, 1150, 2900], e: [530, 1840, 2480], i: [270, 2290, 3010], u: [300, 870, 2240], o: [500, 700, 2400] };
 // голосовой выкрик: пила через три формантных фильтра — «ХУЭЙ!», «КИЯ!», «ХА!»
 function shout(kind) {
-  if (!audio()) return;
+  if (quiet || !audio()) return;
   const t = ac.currentTime + 0.01, V = { huey: ['x', [[0, 'u'], [0.1, 'e'], [0.28, 'i']], [200, 330, 250], 0.42], kiya: ['k', [[0, 'i'], [0.14, 'a']], [260, 360, 210], 0.38], ha: ['x', [[0, 'a']], [240, 200, 170], 0.26] }[kind];
   const [cons, vow, pitch, dur] = V;
   if (cons === 'x') noiseAt(t, 0.09, 0.16, sfxBus, 1400, 6000); else noiseAt(t, 0.03, 0.3, sfxBus, 2000, 0);
@@ -11040,13 +11084,6 @@ function drawAllyForm(form, x, y, s, o) {
       P(-1, hy3 - 9, 1, 4, OL); E(-0.5, hy3 - 9, 1.6, 1.6, Math.sin(t * 8) > 0 ? '#ff3af0' : '#3af0ff');
     }
     if (!k && o.spd > 40) { ctx.globalAlpha = Math.min(0.5, o.spd / 400); ctx.strokeStyle = '#3af0ff'; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.arc(x, y, 12 * s, (o.rot || 0), (o.rot || 0) + 1.6); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, 12 * s, (o.rot || 0) + Math.PI, (o.rot || 0) + Math.PI + 1.6); ctx.stroke(); ctx.globalAlpha = 1; }   // неоновый обод крутится
-  } else if (form === 'soldier') {   // игрушечный солдатик: зелёный пластик, каска, винтовка, подставка
-    const g1 = '#5ab03a', g2 = '#3a8a2a', g3 = '#8ad05a', st = o.walk ? Math.sin(t * 14) * 2 : 0;
-    P(-8, 14, 16, 4, OL); P(-7, 14, 14, 3, g2);
-    P(-4, 6, 3, 9 + st * 0.5, OL); P(1, 6, 3, 9 - st * 0.5, OL); P(-3, 6, 1, 8, g1); P(2, 6, 1, 8, g1);
-    P(-5, -4, 10, 11, OL); P(-4, -3, 8, 9, g1); P(-4, -3, 2, 9, g3); P(-4, 2, 8, 1, g2);
-    E(0, -8, 5, 5, OL); E(0, -8, 4, 4, g1); P(-6, -12, 12, 3, OL); P(-5, -12, 10, 2, g2); P(-3, -14, 6, 3, OL); P(-2, -14, 4, 2, g1);
-    P(1, -9, 2, 2, OL); P(4, -2, 12, 3, OL); P(5, -1, 10, 1, g2); P(5, 0, 3, 3, OL);   // глаз и винтовка
   } else if (form === 'car') {   // машина-трансформер: спорткар; робот — двери-наплечники, колёса на коленях, рука-пушка; между ними — настоящее превращение
     const k = o.robot || 0;
     if (k >= 0.98) {
@@ -11396,19 +11433,18 @@ function updateAlly(dt) {
     const q = Math.min(1, k.t / k.dur), out = q < 0.5 ? q * 2 : (1 - q) * 2;
     a.x = lerp(k.ox, k.tx, out); a.y = lerp(k.oy, k.ty, out) - (k.kind === 'stomp' ? Math.sin(out * Math.PI) * 30 : 0);
     a.rot = k.kind === 'spin' ? q * Math.PI * 2 * a.face : k.kind === 'fly' ? -0.6 * a.face * out : 0;
-    if (k.kind === 'dash') { a.rot = 0; a.rr = (a.rr || 0) + a.face * dt * 30; }
     if (!k.hit && q >= 0.45) { k.hit = true; if (ents.includes(k.e) && !k.e.kicked) { allyHit(k.e, k.kind); a.freeze = 0.07; parts.push({ x: a.x + a.face * 16, y: a.y, vx: 0, vy: 0, life: 0.3, max: 0.3, color: '#ffffff', size: 36, grav: 0, shape: 'wave' }); } }
     if (q >= 1) { a.kick = null; a.rot = 0; a.x = k.ox; a.y = k.oy; a.cd = 0.3; a.win = 0.45; }
     return;
   }
   if (a.def.ab === 'kick' && a.cd <= 0) {   // кибер-шар не дерётся — только таранит, когда катится
-    let tg = null, td = a.def.ab === 'roll' ? 130 : 95;
+    let tg = null, td = 95;
     for (const e of ents) { if (!activeEnemy(e)) continue; const d = Math.hypot(e.x - a.x, e.y - a.y); if (d < td) { td = d; tg = e; } }
     if (tg) {
-      const kind = a.def.ab === 'roll' ? 'dash' : kickKind(tg.type);
+      const kind = kickKind(tg.type);
       a.face = tg.x > a.x ? 1 : -1;
       a.kick = { e: tg, kind, t: 0, dur: kind === 'spin' ? 0.42 : 0.34, ox: a.x, oy: a.y, tx: tg.x - a.face * 14, ty: kind === 'stomp' ? tg.y - 16 : tg.y, hit: false };
-      if (kind === 'dash') { tone(200, 1200, 0.15, 'sawtooth', 0.04); noise(0.15, 0.06, 1500); } else shout(kind === 'fly' ? 'huey' : kind === 'spin' ? 'kiya' : 'ha');
+      shout(kind === 'fly' ? 'huey' : kind === 'spin' ? 'kiya' : 'ha');
       return;
     }
   }
@@ -11605,7 +11641,7 @@ function drawAllies() {
   // настоящий геймплей: твой герой и этот союзник лезут вверх, союзник применяет способность к врагам
   if (!allyDemo || allyDemo.allyDef !== A || allyDemo.k !== curSkin() || allyDemo.t > 14) allyDemo = svDemoNew(curSkin(), A);
   allyDT = allyDT == null ? time : allyDT; const dt = clamp(time - allyDT, 0, 0.05); allyDT = time;
-  for (let i = 0; i < 3; i++) svDemoStep(allyDemo, dt / 3);
+  svDemoStep(allyDemo, dt);
   allyFrame(A, 24, 88, W - 48, 242);
   svDemoDraw(allyDemo, 24, 88, W - 48, 242);
   ctx.fillStyle = OL; ctx.fillRect(30, 94, 84, 16); ctx.fillStyle = R.col; ctx.fillRect(32, 96, 80, 12); text(T('one')[A.r], 72, 106, 1, OL, 'center', null, 76);
@@ -12789,23 +12825,26 @@ function draw() {
 }
 
 // ---------- Цикл ----------
-let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0;
+let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0, perfSlow = 0, perfDownAt = -1e9;
 function frame(now) {
   if (now - last < 10) { requestAnimationFrame(frame); return; }   // экраны 120–144 Гц: лишние вызовы пропускаем — работы вдвое меньше, плавность та же
-  const t0 = performance.now();
-  let dt = (now - last) / 1000; last = now;
+  const t0 = performance.now(), gap = now - last;
+  let dt = gap / 1000; last = now;
   if (dt > 0.05) dt = 0.05;
   const steps = Math.ceil(dt / (1 / 120));
   const ts = state === 'play' && p && p.slow > 0 && !pmenu ? 0.45 : 1;   // замедление времени
   if (mp.active) { const now = Date.now(); if (now < mp.startAt) mp.cd = Math.ceil((mp.startAt - now) / 1000); else { mp.cd = 0; if (!mp.go) { mp.go = true; } const target = Math.floor((now - mp.startAt) * 0.12); for (let n = 0; mp.step < target && n < 40; n++) { update(1 / 120); mp.step++; } } }
   else for (let i = 0; i < steps; i++) update(dt / steps * ts);
   draw();
-  // сколько ушло на кадр: тяжело — разрешение холста на ступень ниже, легко долго — обратно выше (картинка та же, пиксели крупнее)
-  perfAcc += performance.now() - t0; perfN++;
+  // телефон не успевает (кадры приходят реже 45 в секунду или кадр считается долго) — разрешение холста на ступень ниже;
+  // долго всё легко — обратно выше, но не раньше чем через 20 с после понижения, чтобы не качаться туда-сюда
+  perfAcc += performance.now() - t0; perfN++; if (gap > 23 && gap < 100) perfSlow++;
   if (perfN >= 90) {
-    const avg = perfAcc / perfN; perfAcc = 0; perfN = 0;
-    if (avg > 13 && dprLvl < DPR_STEPS.length - 1) { dprLvl++; perfLow = 0; resize(); }
-    else if (avg < 6 && dprLvl > 0 && ++perfLow >= 4) { dprLvl--; perfLow = 0; resize(); }
+    const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
+    let ch = false;
+    if ((avg > 13 || slow > 0.25) && dprLvl < DPR_STEPS.length - 1) { dprLvl++; perfLow = 0; perfDownAt = now; ch = true; }
+    else if (avg < 6 && slow < 0.03 && dprLvl > 0 && now - perfDownAt > 20000 && ++perfLow >= 4) { dprLvl--; perfLow = 0; ch = true; }
+    if (ch) { resize(); draw(); }   // сразу перерисовать: после смены размера холст пустой — без чёрной вспышки
   }
   requestAnimationFrame(frame);
 }
