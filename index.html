@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -596,7 +596,7 @@ const LANG_DATA = {
     zones: 'ЗЕЛЁНЫЙ ЛЕС|ОСЕННИЙ ЛЕС|ДЖУНГЛИ|СНЕЖНЫЕ ГОРЫ|ПУСТЫНЯ|ТРОПИЧЕСКИЙ ПЛЯЖ|ХРУСТАЛЬНАЯ ПЕЩЕРА|ПОДВОДНЫЙ МИР|КОНФЕТНАЯ СТРАНА|ОГНЕННЫЙ ВУЛКАН|ОБЛАЧНОЕ ЦАРСТВО|ЗВЁЗДНАЯ НОЧЬ|ОТКРЫТЫЙ КОСМОС',
     ach: 'ПЕРВОЕ САЛЬТО|ПЕРЕПРЫГУН|100 МЕТРОВ|250 МЕТРОВ|500 МЕТРОВ|1000 МЕТРОВ|КОПИЛКА|АКРОБАТ|КРУТИЛКА|ШУСТРИК|ПОД ЗАЩИТОЙ|ПУТЕШЕСТВЕННИК|ПРЫГ-СКОК|КЛАДОИСКАТЕЛЬ|ЛЕГЕНДА|ТЕЛЕПОРТ',
     tips: 'ДЕРЖИ — ПРЫЖОК ВЫШЕ|В ВОЗДУХЕ ЖМИ — САЛЬТО|ЖЕЛЕ ОТТАЛКИВАЕТ|СЛЕДИ ЗА ТАЙМЕРОМ|МЁД НЕ ДАЁТ СЪЕЗЖАТЬ|В СУНДУКЕ ЕСТЬ ЛЕГЕНДЫ|ЛИФТ ВЕЗЁТ НАВЕРХ|БЕРЕГИСЬ ТОКА!',
-    skins: 'ХОМЯК|ШОКО|СНЕЖОК|РОЗОВЫЙ|МЯТНЫЙ|НОЧНОЙ|ЛИМОН|ЯГОДКА|ПАНДА|ЛИС|ЛЯГУШ|КОТИК|ПИНГВИН|ЕНОТ|ЗАЙКА|МИШКА|МАРТЫШКА|КОАЛА|СОВА|ПЧЁЛКА|ТИГР|ЕДИНОРОГ|РОБОТ|ДРАКОША|ПРИЗРАК|ВАМПИР|ЗОМБИ|НИНДЗЯ|КИБОРГ|КРАБ|ПИРАТ|КОСМОНАВТ|КОРОЛЬ|ОГОНЁК|РАДУГА|ЛЕДЫШ|ПОВАР|КОВБОЙ|ПОЖАРНЫЙ|ПОЛИЦЕЙСКИЙ|ДОКТОР|ШАХТЁР|ХРЮША|ОТЛИЧНИК|ВЕРТОЛЁТИК|ИМЕНИННИК|БАРАШЕК|БУРЁНКА|ЦЫПЛЁНОК|МЫШОНОК|ЁЖИК|ЖУЧОК|ВОЛШЕБНИК|ВЕДЬМОЧКА|РЫЦАРЬ|ВИКИНГ|САМУРАЙ|ФАРАОН|МУМИЯ|СКЕЛЕТ|ТЫКВА|СНЕГОВИК|САНТА|КЛОУН|ШУТ|СУПЕРГЕРОЙ|ПРИШЕЛЕЦ|АКУЛЁНОК|ОСЬМИНОЖКА|БАБОЧКА|ЧЕРЕПАШКА|ДИНОЗАВРИК|АНГЕЛ|ДЕМОН|ФЕЯ|ФЕНИКС|ДРАКОН-ЦАРЬ|ОБОРОТЕНЬ|ЙЕТИ|КРАКЕН|МЕХ-ПИЛОТ|НЛО|ДУХ САМУРАЯ|СНЕГУРОЧКА|ЛАВОГОЛЕМ|КОСМОКОТ|ПАЛАДИН|НЕОН-ГОНЩИК|ТЕНЬ-НИНДЗЯ|САМОЦВЕТ|ГРОМОВЕРЖЕЦ|ПЕГАС|РУСАЛОЧКА|ЖНЕЦ|ВОДОЛАЗ|ЗАВОДНОЙ|ОБЛАЧКО|МАРМЕЛАДКА|ГЛИТЧ|ЗВЕЗДОЧЁТ|ДЖЕНТЛЬМЕН|ОГНЕННЫЙ ГОНЩИК|ДЖЕЙСОН|ЛЕВ|РОБОПАНДА|ЧЁРНАЯ ДЫРА|ДИДЖЕЙ|КОРОЛЕВА ПЧЁЛ|ЧЕШИРСКИЙ КОТ|АНУБИС|ЛЕСНОЙ ДУХ|ДЖИНН|ГОРГОНА|ХУДОЖНИК|РЫБАК|САДОВНИК|МОРЯЧОК|ФУТБОЛИСТ|РОКЕР|ДЕТЕКТИВ|ЭЛЬФ-ЛУЧНИК|ГЛАДИАТОР|БАЛЕРИНА|АЛХИМИК|КАПИТАН|КИБЕР-САМУРАЙ|ВАЛЬКИРИЯ|НЕКРОМАНТ|ХРАНИТЕЛЬ ВРЕМЕНИ|КИЦУНЭ|МИНОТАВР|ГРИБНОЙ КОРОЛЬ|ПОСЕЙДОН|ПОЧТАЛЬОН|ПЛОВЕЦ|ТЕННИСИСТ|СТРОИТЕЛЬ|ЛЁТЧИК|ФОКУСНИК|КОРОЛЕВСКИЙ СТРАЖ|МАСТЕР КУНГ-ФУ|ЛЕДЯНОЙ ДРАКОН|ПРИЗРАК-ПИРАТ|ЗВЁЗДНЫЙ ВОЛК|БОГ СОЛНЦА|ТУРИСТ|БАРАБАНЩИК|ПАСЕЧНИК|СКЕЙТЕР|МУШКЕТЁР|ЛЕПРЕКОН|ЭСКИМОС|БОКСЁР|КОРОЛЬ ОБЕЗЬЯН|ТЁМНЫЙ РЫЦАРЬ|ЛУННАЯ ВЕДЬМА|РОБО-ДРАКОН|КАПКЕЙК|ПОНЧИК|ЗЕФИРКА|ВАФЕЛЬКА|ПРЯНИК|МОРОЖЕНКА|ЛЕДЕНЕЦ|МАРМЕЛАДНЫЙ МИШКА|КОНФЕТНЫЙ КОРОЛЬ|САХАРНАЯ ФЕЯ|БАНАН|СОНЯ|ФЕРМЕР|ЛЫЖНИК|ГЕЙМЕР|СУШИ-ПОВАР|ЖВАЧКА|СПАСАТЕЛЬ|ДИНО-КОСТЮМ|СИЛАЧ|ШЕРИФ|СНЕЖНЫЙ БАРС|ВОРИШКА|ПОП-ЗВЕЗДА|РОБОКОТ|ГРИФОН|КОСМО-ИМПЕРАТОР|АЛИКОРН|ЛАВОВЫЙ ДРАКОН|ЗОЛОТОЙ НИНДЗЯ|ПИЦЦАЙОЛО|СКРИПАЧ|ФОТОГРАФ|ЮНГА|СЁРФЕР|ЗОНТИК|ПРИНЦ-ЛЯГУШКА|МАГ ВОДЫ|МЕХАНИК|МАГ ОГНЯ|ПАНДА-САМУРАЙ|ЗВЁЗДНЫЙ РЫЦАРЬ|ДРЕВНИЙ ЭНТ|КОРОЛЕВА ТЬМЫ|ПЛАЗМОИД|МЕДСЕСТРА|УЧЁНЫЙ|ПОХОДНИК|РЕСТЛЕР|ЧИРЛИДЕР|ГОЛЬФИСТ|БЕЙСБОЛИСТ|БАСКЕТБОЛИСТ|БИБЛИОТЕКАРЬ|ЛЕСОРУБ|СКАУТ|САНТЕХНИК|БОТАНИК|ХИППИ|МИМ|АЦТЕК|СТИМПАНК|ОХОТНИК ЗА СОКРОВИЩАМИ|БАРД|МОНАХ|ДРУИД|ВЕДУЩИЙ ЦИРКА|ПУГАЛО|ГНОМ|КОСМОКУРСАНТ|МЕДВЕДЬ-ВИКИНГ|СУЛТАН|КРОЛИК-РЫЦАРЬ|СОВА-МАГ|ЛЯГУШКА-НИНДЗЯ|АРХАНГЕЛ|ПОВЕЛИТЕЛЬ ДЕМОНОВ|ГРОЗОВОЙ ДРАКОН|ВЛАДЫКА КОСМОСА|СЁГУН|ДЕМОН ОНИ|ЛЕДЯНОЙ ВЕЛИКАН|ПРИЗРАЧНЫЙ РЫЦАРЬ|ГРОМОВАЯ ПТИЦА|КИБЕР-НИНДЗЯ|ЛЕВИАФАН|КОРОЛЬ ЕДИНОРОГОВ|МЕХ-ТИТАН|ГРАФ ВАМПИРОВ|ТЫКВЕННЫЙ КОРОЛЬ|РАДУЖНЫЙ ДРАКОН|КОСМИЧЕСКИЙ ПИРАТ|ВЕРХОВНЫЙ МАГ|ЗОЛОТОЙ ДРАКОН|ГОЛОГРАММА|ТЁМНЫЙ ЛОРД|РЫЦАРЬ СВЕТА|ВОИН-СПАРТАНЕЦ|ПАУЧИЙ ГЕРОЙ|ЖЕЛЕЗНЫЙ ГЕРОЙ|ЗЕЛЁНЫЙ ГРОМИЛА|ЮНЫЙ ВОЛШЕБНИК|ЛЕДЯНОЙ ГОНЩИК|ГОНЩИК БОЛИДА|ОХОТНИК НА ПРИВИДЕНИЙ|КАПИТАН ЩИТ|НОЧНОЙ СТРАЖ|НИНДЗЯ-РОБОТ|ГАВАЙСКИЙ СЁРФЕР|МУРАВЬИНЫЙ ГЕРОЙ|ТИТАН С ПЕРЧАТКОЙ|ЮНЫЙ СУПЕРГЕРОЙ|УСАТЫЙ ТИТАН|ВЕРХОВНЫЙ ЧАРОДЕЙ|ЖЁЛТЫЙ НИНДЗЯ|ЛЕДЯНОЙ НИНДЗЯ|ДЕСАНТНИК АДА|ЛЫСЫЙ ГЕРОЙ|ТИТАН-БОЕЦ|СУПЕРВОИН|ЛИСИЙ НИНДЗЯ|РЕЗИНОВЫЙ ПИРАТ|КИБОРГ-ОХОТНИК|КЛОУН ИЗ ЛЮКА|НАЁМНИК В КОСТЮМЕ|НАЁМНИК В КРАСНОМ|КИБЕР-ХОМЯК|ГРОМОВОЙ ХОМЯК|ЗВЁЗДНЫЙ ЛИС|ЧЕРЕПАХА С КАТАНАМИ|ЧЕРЕПАХА С САЯМИ|ЧЕРЕПАХА С НУНЧАКАМИ|ЧЕРЕПАХА С ШЕСТОМ|ЖЁЛТЫЙ ПОМОЩНИК|КОСМОДЕСАНТНИК|ПРИЗРАЧНАЯ МАСКА|ЗЛОЙ ГЕНИЙ|ЭЛЕКТРОМЫШЬ|БЕЛОЧКА|БОБР|КАПИБАРА|АКСОЛОТЛЬ|КРАСНАЯ ПАНДА|ЛЕНИВЕЦ|УДИЛЬЩИК|ПАВЛИН|УЛИТКА|СВЕТЛЯЧОК|ЛУННЫЙ ЗАЯЦ|СЕВЕРНЫЙ ЛИС|МЕДУЗА|ТАНУКИ|АССАСИН|НИНДЗЯ ОГНЯ|НИНДЗЯ МОЛНИИ|НИНДЗЯ ЗЕМЛИ|НИНДЗЯ ЛЬДА|ЗЕЛЁНЫЙ НИНДЗЯ|ЗВЕЗДА 7|ПЕРСИК|КАРАМЕЛЬ|НЕБЕСНЫЙ|СИРЕНЬ|ВЫДРА|БЕГЕМОТИК|ОЛЕНЁНОК|ФЛАМИНГО|ПОПУГАЙ|КОЗЛИК|ТЮЛЕНЬ|ЛЕМУР|БЕЛЫЙ МИШКА|СУШИ|КАКТУС|АВИАТОР|ЖУК-НОСОРОГ|ПОПКОРН|САМУРАЙ-ХОМЯК|ТУМАННОСТЬ|ЛАВОВЫЙ РЫЦАРЬ|СОННАЯ ОВЕЧКА',
+    skins: 'ХОМЯК|ШОКО|СНЕЖОК|РОЗОВЫЙ|МЯТНЫЙ|НОЧНОЙ|ЛИМОН|ЯГОДКА|ПАНДА|ЛИС|ЛЯГУШ|КОТИК|ПИНГВИН|ЕНОТ|ЗАЙКА|МИШКА|МАРТЫШКА|КОАЛА|СОВА|ПЧЁЛКА|ТИГР|ЕДИНОРОГ|РОБОТ|ДРАКОША|ПРИЗРАК|ВАМПИР|ЗОМБИ|НИНДЗЯ|КИБОРГ|КРАБ|ПИРАТ|КОСМОНАВТ|КОРОЛЬ|ОГОНЁК|РАДУГА|ЛЕДЫШ|ПОВАР|КОВБОЙ|ПОЖАРНЫЙ|ПОЛИЦЕЙСКИЙ|ДОКТОР|ШАХТЁР|ХРЮША|ОТЛИЧНИК|ВЕРТОЛЁТИК|ИМЕНИННИК|БАРАШЕК|БУРЁНКА|ЦЫПЛЁНОК|МЫШОНОК|ЁЖИК|БОЖЬЯ КОРОВКА|ВОЛШЕБНИК|ВЕДЬМОЧКА|РЫЦАРЬ|ВИКИНГ|САМУРАЙ|ФАРАОН|МУМИЯ|СКЕЛЕТ|ТЫКВА|СНЕГОВИК|САНТА|КЛОУН|ШУТ|СУПЕРГЕРОЙ|ПРИШЕЛЕЦ|АКУЛЁНОК|ОСЬМИНОЖКА|БАБОЧКА|ЧЕРЕПАШКА|ДИНОЗАВРИК|АНГЕЛ|ДЕМОН|ФЕЯ|ФЕНИКС|ДРАКОН-ЦАРЬ|ОБОРОТЕНЬ|ЙЕТИ|КРАКЕН|МЕХ-ПИЛОТ|НЛО|ДУХ САМУРАЯ|СНЕГУРОЧКА|ЛАВОГОЛЕМ|КОСМОКОТ|ПАЛАДИН|НЕОН-ГОНЩИК|ТЕНЬ-НИНДЗЯ|САМОЦВЕТ|ГРОМОВЕРЖЕЦ|ПЕГАС|РУСАЛОЧКА|ЖНЕЦ|ВОДОЛАЗ|ЗАВОДНОЙ|ОБЛАЧКО|МАРМЕЛАДКА|ГЛИТЧ|ЗВЕЗДОЧЁТ|ДЖЕНТЛЬМЕН|ОГНЕННЫЙ ГОНЩИК|ДЖЕЙСОН|ЛЕВ|РОБОПАНДА|ЧЁРНАЯ ДЫРА|ДИДЖЕЙ|КОРОЛЕВА ПЧЁЛ|ЧЕШИРСКИЙ КОТ|АНУБИС|ЛЕСНОЙ ДУХ|ДЖИНН|ГОРГОНА|ХУДОЖНИК|РЫБАК|САДОВНИК|МОРЯЧОК|ФУТБОЛИСТ|РОКЕР|ДЕТЕКТИВ|ЭЛЬФ-ЛУЧНИК|ГЛАДИАТОР|БАЛЕРИНА|АЛХИМИК|КАПИТАН|КИБЕР-САМУРАЙ|ВАЛЬКИРИЯ|НЕКРОМАНТ|ХРАНИТЕЛЬ ВРЕМЕНИ|КИЦУНЭ|МИНОТАВР|ГРИБНОЙ КОРОЛЬ|ПОСЕЙДОН|ПОЧТАЛЬОН|ПЛОВЕЦ|ТЕННИСИСТ|СТРОИТЕЛЬ|ЛЁТЧИК|ФОКУСНИК|КОРОЛЕВСКИЙ СТРАЖ|МАСТЕР КУНГ-ФУ|ЛЕДЯНОЙ ДРАКОН|ПРИЗРАК-ПИРАТ|ЗВЁЗДНЫЙ ВОЛК|БОГ СОЛНЦА|ТУРИСТ|БАРАБАНЩИК|ПАСЕЧНИК|СКЕЙТЕР|МУШКЕТЁР|ЛЕПРЕКОН|ЭСКИМОС|БОКСЁР|КОРОЛЬ ОБЕЗЬЯН|ТЁМНЫЙ РЫЦАРЬ|ЛУННАЯ ВЕДЬМА|РОБО-ДРАКОН|КАПКЕЙК|ПОНЧИК|ЗЕФИРКА|ВАФЕЛЬКА|ПРЯНИК|МОРОЖЕНКА|ЛЕДЕНЕЦ|МАРМЕЛАДНЫЙ МИШКА|КОНФЕТНЫЙ КОРОЛЬ|САХАРНАЯ ФЕЯ|БАНАН|СОНЯ|ФЕРМЕР|ЛЫЖНИК|ГЕЙМЕР|СУШИ-ПОВАР|ЖВАЧКА|СПАСАТЕЛЬ|ДИНО-КОСТЮМ|СИЛАЧ|ШЕРИФ|СНЕЖНЫЙ БАРС|ВОРИШКА|ПОП-ЗВЕЗДА|РОБОКОТ|ГРИФОН|КОСМО-ИМПЕРАТОР|АЛИКОРН|ЛАВОВЫЙ ДРАКОН|ЗОЛОТОЙ НИНДЗЯ|ПИЦЦАЙОЛО|СКРИПАЧ|ФОТОГРАФ|ЮНГА|СЁРФЕР|ЗОНТИК|ПРИНЦ-ЛЯГУШКА|МАГ ВОДЫ|МЕХАНИК|МАГ ОГНЯ|ПАНДА-САМУРАЙ|ЗВЁЗДНЫЙ РЫЦАРЬ|ДРЕВНИЙ ЭНТ|КОРОЛЕВА ТЬМЫ|ПЛАЗМОИД|МЕДСЕСТРА|УЧЁНЫЙ|ПОХОДНИК|РЕСТЛЕР|ЧИРЛИДЕР|ГОЛЬФИСТ|БЕЙСБОЛИСТ|БАСКЕТБОЛИСТ|БИБЛИОТЕКАРЬ|ЛЕСОРУБ|СКАУТ|САНТЕХНИК|БОТАНИК|ХИППИ|МИМ|АЦТЕК|СТИМПАНК|ОХОТНИК ЗА СОКРОВИЩАМИ|БАРД|МОНАХ|ДРУИД|ВЕДУЩИЙ ЦИРКА|ПУГАЛО|ГНОМ|КОСМОКУРСАНТ|МЕДВЕДЬ-ВИКИНГ|СУЛТАН|КРОЛИК-РЫЦАРЬ|СОВА-МАГ|ЛЯГУШКА-НИНДЗЯ|АРХАНГЕЛ|ПОВЕЛИТЕЛЬ ДЕМОНОВ|ГРОЗОВОЙ ДРАКОН|ВЛАДЫКА КОСМОСА|СЁГУН|ДЕМОН ОНИ|ЛЕДЯНОЙ ВЕЛИКАН|ПРИЗРАЧНЫЙ РЫЦАРЬ|ГРОМОВАЯ ПТИЦА|КИБЕР-НИНДЗЯ|ЛЕВИАФАН|КОРОЛЬ ЕДИНОРОГОВ|МЕХ-ТИТАН|ГРАФ ВАМПИРОВ|ТЫКВЕННЫЙ КОРОЛЬ|РАДУЖНЫЙ ДРАКОН|КОСМИЧЕСКИЙ ПИРАТ|ВЕРХОВНЫЙ МАГ|ЗОЛОТОЙ ДРАКОН|ГОЛОГРАММА|ТЁМНЫЙ ЛОРД|РЫЦАРЬ СВЕТА|ВОИН-СПАРТАНЕЦ|ПАУЧИЙ ГЕРОЙ|ЖЕЛЕЗНЫЙ ГЕРОЙ|ЗЕЛЁНЫЙ ГРОМИЛА|ЮНЫЙ ВОЛШЕБНИК|ЛЕДЯНОЙ ГОНЩИК|ГОНЩИК БОЛИДА|ОХОТНИК НА ПРИВИДЕНИЙ|КАПИТАН ЩИТ|НОЧНОЙ СТРАЖ|НИНДЗЯ-РОБОТ|ГАВАЙСКИЙ СЁРФЕР|МУРАВЬИНЫЙ ГЕРОЙ|ТИТАН С ПЕРЧАТКОЙ|ЮНЫЙ СУПЕРГЕРОЙ|УСАТЫЙ ТИТАН|ВЕРХОВНЫЙ ЧАРОДЕЙ|ЖЁЛТЫЙ НИНДЗЯ|ЛЕДЯНОЙ НИНДЗЯ|ДЕСАНТНИК АДА|ЛЫСЫЙ ГЕРОЙ|ТИТАН-БОЕЦ|СУПЕРВОИН|ЛИСИЙ НИНДЗЯ|РЕЗИНОВЫЙ ПИРАТ|КИБОРГ-ОХОТНИК|КЛОУН ИЗ ЛЮКА|НАЁМНИК В КОСТЮМЕ|НАЁМНИК В КРАСНОМ|КИБЕР-ХОМЯК|ГРОМОВОЙ ХОМЯК|ЗВЁЗДНЫЙ ЛИС|ЧЕРЕПАХА С КАТАНАМИ|ЧЕРЕПАХА С САЯМИ|ЧЕРЕПАХА С НУНЧАКАМИ|ЧЕРЕПАХА С ШЕСТОМ|ЖЁЛТЫЙ ПОМОЩНИК|КОСМОДЕСАНТНИК|ПРИЗРАЧНАЯ МАСКА|ЗЛОЙ ГЕНИЙ|ЭЛЕКТРОМЫШЬ|БЕЛОЧКА|БОБР|КАПИБАРА|АКСОЛОТЛЬ|КРАСНАЯ ПАНДА|ЛЕНИВЕЦ|УДИЛЬЩИК|ПАВЛИН|УЛИТКА|СВЕТЛЯЧОК|ЛУННЫЙ ЗАЯЦ|СЕВЕРНЫЙ ЛИС|МЕДУЗА|ТАНУКИ|АССАСИН|НИНДЗЯ ОГНЯ|НИНДЗЯ МОЛНИИ|НИНДЗЯ ЗЕМЛИ|НИНДЗЯ ЛЬДА|ЗЕЛЁНЫЙ НИНДЗЯ|ЗВЕЗДА 7|ПЕРСИК|КАРАМЕЛЬ|НЕБЕСНЫЙ|СИРЕНЬ|ВЫДРА|БЕГЕМОТИК|ОЛЕНЁНОК|ФЛАМИНГО|ПОПУГАЙ|КОЗЛИК|ТЮЛЕНЬ|ЛЕМУР|БЕЛЫЙ МИШКА|СУШИ|КАКТУС|АВИАТОР|ЖУК-НОСОРОГ|ПОПКОРН|САМУРАЙ-ХОМЯК|ТУМАННОСТЬ|ЛАВОВЫЙ РЫЦАРЬ|СОННАЯ ОВЕЧКА',
     ui2: 'МАГАЗИН|КОЛЕСО|СКИНЫ ДНЯ|НАГРАДА ЗА ВХОД|ЗАБРАТЬ|ПРИХОДИ ЗАВТРА|СКИНЫ ДНЯ|СКИДКА|МЕГА-СКИДКА!|НОВЫЕ ЧЕРЕЗ|КРУТИТЬ|БЕСПЛАТНО|ПРЕМИУМ|ПОКУПКИ ЗА ДЕНЬГИ ЗАРАБОТАЮТ|В ВЕРСИИ ДЛЯ МАГАЗИНА ПРИЛОЖЕНИЙ|ТВОЙ ПРИЗ!|НАБОР НОВИЧКА|ЛЕГЕНД. СУНДУК|СОБРАНО|ОК',
     packs: 'ГОРСТЬ|МЕШОК|СУНДУК|ГОРА',
     zones2: 'САКУРОВЫЙ САД|ГРИБНАЯ ПОЛЯНА|ТУМАННОЕ БОЛОТО|СТАРЫЙ ЗАМОК|ПРИЗРАЧНЫЙ ЛЕС|НЕОНОВЫЙ ГОРОД|РАДУЖНОЕ НЕБО|ЗАКАТНАЯ ДОЛИНА|ГРОЗОВЫЕ ТУЧИ|ЛЕТАЮЩИЕ ОСТРОВА|ПРАЗДНИК ФОНАРИКОВ|МОРСКАЯ БЕЗДНА|ДИСКО-ГОРОД|ЦИФРОВОЙ МИР|СЕВЕРНОЕ СИЯНИЕ|МЕТЕОРИТНЫЙ ДОЖДЬ|ЧЁРНАЯ ДЫРА|ПИРАТСКАЯ БУХТА|ЕГИПЕТСКИЕ ПИРАМИДЫ|ГОРОД БУДУЩЕГО|МЕХАНИЧЕСКИЙ ЗАВОД|СТАРОЕ КЛАДБИЩЕ|ВОЛШЕБНЫЙ ЛЕС|ШОКОЛАДНАЯ ФАБРИКА|РАДУЖНЫЙ ВОДОПАД|ЛУННАЯ БАЗА|ХРАМ В ДЖУНГЛЯХ|ВОЗДУШНЫЕ ШАРЫ|ОГНЕННЫЕ ГОРЫ|НЕБЕСНЫЕ КИТЫ|ЛЕДЯНОЙ ЗАМОК|ВЕСЁЛАЯ ЯРМАРКА|КОРАЛЛОВЫЙ РИФ|САКУРОВАЯ БУРЯ|ЗАБРОШЕННАЯ ШАХТА|ЗАМОК ВАМПИРА|КОСМИЧЕСКАЯ СТАНЦИЯ|ТЫКВЕННАЯ НОЧЬ|ЗИМНЯЯ ДЕРЕВНЯ|АТЛАНТИДА|ПУСТЫННЫЙ ОАЗИС|НЕБЕСНЫЕ ВРАТА|ДОЛИНА ДИНОЗАВРОВ|ГОРОД-СТИМПАНК|СЕВЕРНЫЙ ПОЛЮС|ПОЛЕ ПОДСОЛНУХОВ|СТАРОЕ КИНО|СЛАДКОЕ КОРОЛЕВСТВО|БАМБУКОВАЯ РОЩА|ХРУСТАЛЬНАЯ ПЕЩЕРА|СТРАНА ИГРУШЕК|САВАННА НА ЗАКАТЕ|НОЧЬ СВЕТЛЯЧКОВ|ВОЛШЕБНАЯ БИБЛИОТЕКА',
@@ -1679,6 +1679,104 @@ const CARD_FX = {
   ngkai: ['flames', '#ff5a1a', '#ffd23a'], ngjay: ['lightning', '#7ad8ff'], ngcole: ['sand', '#8a6a4a'], ngzane: ['snow', '#ffffff'], nglloyd: ['holy', '#9aff6a'], star7: ['stars', '#ffffff'], 
 };
 for (const k of SKINS) if (CARD_FX[k.id]) k.cfx = CARD_FX[k.id];
+// обычные и редкие герои в новом виде: свои детали (rp) вместо старых
+const RARE_LOOK = {
+  sky: { acc: null, rp: ['skyCloud', 'cloudHat'], scarf: '#ffffff', scarfD: '#bfe0ff' },
+  lilac: { acc: null, rp: ['lilacCrown', 'lilacSprig'], scarf: '#7ad07a', scarfD: '#3a9a4a' },
+  pinky: { acc: null, rp: ['bigBow', 'berryScarf'], scarf: '#e8264a', scarfD: '#9a0a2a' },
+  night: { acc: null, rp: ['moonClip', 'nightStars'], scarf: '#22225a', scarfD: '#0e0e30' },
+  panda: { patch: null, rp: ['pandaBamboo', 'pandaEyes'], scarf: '#5ac03a', scarfD: '#3a8a2a' },
+  fox: { tailTip: '#ffffff', rp: ['foxTips'] },
+  frog: { ears: 'none', noMuzzle: true, noEyes: true, rp: ['frogFace'] },
+  cat: { rp: ['bell'] },
+  raccoon: { mask: null, tail: null, ringA: '#9a9aa8', ringB: '#2a2a34', rp: ['ringTail', 'racMask'] },
+  penguin: { rp: ['flipperWave'] },
+  bunny: { rp: ['carrot'] },
+  bear: { rp: ['honeyPot'] },
+  monkey: { rp: ['bananaHand'] },
+  koala: { rp: ['eucalyptus'] },
+  owl: { rp: ['owlFace'] },
+  chef: { rp: ['fryPan'] },
+  cowboy: { ears: 'none', parts: null, dark: '#5a3018', rp: ['cowVest', 'cowHat', 'lasso'] },
+  firefighter: { ears: 'none', parts: null, noScarf: true, dark: '#2a2a34', rp: ['fireCoat', 'fireHelm', 'hose'] },
+  police: { rp: ['badge'] },
+  doctor: { rp: ['stetho2'] },
+  miner: { ...HAM, ears: 'none', parts: null, scarf: '#ff8a1e', scarfD: '#c05a10', rp: ['mineHelm', 'pickaxe'] },
+  pig: { ears: 'none', parts: null, noMuzzle: true, tail: 'curl', rp: ['pigEars', 'pigSnout2', 'mud'] },
+  graduate: { rp: ['diploma'] },
+  propeller: { parts: null, ears: 'none', rp: ['propCap', 'lollipop'], ord: 14 },
+  party: { rp: ['partyHorn'] },
+  sheep: { scarf: '#ffffff', scarfD: '#d0d0dc', rp: ['bell'] },
+  cow: { rp: ['cowBell'] },
+  chick: { rp: ['chickWings'] },
+  mouse: { rp: ['cheese'] },
+  hedgehog: { parts: null, rp: ['hogSpikes', 'hogNose'] },
+  ladybug: { parts: ['antennae'], light: '#ff6a5a', scarf: '#1a1a24', scarfD: '#000000', dotC: '#e8261a', rp: ['ladyWings', 'ladyShell', 'dotScarf'] },
+  artist: { ears: 'round', parts: null, scarf: '#e8261a', scarfD: '#a01008', rp: ['smock', 'beret2', 'brushEar', 'palette'] },
+  fisher: { ears: 'none', parts: null, scarf: '#5a8a3a', scarfD: '#3a6a2a', rp: ['fishHat', 'fishRod'] },
+  gardener: { parts: null, rp: ['apron', 'gardHat', 'canWater'] },
+  sailor: { rp: ['anchor'] },
+  footballer: { parts: null, dark: '#1a1a24', scarf: '#ffffff', scarfD: '#2a6aff', rp: ['soccerKit', 'soccerBall'] },
+  rocker: { parts: null, scarf: '#24242c', scarfD: '#000000', rp: ['leather', 'mohawk2', 'vGuitar'] },
+  postman: { rp: ['letter'] },
+  swimmer: { parts: null, dark: '#3ab0ff', rp: ['swimCap2', 'swimRing2'] },
+  tennis: { parts: null, scarf: '#ffffff', scarfD: '#e8261a', rp: ['tennisBand', 'racket2'] },
+  builder: { ears: 'none', parts: null, noScarf: true, rp: ['hiVis', 'hardHat2', 'hammer2'] },
+  tourist: { ears: 'none', parts: null, rp: ['backPack2', 'safariHat', 'camNeck', 'mapHand'], pack: '#3a8a4a' },
+  drummer: { parts: null, rp: ['drum2', 'sticks2'] },
+  beekeeper: { ears: 'none', parts: null, noScarf: true, rp: ['beeSuit2', 'beeVeil', 'smoker', 'bees2'] },
+  skater: { ...HAM, ears: 'none', parts: null, noScarf: true, cap: '#e8261a', capD: '#a01008', hood: '#3a7aff', hoodD: '#2a5ac0', rp: ['hoodie', 'capBack', 'kneePads', 'board2'] },
+  cupcake: { ...HAM, ears: 'none', parts: null, scarf: '#ff8ac8', scarfD: '#d05a98', rp: ['cupWrap', 'frostSwirl'] },
+  donut: { parts: null, rp: ['donutHat2', 'donutFloat'] },
+  marshmallow: { parts: null, rp: ['toasty', 'smoreStick'] },
+  waffle: { ...HAM, body: '#f0b860', dark: '#c0803a', light: '#ffe0a8', ears: 'none', parts: null, scarf: '#a0501a', scarfD: '#6a3010', rp: ['waffleGrid2', 'butter'] },
+  banana: { ears: 'none', parts: null, body: '#fff2b8', light: '#fffbe0', dark: '#e0c060', noScarf: true, rp: ['peel2'] },
+  sleepy: { ears: 'none', parts: ['sleepEyes', 'zzz'], noScarf: true, rp: ['nightCapTail', 'pajama', 'nightCap2', 'pillow2', 'slippers'] },
+  farmer: { ears: 'none', parts: ['wheatStraw'], rp: ['overalls2', 'strawHat3', 'pitchfork'] },
+  skier: { parts: null, noScarf: true, rp: ['skiJacket', 'skiGog2', 'skis2'] },
+  gamer: { parts: null, noScarf: true, rp: ['gamerHood', 'gamerSet', 'pad2'] },
+  sushichef: { parts: ['hachimaki'], noScarf: true, rp: ['chefJacket', 'sushiPlate2'] },
+  bubblegum: { parts: null, rp: ['gumBubble2'] },
+  lifeguard: { acc: null, parts: ['redShorts'], scarf: '#e8261a', scarfD: '#a01008', rp: ['lgVisor', 'whistle2', 'rescueTube'] },
+  pizzaiolo: { ...HAM, ears: 'none', parts: null, scarf: '#e8261a', scarfD: '#a01008', rp: ['chefJacket', 'chefHat2', 'pizzaPeel2'] },
+  violinist: { parts: null, noScarf: true, rp: ['tux', 'violin2'] },
+  photographer: { parts: null, rp: ['photoVest', 'camera2'] },
+  cabinboy: { ears: 'none', parts: null, noScarf: true, rp: ['sailorTop', 'gobHat', 'spyglass'] },
+  surfer: { parts: ['redShorts'], scarf: '#ff5a8a', scarfD: '#c0306a', rp: ['surfBoard2', 'lei'] },
+  umbrella: { ears: 'none', parts: null, noScarf: true, bootC: '#e8261a', rp: ['raincoat2', 'boots', 'rainHood', 'umbrella2'] },
+  nurse: { parts: null, noScarf: true, rp: ['scrubs', 'stetho2', 'nurseCap2', 'clipboard'] },
+  scientist: { parts: null, noScarf: true, rp: ['labCoat2', 'wildHair', 'flask2'] },
+  camper: { ears: 'none', parts: null, scarf: '#e8261a', scarfD: '#a01008', rp: ['bigPack', 'campHat', 'hikeStick'] },
+  wrestler: { parts: null, noScarf: true, rp: ['luchaMask', 'champBelt2'] },
+  cheerleader: { parts: null, noScarf: true, hair: '#7a4a2a', rp: ['pomBack', 'cheerTop', 'ponytail', 'pomFront'] },
+  golfer: { acc: null, parts: null, noScarf: true, rp: ['argyle', 'visor2', 'golfClub2'] },
+  baseball: { acc: null, parts: null, noScarf: true, rp: ['pinstripe', 'bbGlove', 'bbCap', 'bat2'] },
+  basketball: { parts: null, noScarf: true, rp: ['hoopKit', 'tennisBand', 'basketball'] },
+  librarian: { ears: 'round', parts: null, noScarf: true, rp: ['cardigan', 'glassChain', 'bookStack'] },
+  lumberjack: { parts: null, noScarf: true, rp: ['plaid2', 'beard2', 'axe2'] },
+  scout: { ears: 'none', parts: null, noScarf: true, pack: '#6a7a3a', rp: ['backPack2', 'sash', 'neckerchief', 'scoutHat2', 'compass'] },
+  plumber: { ...HAM, ears: 'round', parts: null, noScarf: true, rp: ['coverall', 'plumbCap', 'plunger'] },
+  nerd: { acc: null, parts: ['bowtie'], rp: ['pocketPens', 'nerdGlasses', 'bigBook'] },
+  hippie: { rp: ['tieDye'] },
+  mime: { rp: ['mimeWall'] },
+  squirrel: { rp: ['acornHat'] },
+  capybara: { rp: ['capyBird'] },
+  sloth: { rp: ['leafHand'] },
+  jellyfish: { rp: ['jellyGlow'] },
+  tanuki: { tail: 'ring', parts: ['leafHead', 'bellyDrum'] },
+  otter: { rp: ['otterShell2'] },
+  hippo: { rp: ['hippoEars'] },
+  fawn: { acc: null },
+  goat: { rp: ['goatBell'] },
+  seal: { parts: null, rp: ['sealBall'] },
+  lemur: { tail: null, ringA: '#ffffff', ringB: '#2a2a34', rp: ['ringTail', 'bananaHand'] },
+  axolotl: { rp: ['glowSpots'] },
+};
+for (const [id, v] of Object.entries(RARE_LOOK)) {
+  const k = SKINS.find(s => s.id === id); if (!k) continue;
+  for (const [key, val] of Object.entries(v)) { if (val === null) delete k[key]; else k[key] = val; }
+  if (v.rp && k.rp !== v.rp) k.rp = v.rp;
+}
 // герои по мотивам фильмов и игр — свои цвета, чтобы не повторять оригиналы один в один
 const OWN_HUE = { darklord: 280, lightknight: 250, wargod: 200, spiderhero: 290, ironhero: 200, greengiant: 70, youngwizard: 130, iceracer: 250, f1racer: 210, shieldcaptain: 60, nightguard: 190, ninjabot: 120, antman: 40, titanglove: 170, youngsuper: 150, mustachetitan: 200, sorcerer: 150, yellowninja: 200, iceninja: 320, hellmarine: 150, baldhero: 170, titanfighter: 60, superwarrior: 200, foxninja: 160, rubberpirate: 120, hunterborg: 150, sewerclown: 120, suithitman: 180, redmerc: 250, turtleblue: 40, turtlered: 40, turtleorange: 40, turtlepurple: 40, yellowhelper: 160, spacemarine: 200, evilgenius: 150, electromouse: 300, assassin: 200, ngkai: 30, ngjay: 40, ngcole: 200, ngzane: 60, nglloyd: 60, star7: 230, jason: 160, ghostrider: 120 };
 for (const [id, h] of Object.entries(OWN_HUE)) { const k = SKINS.find(s => s.id === id); if (k) k.hue = h; }
@@ -2340,6 +2438,20 @@ function sell(c, cx, cy, rx, ry, col) {
     if (x1 > x0) c.fillRect(x0, y, x1 - x0, 1);
   }
 }
+// острое ушко (кот, лис, енот…): внешний край почти прямой, кончик чуть наружу; ol — контур, inner — розовая середина
+const CAT_EAR = [[-1, -1], [-1, 0], [-2, 0], [-2, 1], [-2, 2], [-3, 2], [-3, 3]], CAT_IN = [null, null, [-1, -1], [-1, 0], [-1, 1], [-2, 1], [-2, 2]];
+function catEar(c, Hd, sd, ol, col, inner) {
+  const cx = Math.round(Hd.x + sd * 4.5 - (sd > 0 ? 0.5 : 0)), ty = Math.round(Hd.y - 11.5);
+  const rows = inner ? CAT_IN : CAT_EAR;
+  c.fillStyle = ol || col;
+  if (ol) c.fillRect(cx + (sd < 0 ? -1 : 1), ty - 1, 1, 1);
+  rows.forEach((sp, r) => {
+    if (!sp) return;
+    let a = sp[0], b = sp[1]; if (sd > 0) [a, b] = [-b, -a];
+    if (ol) { a--; b++; }
+    c.fillRect(cx + a, ty + r, b - a + 1, 1);
+  });
+}
 function stri(c, cx, top, h, col, grow = 0) {
   c.fillStyle = col;
   for (let r = -grow; r < h + grow; r++) {
@@ -2506,10 +2618,11 @@ function heroSpriteRaw(sk, pose, t, blink) {
   const E1 = { x: Hd.x - (big ? 6 : side ? 8 : 4.5), y: Hd.y - (long ? 9 : big ? 5.5 : side ? 0 : 6.5), rx: big ? 3.6 : 2.5, ry: long ? 4.5 : big ? 3.4 : 2.5 };
   const E2 = { x: Hd.x + (big ? 5 : side ? 7.5 : 3.5), y: Hd.y - (long ? 9.5 : big ? 6 : side ? 0 : 7), rx: big ? 3.6 : 2.5, ry: long ? 4.5 : big ? 3.4 : 2.5 };
   if (sk.parts) drawParts(c, sk, t, pose, blink, true, Hd, B, A1, 0, 0, 0);
+  if (sk.rp) drawRare(c, sk, t, pose, blink, true, Hd, B, A1, 0, 0, 0, F1, F2);
   if (sk.tail) drawTail(c, sk, t, B);
   // контур
   if (roundish) for (const e of [E1, E2]) sell(c, e.x, e.y, e.rx + 1, e.ry + 1, ol);
-  if (ears === 'cat') { stri(c, Hd.x - 4, Hd.y - 11, 5, ol, 1); stri(c, Hd.x + 4, Hd.y - 11.5, 5, ol, 1); }
+  if (ears === 'cat') { catEar(c, Hd, -1, ol); catEar(c, Hd, 1, ol); }
   sell(c, Hd.x, Hd.y, Hd.rx + 1, Hd.ry + 1, ol);
   sell(c, B.x, B.y, B.rx + 1, B.ry + 1, ol);
   if (!sk.ghost && !sk.noFeet) for (const f of [F1, F2]) sell(c, f.x, f.y, 3.6, 2.6, ol);
@@ -2519,7 +2632,7 @@ function heroSpriteRaw(sk, pose, t, blink) {
   // заливка
   if (A2) sell(c, A2.x, A2.y, 1.8, 2, sk.dark);
   if (roundish) for (const e of [E1, E2]) { sell(c, e.x, e.y, e.rx, e.ry, sk.earC || sk.body); sell(c, e.x, e.y + 0.5, e.rx - 1.3, e.ry - 1.2, sk.ear); }
-  if (ears === 'cat') { stri(c, Hd.x - 4, Hd.y - 11, 5, sk.body); stri(c, Hd.x + 4, Hd.y - 11.5, 5, sk.body); stri(c, Hd.x - 4, Hd.y - 9, 3, sk.ear); stri(c, Hd.x + 4, Hd.y - 9.5, 3, sk.ear); }
+  if (ears === 'cat') for (const sd of [-1, 1]) { catEar(c, Hd, sd, null, sk.earC || sk.body); catEar(c, Hd, sd, null, sk.ear, true); }
   sell(c, B.x, B.y, B.rx, B.ry, sk.body);
   if (sk.ghost) for (let i = -1; i <= 1; i++) sell(c, B.x + i * 4, B.y + B.ry, 1.6, 1.6, sk.body);
   sell(c, B.x + 1, B.y + 1, B.rx - 2, B.ry - 1.5, sk.light);
@@ -2571,6 +2684,706 @@ function heroSpriteRaw(sk, pose, t, blink) {
   if (sk.special) drawSpecial(c, sk, t, pose, blink, Hd, B, A1, E2, ex1, ex2, ey);
   if (sk.look) drawTheme(c, sk, t, Hd, B);
   if (sk.parts) drawParts(c, sk, t, pose, blink, false, Hd, B, A1, ex1, ex2, ey);
+  if (sk.rp) drawRare(c, sk, t, pose, blink, false, Hd, B, A1, ex1, ex2, ey, F1, F2);
+}
+
+// ---------- Перерисованные обычные и редкие герои: свои шляпы, предметы и анимации (sk.rp) ----------
+// пиксельная картинка строками: символ — цвет из палитры, '.' — пусто
+function pxMap(c, rows, x0, y0, pal) {
+  x0 = Math.round(x0); y0 = Math.round(y0);
+  for (let y = 0; y < rows.length; y++) {
+    const s = rows[y];
+    for (let x = 0; x < s.length; x++) { const col = pal[s[x]]; if (col) { c.fillStyle = col; c.fillRect(x0 + x, y0 + y, 1, 1); } }
+  }
+}
+const RARE_BACK = new Set(['ringTail', 'bat2', 'axe2', 'pitchfork', 'pickaxe', 'skyCloud', 'hogSpikes', 'ladyWings', 'bigPack', 'surfBoard2', 'nightCapTail', 'pandaBamboo', 'backPack2', 'pomBack', 'jellyGlow']);
+function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) {
+  const r = Math.round, ol = sk.ol, hx = r(Hd.x), hy = r(Hd.y), bx = r(B.x), by = r(B.y);
+  const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(r(x), r(y), w, h); };
+  const E = (x, y, rx, ry, col) => sell(c, x, y, rx, ry, col);
+  const O = (x, y, rx, ry, col) => { E(x, y, rx + 1, ry + 1, ol); E(x, y, rx, ry, col); };
+  const M = (rows, x, y, pal) => pxMap(c, rows, x, y, { o: ol, ...pal });
+  const line = (x0, y0, x1, y1, col, w = 1) => { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1); for (let i = 0; i <= n; i++) R(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, w, w, col); };
+  const clipTop = (y, fn) => { c.save(); c.beginPath(); c.rect(0, -8, 32, y + 8); c.clip(); fn(); c.restore(); };
+  const clipBelow = (y, fn) => { c.save(); c.beginPath(); c.rect(0, y, 32, 48); c.clip(); fn(); c.restore(); };
+  // костюм: тело ниже строки y своим цветом
+  const suit = (y, col, light) => clipBelow(y, () => { E(B.x, B.y, B.rx, B.ry, col); if (light) E(B.x + 1, B.y + 1, B.rx - 2, B.ry - 1.5, light); });
+  // шапка-купол по форме головы: всё выше строки cut
+  const dome = (cut, col, hl) => { clipTop(cut, () => { E(Hd.x, Hd.y, Hd.rx + 1.5, Hd.ry + 1.5, ol); E(Hd.x, Hd.y, Hd.rx + 0.5, Hd.ry + 0.5, col); if (hl) R(hx - 4, hy - 7, 3, 1, hl); }); };
+  const eyes = (col = '#1a1010', hl = '#ffffff') => { if (blink) { R(ex1, ey + 2, 2, 1, col); R(ex2, ey + 2, 2, 1, col); } else { R(ex1, ey, 2, 3, col); R(ex2, ey, 2, 3, col); R(ex1, ey, 1, 1, hl); R(ex2, ey, 1, 1, hl); } };
+  const flying = pose === 'jump' || pose === 'tuck' || pose === 'fall';
+  const sy = r(B.y - B.ry + 0.5), sx = r(B.x - 5.5);
+  const ax = r(A1.x), ay = r(A1.y);
+  const flower = (x, y, pet, mid = '#ffe27a') => { R(x - 1, y, 3, 1, pet); R(x, y - 1, 1, 3, pet); R(x, y, 1, 1, mid); };
+  for (const part of sk.rp) {
+    if (RARE_BACK.has(part) !== back) continue;
+    switch (part) {
+      // ---- обычные ----
+      case 'skyCloud': {   // облачко-друг летает за спиной и иногда капает
+        const x = bx - 9, y = hy - 13 + Math.sin(t * 2) * 1.5;
+        for (const [dx, dy, rr] of [[-2, 1, 2.2], [1, 0, 2.8], [4, 1, 2]]) E(x + dx, y + dy, rr + 1, rr + 0.6, ol);
+        for (const [dx, dy, rr] of [[-2, 1, 2.2], [1, 0, 2.8], [4, 1, 2]]) E(x + dx, y + dy, rr, rr - 0.4, '#ffffff');
+        R(x - 3, y + 2, 8, 1, '#cfe6ff');
+        const q = (t * 1.5) % 1; if (q < 0.6) R(x + 1, y + 4 + q * 10, 1, 2, '#5ab0ff');
+        break;
+      }
+      case 'cloudHat': {
+        const P = [[-5, -6, 2.6, 2.2], [-1.5, -9, 3.2, 3], [2.5, -8, 3, 2.6], [5.5, -5.5, 2.2, 2]];
+        for (const [dx, dy, rx, ry] of P) E(Hd.x + dx, Hd.y + dy, rx + 1, ry + 1, ol);
+        for (const [dx, dy, rx, ry] of P) E(Hd.x + dx, Hd.y + dy, rx, ry, '#cfe6ff');
+        for (const [dx, dy, rx, ry] of P) E(Hd.x + dx - 0.3, Hd.y + dy - 0.6, rx - 0.5, ry - 0.5, '#ffffff');
+        R(hx - 3, hy - 11, 2, 1, '#ffffff');
+        if (Math.sin(t * 3) > 0.6) { R(hx + 6, hy - 11, 1, 1, '#fff27a'); R(hx + 5, hy - 10, 3, 1, '#fff27a'); R(hx + 6, hy - 9, 1, 1, '#fff27a'); }
+        break;
+      }
+      case 'lilacCrown': {
+        const P = [[-7, -4], [-5, -7], [-2, -9], [1, -9], [4, -8], [7, -6]], col = ['#b07aff', '#e2c4ff', '#8a4ae0', '#f4e8ff', '#c08aff', '#9a5af0'];
+        for (let i = 0; i < P.length - 1; i++) R(hx + P[i][0] + 1, hy + P[i][1] + 1, 2, 1, '#4aa04a');
+        P.forEach(([dx, dy], i) => { const x = hx + dx, y = hy + dy; R(x - 1, y - 1, 3, 3, ol); R(x - 2, y, 5, 1, ol); R(x, y - 2, 1, 5, ol); flower(x, y, col[i], i % 2 ? '#ffe27a' : '#ffffff'); });
+        break;
+      }
+      case 'lilacSprig': {
+        const x = ax + 1, y = ay;
+        R(x, y - 5, 1, 6, '#3a8a3a'); R(x + 1, y - 3, 2, 1, '#5ac05a');
+        M(['.o.', 'oao', 'aba', 'oao', '.a.'], x - 1, y - 10, { a: '#b07aff', b: '#e8d0ff' });
+        break;
+      }
+      case 'bigBow': {
+        const x = hx - 3, y = hy - 9, w = Math.sin(t * 3) > 0.7 ? 1 : 0;
+        M(['oo.....oo', 'obbo.obbo', 'obhbobhbo', 'obbbkbbbo', 'obbo.obbo', 'oo.o.o.oo', '...o.o...'], x - 4, y - 2 - w, { b: '#ff4aa0', h: '#ffc0e0', k: '#c01a6a' });
+        R(x - 1, y + 3 - w, 1, 1, '#ff4aa0'); R(x + 1, y + 3 - w, 1, 1, '#ff4aa0');
+        break;
+      }
+      case 'berryScarf': {
+        for (const [dx, dy] of [[1, 0], [4, 1], [7, 0], [9, 1]]) R(sx + dx, sy + dy, 1, 1, '#ffe27a');
+        M(['.gg.', 'grrg', 'oyro', 'orro', '.oo.'], sx + 8, sy + 2, { g: '#3ac03a', r: '#e8264a', y: '#ffe27a' });
+        break;
+      }
+      case 'moonClip': {
+        M(['..oo.', '.oyyo', 'oyyo.', 'oyo..', 'oyyo.', '.oyyo', '..oo.'], hx - 7, hy - 12, { y: '#ffe27a' });
+        break;
+      }
+      case 'nightStars': {
+        for (const [dx, dy, k] of [[-3, 1, 0], [2, 4, 1], [-1, -2, 2]]) if (Math.sin(t * 3 + k * 2) > -0.3) R(bx + dx, by + dy, 1, 1, '#ffe27a');
+        for (const [x, y, k] of [[hx + 9, hy - 9, 0], [hx - 10, hy - 2, 1]]) { const s = Math.sin(t * 4 + k * 3); if (s > 0) { R(x, y - 1, 1, 3, '#fff6a0'); R(x - 1, y, 3, 1, '#fff6a0'); } else R(x, y, 1, 1, '#a8a8ff'); }
+        for (const dx of [1, 5, 9]) R(sx + dx, sy, 1, 1, '#ffe27a');
+        break;
+      }
+      // ---- редкие ----
+      case 'pandaEyes': {
+        for (const x of [ex1, ex2]) M(['.kkk', 'kkkk', 'kkkk', 'kkk.'], x - 1, ey - 1, { k: '#1a1a24' });
+        for (const x of [ex1, ex2]) if (blink) R(x, ey + 1, 2, 1, '#ffffff'); else { R(x + 1, ey, 1, 2, '#ffffff'); R(x, ey + 1, 1, 1, '#8a8a9a'); }
+        E(A1.x, A1.y, 1.8, 2, '#1a1a24');
+        break;
+      }
+      case 'pandaBamboo': {
+        for (let i = 0; i <= 9; i++) { const x = ax - 1 + i * 0.8, y = ay + 3 - i; R(x - 1, y - 1, 3, 3, ol); }
+        for (let i = 0; i <= 9; i++) { const x = ax - 1 + i * 0.8, y = ay + 3 - i; R(x, y, 1, 1, i % 4 === 2 ? '#3a8a2a' : '#7ad04a'); }
+        M(['..oo', '.ogo', 'ogo.', 'oo..'], ax + 7, ay - 10, { g: '#5ac03a' });
+        E(A1.x, A1.y, 1.8, 2, '#1a1a24');
+        break;
+      }
+      case 'foxTips': {
+        for (const sd of [-1, 1]) { const cx = r(Hd.x + sd * 4.5 - (sd > 0 ? 0.5 : 0)), ty = r(Hd.y - 11.5); R(cx + (sd < 0 ? -1 : 0), ty + 1, 2, 1, '#3a1a10'); R(cx + (sd < 0 ? -1 : 1), ty, 1, 1, '#3a1a10'); }
+        M(['ww..', 'www.', '.www'], hx - 1, hy + 2, { w: '#fff6ea' });
+        break;
+      }
+      case 'frogFace': {
+        clipTop(hy - 5, () => { E(hx, hy - 5.5, 3, 2.8, ol); E(hx + 5, hy - 5.5, 3, 2.8, ol); });
+        E(hx, hy - 5.5, 2.2, 2, sk.body); E(hx + 5, hy - 5.5, 2.2, 2, sk.body);
+        for (const x of [hx - 1, hx + 4]) {
+          if (blink) R(x, hy - 5, 3, 1, ol);
+          else { R(x, hy - 6, 3, 2, '#ffffff'); R(x + 1, hy - 6, 2, 2, '#1a1010'); R(x + 1, hy - 6, 1, 1, '#ffffff'); }
+        }
+        R(hx - 2, hy + 2, 1, 1, ol); R(hx - 1, hy + 3, 8, 1, ol); R(hx + 7, hy + 2, 1, 1, ol);
+        R(hx + 5, hy, 1, 1, ol); R(hx + 7, hy, 1, 1, ol);
+        for (const [dx, dy] of [[-5, -1], [-3, 2], [-6, 2]]) R(hx + dx, hy + dy, 2, 1, sk.dark);
+        R(hx + 3, hy + 2, 2, 1, '#ff8aa8');
+        break;
+      }
+      case 'bell': { const x = sx + 8, y = sy + 3; M(['.oo.', 'oyyo', 'oyho', 'oyyo', 'oooo', '.o..'], x, y, { y: '#ffd23a', h: '#fff6a0' }); break; }
+      case 'racMask': {
+        R(hx - 4, ey - 2, 11, 1, '#f4f4f8');
+        R(hx - 4, ey - 1, 11, 1, '#22222a'); R(hx - 6, ey, 15, 3, '#22222a'); R(hx - 5, ey + 3, 6, 1, '#22222a'); R(hx + 3, ey + 3, 5, 1, '#22222a');
+        if (blink) { R(ex1, ey + 2, 2, 1, '#ffffff'); R(ex2, ey + 2, 2, 1, '#ffffff'); }
+        else for (const x of [ex1, ex2]) { R(x, ey, 2, 3, '#ffffff'); R(x + 1, ey + 1, 1, 2, '#1a1010'); }
+        break;
+      }
+      case 'cowHat': {
+        const h = '#9a6230', d = '#6a3a18', l = '#c08a50';
+        R(hx - 5, hy - 14, 11, 8, ol); R(hx - 4, hy - 13, 9, 6, h); R(hx - 1, hy - 13, 3, 1, d); R(hx - 4, hy - 13, 2, 1, l);
+        R(hx - 4, hy - 9, 9, 1, '#3a2010'); R(hx + 2, hy - 9, 1, 1, '#ffd23a');
+        R(hx - 9, hy - 7, 19, 3, ol); R(hx - 8, hy - 6, 17, 1, h);
+        R(hx - 11, hy - 9, 3, 3, ol); R(hx - 10, hy - 8, 2, 1, h); R(hx + 9, hy - 9, 3, 3, ol); R(hx + 9, hy - 8, 2, 1, h);
+        break;
+      }
+      case 'cowVest': { R(bx - 5, by - 3, 3, 6, '#7a4a2a'); R(bx + 3, by - 3, 2, 5, '#7a4a2a'); M(['.y.', 'yyy', 'y.y'], bx + 3, by - 2, { y: '#ffd23a' }); break; }
+      case 'lasso': {
+        const sp = Math.sin(t * 9), cx = ax + 4, cy = ay - 6;
+        line(ax, ay, cx - 1, cy + 2, '#c8985a');
+        sring(c, cx, cy, 3.5 + sp * 0.8, 1.6, '#d8a860', ol);
+        break;
+      }
+      case 'mineHelm': {
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8.5, 6.5, ol); E(Hd.x, hy - 4, 7.5, 5.5, '#ffc81a'); R(hx - 5, hy - 9, 3, 1, '#fff2a0'); R(hx - 1, hy - 10, 1, 6, '#e0a010'); });
+        R(hx - 9, hy - 5, 19, 2, ol); R(hx - 8, hy - 5, 17, 1, '#c89a10');
+        R(hx + 3, hy - 10, 4, 4, ol); R(hx + 4, hy - 9, 2, 2, '#fff6c0');
+        const a = 0.22 + Math.sin(t * 6) * 0.05; c.globalAlpha = a; c.fillStyle = '#fff2a0';
+        for (let x = hx + 7; x < 32; x++) { const s = (x - hx - 7) * 0.35; c.fillRect(x, r(hy - 9 - s), 1, r(2 + s * 2)); }
+        c.globalAlpha = 1; R(hx - 4, hy + 2, 2, 1, 'rgba(60,40,20,0.45)');
+        break;
+      }
+      case 'pickaxe': {
+        line(bx - 1, by + 3, bx - 8, by - 9, '#8a5a2a');
+        M(['..ooooo..', '.oggggho.', 'og.....go', 'o.......o'], bx - 12, by - 12, { g: '#a8b0b8', h: '#e8f0f8' });
+        break;
+      }
+      case 'fireHelm': {
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8.5, 6.5, ol); E(Hd.x, hy - 4, 7.5, 5.5, '#e8261a'); R(hx - 5, hy - 9, 3, 1, '#ff8a7a'); for (const dx of [-3, 0, 3]) R(hx + dx, hy - 10, 1, 6, '#b01a10'); });
+        R(hx - 12, hy - 5, 22, 2, ol); R(hx - 11, hy - 5, 20, 1, '#b01a10'); R(hx - 12, hy - 3, 4, 1, ol);
+        M(['.ooo.', 'oyyyo', 'oyry', 'oyyyo', '.oyo.', '..o..'], hx + 3, hy - 12, { y: '#ffd23a', r: '#e8261a' });
+        break;
+      }
+      case 'fireCoat': { suit(by - 4, '#3a3a44'); R(bx - 5, by + 1, 11, 1, '#e8ff5a'); R(bx - 4, by + 2, 9, 1, '#c8c8d0'); R(bx + 1, by - 4, 1, 5, '#e8ff5a'); break; }
+      case 'hose': {
+        const sp = (t * 8) % 1;
+        M(['.ooo', 'oggo', 'oyyyo', 'oggo', '.ooo'], ax - 1, ay - 3, { g: '#8a8a94', y: '#ffd23a' });
+        for (let i = 0; i < 4; i++) { const x = ax + 5 + i * 2 + sp * 2, y = ay - 1 + i * 0.4; if (x < 32) R(x, y + (i % 2), 1, 1, i % 2 ? '#7ad8ff' : '#d8f4ff'); }
+        line(ax - 2, ay + 1, bx - 6, by + 5, '#c01a10');
+        break;
+      }
+      case 'pigEars': {
+        M(['...oo', '..opo', '.oqpo', 'oqppo', 'oppo.'], hx - 9, hy - 10, { p: sk.body, q: '#ff7aa8' });
+        M(['oo...', 'opo..', 'opqo.', 'oppqo', '.oppo'], hx + 3, hy - 11, { p: sk.body, q: '#ff7aa8' });
+        break;
+      }
+      case 'pigSnout2': { O(hx + 6, hy + 1.5, 2.4, 1.8, '#ff9ab8'); R(hx + 5, hy + 1, 1, 2, '#c0406a'); R(hx + 7, hy + 1, 1, 2, '#c0406a'); R(hx + 5, hy, 2, 1, '#ffc0d8'); break; }
+      case 'mud': { for (const [x, y, w] of [[bx - 3, by + 2, 3], [bx + 2, by + 4, 2], [hx - 5, hy - 2, 2]]) R(x, y, w, 1, '#a0603a'); R(bx - 2, by + 3, 1, 1, '#a0603a'); flower(hx - 7, hy - 6, '#ffffff'); break; }
+      case 'chickWings': {
+        const up = flying && Math.sin(t * 22) > 0;
+        if (up) M(['..oo.', '.oyyo', 'oyyyo', 'oooo.'], bx - 7, by - 6, { y: sk.body });
+        else M(['oooo.', 'oyyyo', '.oyyo', '..oo.'], bx - 7, by - 1, { y: sk.body });
+        R(bx - 5, up ? by - 4 : by, 2, 1, sk.dark);
+        break;
+      }
+      case 'propCap': {
+        clipTop(hy - 4, () => {
+          E(Hd.x, hy - 4, 8.5, 6.5, ol); E(Hd.x, hy - 4, 7.5, 5.5, '#e8261a');
+          c.save(); c.beginPath(); c.rect(0, -8, hx - 2, 40); c.clip(); E(Hd.x, hy - 4, 7.5, 5.5, '#3ab0ff'); c.restore();
+          c.save(); c.beginPath(); c.rect(hx + 3, -8, 32, 40); c.clip(); E(Hd.x, hy - 4, 7.5, 5.5, '#ffd23a'); c.restore();
+          R(hx - 2, hy - 10, 1, 6, ol); R(hx + 3, hy - 10, 1, 6, ol); R(hx - 5, hy - 8, 2, 1, '#bfe8ff');
+        });
+        R(hx + 3, hy - 5, 7, 2, ol); R(hx + 4, hy - 5, 5, 1, '#3ab0ff');
+        R(hx, hy - 13, 1, 3, ol); O(hx + 0.5, hy - 10.5, 1, 0.8, '#3ae05a');
+        const w = r(Math.abs(Math.cos(t * 22)) * 6) + 1;
+        R(hx - w, hy - 14, w, 1, '#e8261a'); R(hx + 1, hy - 14, w, 1, '#3ab0ff'); R(hx, hy - 14, 1, 1, '#ffd23a');
+        c.globalAlpha = 0.3; R(hx - 6, hy - 15, 13, 1, '#ffffff'); c.globalAlpha = 1;
+        break;
+      }
+      case 'lollipop': {
+        const x = ax + 1; R(x, ay - 5, 1, 6, '#ffffff'); R(x - 1, ay - 5, 1, 6, ol);
+        O(x + 0.5, ay - 8, 2.6, 2.6, '#ff4aa0');
+        const k = Math.floor(t * 6) % 4, sw = [[0, -2], [2, 0], [0, 2], [-2, 0]];
+        for (let i = 0; i < 4; i++) { const [dx, dy] = sw[(i + k) % 4]; R(x + dx * (i ? 0.6 : 1), ay - 8 + dy * (i ? 0.6 : 1), 1, 1, i % 2 ? '#ffffff' : '#fff27a'); }
+        R(x - 1, ay - 10, 1, 1, '#ffffff');
+        break;
+      }
+      case 'hogSpikes': {   // веер острых игл от макушки до спины: тёмные у основания, светлые кончики
+        const cx = hx - 1, cy = hy + 5, N = 11;
+        E(cx - 1, cy - 2, 10, 10, ol); E(cx - 1, cy - 2, 9, 9, '#4a2a18');
+        for (let pass = 0; pass < 2; pass++) for (let i = 0; i < N; i++) {
+          const a = -1.25 - i * 0.2 + Math.sin(t * 3 + i) * 0.03, L = i % 2 ? 13 : 15.5;
+          for (let k = 0; k < 10; k++) {
+            const d = 7 + (L - 7) * k / 9, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d, w = k < 4 ? 2 : 1;
+            if (pass === 0) R(x - 1, y - 1, w + 2, w + 2, ol);
+            else R(x, y, w, w, k >= 7 ? '#f0dcb8' : k >= 3 ? '#7a5030' : '#5a3620');
+          }
+        }
+        break;
+      }
+      case 'hogNose': { O(hx + 7.5, hy + 1.5, 2.6, 1.5, sk.light); R(hx + 9, hy, 2, 2, '#1a1010'); R(hx + 9, hy, 1, 1, '#6a6a7a'); break; }
+      case 'ladyWings': {   // в прыжке надкрылья раскрываются, под ними машут прозрачные крылья
+        if (!flying) break;
+        const f = Math.sin(t * 30) > 0;
+        c.globalAlpha = 0.8; E(bx - 10, by - (f ? 8 : 2), f ? 4 : 5, f ? 5 : 2.5, '#e0f4ff'); E(bx - 7, by - (f ? 11 : 4), f ? 3 : 4, f ? 4 : 2, '#c8e8ff'); c.globalAlpha = 1;
+        line(bx - 4, by - 2, bx - 10, by - (f ? 12 : 3), '#7aa8d0');
+        M(['..ooo.', '.orrro', 'orrkro', 'orrrro', 'okrrro', 'orrro.', '.ooo..'], bx - 15, by - 9, { r: '#e8261a', k: '#1a1010' });
+        M(['.ooo.', 'orrro', 'orkro', 'orrro', 'orrko', '.ooo.'], bx - 11, by - 14, { r: '#e8261a', k: '#1a1010' });
+        break;
+      }
+      case 'ladyShell': {
+        if (flying) { R(bx - 2, by - 3, 1, 7, '#1a1010'); break; }
+        c.save(); c.beginPath(); c.rect(0, -8, bx + 3, 48); c.clip();
+        E(B.x - 0.5, B.y - 0.5, B.rx + 1.5, B.ry + 1, ol); E(B.x - 0.5, B.y - 0.5, B.rx + 0.5, B.ry, '#e8261a');
+        c.restore();
+        R(bx + 2, by - 5, 1, 10, ol); R(bx - 4, by - 4, 2, 1, '#ff8a7a');
+        for (const [dx, dy] of [[-4, -1], [-1, -3], [-2, 2], [0, 0]]) R(bx + dx, by + dy, 2, 2, '#1a1010');
+        break;
+      }
+      case 'ringTail': {   // длинный полосатый хвост дугой за спиной
+        const P = []; for (let i = 0; i < 12; i++) { const k = i / 11; P.push([bx - 5 - Math.sin(k * 2.2) * 7 + Math.sin(t * 3 + k * 3) * k, by + 3 - k * 15]); }
+        for (const [x, y] of P) E(x, y, 2.6, 2.6, ol);
+        P.forEach(([x, y], i) => E(x, y, 1.7, 1.7, (i >> 1) % 2 ? sk.ringA || '#ffffff' : sk.ringB || '#1a1a24'));
+        break;
+      }
+      case 'dotScarf': for (let i = 1; i < 11; i += 3) R(sx + i, sy + (i % 2), 1, 1, sk.dotC || '#e8261a'); break;
+      case 'beret2': {
+        M(['....oo....', '..oorroo..', '.orrrrrro.', 'orrhrrrrro', 'orrrrrrrro', '.oooooooo.'], hx - 9, hy - 11, { r: '#d82a4a', h: '#ff7a8a' });
+        R(hx - 4, hy - 13, 1, 2, ol);
+        break;
+      }
+      case 'palette': {
+        M(['.ooooo.', 'owwwwwo', 'owrwbwo', 'owywgwo', 'owwwwo.', '.oooo..'], ax - 1, ay - 3, { w: '#f0d8a8', r: '#e8261a', b: '#3a7aff', y: '#ffd23a', g: '#3ac04a' });
+        break;
+      }
+      case 'brushEar': { line(hx + 7, hy - 4, hx + 10, hy - 11, '#c89a5a'); R(hx + 10, hy - 12, 1, 2, '#3a7aff'); R(hx - 3, hy + 2, 2, 1, '#3a7aff'); R(bx - 2, by + 3, 1, 1, '#ffd23a'); R(bx + 2, by + 1, 1, 1, '#e8261a'); break; }
+      case 'smock': { suit(by - 4, '#f4f4f8', '#ffffff'); for (const [dx, dy, col] of [[-3, 0, '#e8261a'], [1, 2, '#3a7aff'], [-1, 3, '#ffd23a'], [3, -1, '#3ac04a']]) R(bx + dx, by + dy, 1, 1, col); break; }
+      case 'fishHat': {
+        const g = sk.scarf, d = sk.scarfD;
+        M(['...oooooo...', '..oggggggo..', '.oggggggggo.', 'oddddddddddo', 'ogggggggggggo', '.oo.......oo'], hx - 6, hy - 11, { g, d });
+        R(hx + 2, hy - 8, 1, 1, '#e8261a'); R(hx + 3, hy - 9, 1, 1, '#ffd23a'); R(hx - 3, hy - 8, 1, 1, '#c8c8d0');
+        break;
+      }
+      case 'fishRod': {
+        const tipx = 30, tipy = hy - 12;
+        for (let i = 0; i <= 14; i++) { const k = i / 14, x = lerp(ax, tipx, k), y = lerp(ay + 1, tipy, k) - Math.sin(k * Math.PI) * 2; R(x, y, 1, 1, i < 4 ? '#3a2a1a' : '#a87040'); }
+        O(ax - 0.5, ay + 1.5, 1.2, 1.2, '#a8b0b8');
+        const by2 = hy + 4 + Math.sin(t * 3) * 1.2;
+        for (let y = tipy + 1; y < by2 - 1; y++) R(tipx, y, 1, 1, 'rgba(255,255,255,0.7)');
+        M(['.o.', 'oro', 'owo', '.o.'], tipx - 1, by2 - 2, { r: '#e8261a', w: '#ffffff' });
+        break;
+      }
+      case 'gardHat': {
+        const s = '#f0d070', d = '#c8a040';
+        M(['....oooooo....', '...ossssss o...'.replace(' ', 's'), '..oggggggggo..', 'osdsdsdsdsdsdo', '.oooooooooooo.'], hx - 7, hy - 11, { s, d, g: '#4aa04a' });
+        flower(hx + 3, hy - 9, '#ff5a7a');
+        break;
+      }
+      case 'apron': { suit(by - 2, '#5aa04a'); R(bx - 4, by - 4, 1, 3, '#5aa04a'); R(bx + 3, by - 4, 1, 3, '#5aa04a'); R(bx - 1, by + 1, 4, 2, '#3a7a2a'); break; }
+      case 'canWater': {
+        M(['.....oo', 'ooooog.o', 'oggggo..', 'ohgggo..', 'oggggo..', '.oooo...'], ax - 2, ay - 4, { g: '#3ab0a0', h: '#8af0e0' });
+        const q = (t * 4) % 1; for (let i = 0; i < 3; i++) R(ax + 6 + i, ay - 2 + ((q + i * 0.33) % 1) * 9, 1, 1, '#7ad8ff');
+        break;
+      }
+      case 'soccerKit': {
+        suit(by - 5, '#2a6aff'); suit(by + 2, '#ffffff');
+        for (const dx of [-3, 1]) R(bx + dx, by - 4, 1, 6, '#ffffff');
+        M(['w.www', 'w.w.w', 'w.www'], bx + 1, by - 2, { w: '#ffd23a' });
+        break;
+      }
+      case 'soccerBall': {
+        const x = bx + 9, y = by + 4 - Math.abs(Math.sin(t * 5)) * 5;
+        O(x, y, 2.4, 2.4, '#ffffff'); R(x - 1, y - 1, 2, 2, '#1a1a24'); R(x + 2, y + 1, 1, 1, '#1a1a24'); R(x - 3, y + 1, 1, 1, '#1a1a24'); R(x, y + 2, 1, 1, '#1a1a24');
+        break;
+      }
+      case 'mohawk2': {
+        for (let i = 0; i < 5; i++) { const h = [4, 6, 7, 6, 5][i]; stri(c, hx - 5 + i * 2.5, hy - 6 - h, h, ol, 1); }
+        for (let i = 0; i < 5; i++) { const h = [4, 6, 7, 6, 5][i]; stri(c, hx - 5 + i * 2.5, hy - 6 - h, h, i % 2 ? '#ff3ad0' : '#a03aff'); R(hx - 5 + i * 2.5, hy - 5 - h, 1, 1, '#ffb0f0'); }
+        break;
+      }
+      case 'leather': { suit(by - 5, '#24242c'); R(bx + 1, by - 4, 1, 9, '#c8c8d0'); for (const dx of [-4, -2]) R(bx + dx, by - 4, 1, 1, '#e8e8f0'); R(hx - 4, hy + 2, 1, 1, '#ffd23a'); break; }
+      case 'vGuitar': {
+        const st = Math.sin(t * 9) > 0.3;
+        line(bx + 1, by + 1, bx + 9, by - 9, '#5a3a1a');
+        M(['oo....', 'orro..', 'orrro.', '.orrwo', 'oorwwo', 'orrro.', 'oo.oo.'], bx - 5, by - 1, { r: '#e8261a', w: '#ffffff' });
+        R(bx + 9, by - 10, 2, 2, ol);
+        if (st) { M(['.oo', '.o.', 'oo.'], bx + 8, by - 15 - (t * 4 % 3), { o: '#ff3ad0' }); }
+        break;
+      }
+      case 'swimCap2': {
+        clipTop(hy - 3, () => { E(Hd.x, Hd.y, Hd.rx + 1.5, Hd.ry + 1.5, ol); E(Hd.x, Hd.y, Hd.rx + 0.5, Hd.ry + 0.5, '#2a8aff'); R(hx - 7, hy - 6, 15, 1, '#ffffff'); R(hx - 4, hy - 8, 2, 1, '#9ad0ff'); });
+        R(hx - 8, hy - 4, 17, 1, '#1a1a24');
+        for (const x of [hx, hx + 5]) M(['oooo', 'oyyo', 'oooo'], x - 1, hy - 6, { y: '#ffd23a' });
+        break;
+      }
+      case 'swimRing2': {
+        const y = by + 2;
+        for (let i = -7; i <= 7; i++) { const k = Math.sqrt(1 - (i / 7.5) ** 2) * 2.2; R(bx + i, y - k - 0.5, 1, r(k * 2) + 2, ol); }
+        for (let i = -6; i <= 6; i++) { const k = Math.sqrt(1 - (i / 7) ** 2) * 1.6; R(bx + i, y - k, 1, r(k * 2) + 1, ((i + 6) >> 2) % 2 ? '#ffffff' : '#ff4a4a'); }
+        R(bx - 3, y - 1, 2, 1, '#ffd0d0');
+        if ((t * 2) % 1 < 0.5) R(hx - 6, hy + 2 + ((t * 2) % 1) * 8, 1, 1, '#7ad8ff');
+        break;
+      }
+      case 'tennisBand': { R(hx - 7, hy - 7, 15, 3, '#ffffff'); R(hx - 7, hy - 7, 15, 1, '#e8261a'); R(hx - 7, hy - 5, 15, 1, '#e8261a'); R(sx, sy, 11, 1, '#e8261a'); break; }
+      case 'racket2': {
+        const x = ax + 1, y = ay;
+        R(x, y - 4, 1, 5, '#3a3a4a'); R(x, y - 1, 1, 2, '#ffffff');
+        sring(c, x + 0.5, y - 8.5, 3, 4, '#e8261a', ol);
+        for (let i = -2; i <= 2; i++) R(x + i, y - 12 + 1, 1, 7, 'rgba(255,255,255,0.55)');
+        for (let j = 0; j < 7; j += 2) R(x - 2, y - 11 + j, 5, 1, 'rgba(255,255,255,0.55)');
+        const q = Math.abs(Math.sin(t * 4)); O(x + 4, y - 14 - q * 5, 1.5, 1.5, '#d8f03a'); R(x + 3, y - 15 - q * 5, 1, 1, '#ffffff');
+        break;
+      }
+      case 'hardHat2': {
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8.5, 6.5, ol); E(Hd.x, hy - 4, 7.5, 5.5, '#ffc81a'); R(hx - 1, hy - 10, 3, 6, '#ffe05a'); R(hx - 5, hy - 8, 2, 1, '#fff2a0'); });
+        R(hx - 9, hy - 5, 21, 2, ol); R(hx - 8, hy - 5, 19, 1, '#e0a010');
+        break;
+      }
+      case 'hiVis': { suit(by - 4, '#ff7a1a'); R(bx - 5, by - 1, 11, 1, '#e8f0f8'); R(bx - 4, by + 2, 9, 1, '#e8f0f8'); R(bx - 5, by + 4, 11, 1, '#6a3a1a'); R(bx - 1, by + 4, 2, 2, '#a86a2a'); break; }
+      case 'hammer2': { R(bx - 7, by + 1, 1, 7, '#a87040'); M(['oooooo', 'oggggo', 'oggo..', '.oo...'], bx - 9, by - 2, { g: '#a8b0b8' }); R(bx - 8, by - 1, 2, 1, '#e8f0f8'); M(['.ooo.', 'owwwo', 'oooo.'], ax - 1, ay - 2, { w: '#f4f4f8' }); break; }
+      case 'safariHat': { M(['...oooooo...', '..okkkkkko..', '..obbbbbbo..', 'okkkkkkkkkko', '.oooooooooo.'], hx - 6, hy - 11, { k: '#d8c088', b: '#8a5a2a' }); break; }
+      case 'camNeck': {
+        line(bx - 3, by - 5, bx + 2, by - 1, '#3a2a1a');
+        M(['.oo...', 'oooooo', 'oggwgo', 'ogkkgo', 'oooooo'], bx + 1, by - 2, { g: '#4a4a54', k: '#1a1a24', w: '#9ad8ff' });
+        if ((t % 2.4) < 0.08) { c.globalAlpha = 0.7; E(bx + 4, by - 1, 4, 4, '#ffffff'); c.globalAlpha = 1; }
+        break;
+      }
+      case 'mapHand': { M(['oooooo', 'ogbgbo', 'obgrgo', 'ogbgbo', 'oooooo'], ax - 1, ay - 4, { g: '#f0e0a8', b: '#7ad0ff', r: '#e8261a' }); break; }
+      case 'backPack2': { M(['.oooo.', 'oggggo', 'oghhgo', 'oggggo', 'oggggo', '.oooo.'], bx - 10, by - 5, { g: sk.pack || '#3a8a4a', h: '#7ac08a' }); break; }
+      case 'drum2': {
+        O(bx + 1, by + 3, 5.5, 3.2, '#e8261a'); R(bx - 4, by + 1, 11, 1, '#f4f4f8'); R(bx - 4, by + 5, 11, 1, '#c8c8d0');
+        for (let i = -3; i <= 5; i += 2) R(bx + i, by + 2, 1, 3, '#ffd23a');
+        line(bx - 4, by - 4, bx - 3, by + 1, '#ffffff');
+        break;
+      }
+      case 'sticks2': {
+        const h = Math.sin(t * 12) > 0;
+        line(ax - 3, ay + (h ? -1 : -4), ax - 1, ay + (h ? 2 : -1), '#f0c890'); line(ax + 2, ay + (h ? -5 : -2), ax + 1, ay + (h ? -1 : 2), '#f0c890');
+        if (h) { R(bx - 1, by + 0, 1, 1, '#fff6a0'); R(bx + 2, by - 1, 1, 1, '#fff6a0'); }
+        R(hx - 7, hy - 6, 15, 2, '#e8261a');
+        break;
+      }
+      case 'beeSuit2': { suit(by - 5, '#f4f4e8', '#ffffff'); R(bx - 5, by + 3, 11, 1, '#d8d8c8'); E(A1.x, A1.y, 1.8, 2, '#e8c040'); break; }
+      case 'beeVeil': {
+        R(hx - 10, hy - 6, 21, 2, ol); R(hx - 9, hy - 6, 19, 1, '#f4f4e8');
+        clipTop(hy - 5, () => { E(Hd.x, hy - 4, 7.5, 5, ol); E(Hd.x, hy - 4, 6.5, 4, '#f4f4e8'); R(hx - 4, hy - 8, 2, 1, '#ffffff'); });
+        c.globalAlpha = 0.25; R(hx - 8, hy - 4, 17, 10, '#ffffff'); c.globalAlpha = 0.35;
+        for (let x = hx - 7; x <= hx + 7; x += 3) R(x, hy - 4, 1, 10, '#ffffff');
+        c.globalAlpha = 1; R(hx - 9, hy - 4, 1, 10, '#c8c8b8'); R(hx + 9, hy - 4, 1, 10, '#c8c8b8');
+        break;
+      }
+      case 'smoker': {
+        M(['.oo.', 'oggo', 'oggo', 'oggo', 'oooo'], ax, ay - 3, { g: '#b8b8c0' });
+        for (let i = 0; i < 3; i++) { const q = (t * 0.8 + i / 3) % 1; c.globalAlpha = 0.6 * (1 - q); E(ax + 2 + q * 3, ay - 5 - q * 10, 1 + q * 2, 1 + q * 2, '#e8e8f0'); }
+        c.globalAlpha = 1;
+        break;
+      }
+      case 'bees2': for (let k = 0; k < 3; k++) { const an = t * 3.2 + k * 2.1, x = hx + 1 + Math.cos(an) * 12, y = hy - 2 + Math.sin(an * 1.4) * 7; M(['.w.', 'yky'], x - 1, y - 1, { w: '#ffffff', y: '#ffd23a', k: '#1a1010' }); } break;
+      case 'capBack': {
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8, 6, ol); E(Hd.x, hy - 4, 7, 5, sk.cap || '#e8261a'); R(hx - 3, hy - 8, 2, 1, '#ffffff'); });
+        R(hx - 12, hy - 6, 6, 2, ol); R(hx - 11, hy - 6, 5, 1, sk.capD || '#a01008'); R(hx, hy - 10, 2, 1, ol);
+        break;
+      }
+      case 'hoodie': { suit(by - 5, sk.hood || '#3a7aff'); R(bx - 1, by + 1, 5, 2, sk.hoodD || '#2a5ac0'); R(bx, by - 4, 1, 3, '#ffffff'); R(bx + 2, by - 4, 1, 2, '#ffffff'); break; }
+      case 'board2': {
+        const fl = flying ? Math.floor(t * 10) % 4 : 0, y = by + 8;
+        if (fl === 1 || fl === 3) { R(bx - 6, y - 1, 13, 2, ol); R(bx - 5, y - 1, 11, 1, '#ffd23a'); }
+        else {
+          R(bx - 8, y - 1, 17, 3, ol); R(bx - 7, y, 15, 1, fl === 2 ? '#c8c8d0' : '#ff7a1a'); R(bx - 9, y - 2, 2, 2, ol); R(bx + 8, y - 2, 2, 2, ol);
+          if (fl !== 2) { R(bx - 3, y, 6, 1, '#ffd23a'); for (const dx of [-5, 4]) M(['oo', 'oo'], bx + dx, y + 2, {}); } else for (const dx of [-5, 4]) M(['oo', 'oo'], bx + dx, y - 3, {});
+        }
+        break;
+      }
+      case 'kneePads': for (const f of [F1, F2]) R(f.x - 1, f.y - 3, 3, 1, '#2a2a34'); break;
+      case 'cupWrap': {
+        const y0 = by;
+        for (let i = 0; i < 7; i++) { const hw = 6.5 - i * 0.3; R(bx - hw - 1, y0 + i, r(hw * 2) + 3, 1, ol); }
+        for (let i = 0; i < 6; i++) { const hw = 6 - i * 0.3; for (let x = r(bx - hw); x < r(bx + hw); x++) R(x, y0 + i, 1, 1, (x & 1) ? '#ff8ac8' : '#ffc0e0'); }
+        R(bx - 7, y0 - 1, 15, 1, ol);
+        break;
+      }
+      case 'frostSwirl': {
+        const T = [[0, -6.5, 7.5, 2.2], [0, -9, 5.5, 2], [0, -11.2, 3.5, 1.6]];
+        for (const [dx, dy, rx, ry] of T) E(Hd.x + dx, Hd.y + dy, rx + 1, ry + 1, ol);
+        T.forEach(([dx, dy, rx, ry], i) => { E(Hd.x + dx, Hd.y + dy, rx, ry, i % 2 ? '#ffb0d8' : '#ff8ac8'); R(hx - rx + 2, hy + dy - 1, 2, 1, '#ffe0f0'); });
+        for (const [dx, dy, col] of [[-5, -7, '#3ab0ff'], [3, -7, '#ffd23a'], [-2, -9, '#3ae05a'], [2, -10, '#ffffff'], [5, -6, '#a64aff']]) R(hx + dx, hy + dy, 1, 1, col);
+        O(hx + 0.5, hy - 14, 1.4, 1.4, '#e8261a'); R(hx, hy - 15, 1, 1, '#ff9a9a'); R(hx + 1, hy - 17, 1, 2, '#3a8a2a');
+        break;
+      }
+      case 'donutFloat': {
+        const y = by + 2;
+        for (const [rx, ry, col] of [[7.5, 3.2, ol], [6.5, 2.4, '#d89a5a'], [6.5, 1.8, '#ff8ac8']]) E(bx, y + (col === '#ff8ac8' ? -0.4 : 0), rx, ry, col);
+        E(bx, y - 0.5, 3.2, 1, sk.light);
+        for (const [dx, dy, col] of [[-5, -1, '#3ab0ff'], [-2, -2, '#ffd23a'], [4, -1, '#3ae05a'], [1, 1, '#ffffff'], [5, 1, '#a64aff']]) R(bx + dx, y + dy, 1, 1, col);
+        break;
+      }
+      case 'donutHat2': {
+        O(hx - 1, hy - 8, 4.5, 2.4, '#d89a5a'); E(hx - 1, hy - 8.6, 4, 1.8, '#5a3018'); E(hx - 1, hy - 8.4, 1.6, 0.8, sk.body);
+        R(hx - 4, hy - 9, 1, 1, '#ff8ac8'); R(hx + 1, hy - 10, 1, 1, '#ffffff'); R(hx + 2, hy - 8, 1, 1, '#ffd23a');
+        break;
+      }
+      case 'toasty': { clipTop(hy - 4, () => E(Hd.x, Hd.y, Hd.rx, Hd.ry, '#f0d0a8')); R(hx - 4, hy - 6, 3, 1, '#d8a878'); R(hx - 3, hy + 2, 3, 1, '#ffb0c8'); break; }
+      case 'smoreStick': {
+        line(ax, ay + 1, ax + 8, ay - 7, '#8a5a2a');
+        O(ax + 8.5, ay - 8, 1.8, 1.4, '#fff6ea'); R(ax + 8, ay - 9, 2, 1, '#d8a060');
+        const f = Math.sin(t * 15) > 0; M(f ? ['.y.', 'yry', '.r.'] : ['y..', 'yry', '.r.'], ax + 7, ay - 6, { y: '#ffd23a', r: '#ff5a1a' });
+        break;
+      }
+      case 'waffleGrid2': {
+        c.save(); c.beginPath(); c.ellipse(B.x, B.y, B.rx, B.ry, 0, 0, 7); c.clip();
+        for (let x = bx - 6; x <= bx + 6; x += 3) R(x, by - 6, 1, 12, '#c8803a');
+        for (let y = by - 4; y <= by + 6; y += 3) R(bx - 6, y, 13, 1, '#c8803a');
+        c.restore();
+        break;
+      }
+      case 'butter': {
+        M(['oooooo', 'oyyyho', 'oyyyyo', 'oooooo'], hx - 2, hy - 10, { y: '#ffe86a', h: '#fffbd0' });
+        const q = (t * 0.7) % 1; R(hx - 5, hy - 6, 1, 2 + r(q * 3), '#a0501a'); R(hx + 4, hy - 6, 1, 2, '#a0501a'); R(hx - 6, hy - 7, 12, 1, '#a0501a');
+        break;
+      }
+      case 'peel2': {
+        const pl = '#ffd23a', pd = '#c89a10';
+        M(['...oo...', '..okko..', '.ooyyoo.'], hx - 3, hy - 14, { k: '#6a4a1a', y: pl });
+        M(['oo.......', 'oyo......', 'oyyo.....', '.oyyo....', '..oyyo...', '..oydo...', '..oyo....', '...o.....'], hx - 10, hy - 9, { y: pl, d: pd });
+        M(['.......oo', '......oyo', '.....oyyo', '....oyyo.', '...oyyo..', '...odyo..', '....oyo..', '.....o...'], hx + 2, hy - 10, { y: pl, d: pd });
+        for (let i = -5; i <= 5; i += 5) M(['oyyo', 'oyyo', '.oo.'], bx + i - 1, by + 2, { y: pl });
+        R(bx - 2, by - 2, 1, 1, '#a07a2a'); R(hx - 4, hy + 1, 1, 1, '#a07a2a');
+        break;
+      }
+      case 'nightCap2': {
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8.5, 6.5, ol); E(Hd.x, hy - 4, 7.5, 5.5, '#3a5ac0'); R(hx - 2, hy - 9, 1, 1, '#fff27a'); R(hx + 3, hy - 7, 1, 1, '#fff27a'); });
+        R(hx - 9, hy - 5, 18, 2, ol); R(hx - 8, hy - 5, 16, 1, '#ffffff');
+        break;
+      }
+      case 'nightCapTail': {
+        const sw = Math.sin(t * 2) * 1.5;
+        for (let i = 0; i < 8; i++) { const x = hx - 6 - i, y = hy - 9 + i * 0.6 + sw * i / 8; R(x - 1, y - 1, 3, 4 - i * 0.3, ol); R(x, y, 1, 2, '#3a5ac0'); }
+        O(hx - 14, hy - 4 + sw, 1.6, 1.6, '#ffffff');
+        break;
+      }
+      case 'pajama': { suit(by - 5, '#bfe0ff'); for (let x = bx - 5; x <= bx + 5; x += 3) R(x, by - 4, 1, 10, '#7ab0f0'); R(bx + 1, by - 3, 1, 1, '#ffffff'); R(bx + 1, by, 1, 1, '#ffffff'); break; }
+      case 'pillow2': {
+        const sq = Math.sin(t * 2.4) > 0.3 ? 1 : 0;
+        M(['o.oooooooo.o', '.owwwwwwwwo.', 'owwwwwwwwwwo', 'owwbwwwwwwwo', 'owwwwwwwwwwo', '.owwwwwwwwo.', 'o.oooooooo.o'].slice(sq), ax - 3, ay - 2 + sq, { w: '#f4f4ff', b: '#c8d0f0' });
+        R(ax - 1, ay + 1, 7, 1, '#dce0f8');
+        break;
+      }
+      case 'slippers': for (const f of [F1, F2]) { O(f.x + 1, f.y, 3, 1.6, '#ffb0d8'); R(f.x + 2, f.y - 3, 1, 2, '#ffffff'); R(f.x + 3, f.y - 3, 1, 2, '#ffffff'); R(f.x + 3, f.y - 1, 1, 1, '#1a1010'); R(f.x + 4, f.y, 1, 1, '#ff5a8a'); } break;
+      case 'strawHat3': {
+        const s = '#f4d070', d = '#c89a40';
+        M(['....oooooo....', '...osdsdsdo...', '...orrrrrro...', 'osdsdsdsdsdsdo', '.oooooooooooo.'], hx - 7, hy - 11, { s, d, r: '#e8261a' });
+        break;
+      }
+      case 'overalls2': {
+        suit(by - 1, '#3a6ad0'); R(bx - 4, by - 5, 1, 5, '#3a6ad0'); R(bx + 3, by - 5, 1, 5, '#3a6ad0');
+        R(bx - 4, by - 2, 1, 1, '#ffd23a'); R(bx + 3, by - 2, 1, 1, '#ffd23a'); R(bx - 1, by + 1, 4, 2, '#2a4aa0');
+        for (let x = bx - 3; x <= bx + 2; x += 2) R(x, by - 4, 1, 1, '#e8261a');
+        break;
+      }
+      case 'pitchfork': { R(bx - 8, by - 9, 1, 15, '#a87040'); M(['o.o.o', 'ogogo', 'ogogo', 'ogggo', '.ooo.'], bx - 10, by - 14, { g: '#c8c8d0' }); break; }
+      case 'skiGog2': { R(hx - 8, hy - 7, 17, 1, '#1a1a24'); M(['oooooooo', 'ohyyhyyo', 'oyyyoyyo', '.oooooo.'], hx - 2, hy - 9, { y: '#ff9a2a', h: '#fff2c0' }); break; }
+      case 'skiJacket': { suit(by - 5, '#e8261a'); R(bx - 5, by - 1, 11, 1, '#ffffff'); R(bx + 1, by - 4, 1, 4, '#ffffff'); break; }
+      case 'skis2': {
+        const y = by + 8;
+        R(bx - 9, y - 1, 20, 3, ol); R(bx - 8, y, 18, 1, '#3a7aff'); R(bx + 10, y - 3, 2, 3, ol); R(bx + 10, y - 2, 1, 1, '#3a7aff');
+        R(ax + 1, ay - 2, 1, 10, '#5a5a6a'); R(ax, ay + 6, 3, 1, '#1a1a24'); R(ax, ay - 2, 2, 2, '#1a1a24');
+        break;
+      }
+      case 'gamerSet': {
+        const glow = hsl(t * 120, 90, 60);
+        for (let x = hx - 7; x <= hx + 7; x++) R(x, hy - 7 + r(((x - hx) / 7) ** 2 * 3), 1, 1, ol);
+        for (const x of [hx - 9, hx + 6]) M(['.oo.', 'oggo', 'oggo', 'oggo', '.oo.'], x, hy - 4, { g: glow });
+        line(hx + 8, hy + 1, hx + 6, hy + 3, ol); R(hx + 5, hy + 3, 2, 1, glow);
+        break;
+      }
+      case 'gamerHood': { suit(by - 5, '#2a2a3a'); M(['.g.', 'ggg', '.g.'], bx - 1, by - 2, { g: hsl(t * 120 + 120, 90, 60) }); break; }
+      case 'pad2': {
+        M(['.oooooooo.', 'oggggggggo', 'ogwggrbggo', 'owwwggyggo', 'ogwgoogggo', '.oo....oo.'], ax - 4, ay - 3, { g: '#4a4a6a', w: '#ffffff', r: '#ff3a3a', b: '#3ab0ff', y: '#ffd23a' });
+        if (Math.sin(t * 10) > 0.4) R(ax + 3, ay - 1, 1, 1, '#ffffff');
+        break;
+      }
+      case 'chefJacket': { suit(by - 5, '#f4f4f8', '#ffffff'); R(bx + 1, by - 3, 1, 1, '#1a1a24'); R(bx + 1, by, 1, 1, '#1a1a24'); R(bx + 1, by + 3, 1, 1, '#1a1a24'); R(bx - 4, by - 5, 9, 1, '#1a1a24'); break; }
+      case 'sushiPlate2': {
+        M(['oooooooooo', '.oddddddo.', '..oooooo..'], ax - 3, ay + 1, { d: '#2a2a34' });
+        M(['.oo.', 'okko', 'owwo', '.oo.'], ax - 2, ay - 3, { k: '#1a3a1a', w: '#ff8a5a' });
+        M(['.oo.', 'owwo', 'orro', '.oo.'], ax + 2, ay - 3, { w: '#ffffff', r: '#ff5a3a' });
+        break;
+      }
+      case 'gumBubble2': {
+        const q = (t % 3) / 3, rr = q < 0.82 ? 1 + q * 7 : 0, x = hx + 8 + rr * 0.6, y = hy + 3;
+        if (rr > 0) { E(x, y, rr + 1, rr + 1, '#c0408a'); E(x, y, rr, rr, '#ff8ad8'); R(x - rr * 0.5, y - rr * 0.6, 1, 1, '#ffffff'); if (rr > 3) R(x - rr * 0.5 + 1, y - rr * 0.6, 1, 1, '#ffe0f4'); }
+        else { R(hx + 5, hy + 2, 4, 1, '#ff8ad8'); R(hx + 6, hy + 3, 2, 1, '#ff8ad8'); for (let k = 0; k < 6; k++) R(hx + 9 + Math.cos(k) * 5, hy + 3 + Math.sin(k) * 5, 1, 1, '#ff8ad8'); }
+        break;
+      }
+      case 'lgVisor': { R(hx - 7, hy - 7, 15, 2, ol); R(hx - 6, hy - 7, 13, 1, '#e8261a'); R(hx + 4, hy - 6, 6, 2, ol); R(hx + 5, hy - 6, 4, 1, '#ff5a4a'); R(hx + 6, hy, 2, 1, '#ffffff'); break; }
+      case 'whistle2': { line(hx - 3, hy + 5, bx, by - 2, '#ffd23a'); M(['ooo.', 'oggo', 'ooo.'], bx, by - 3, { g: '#c8c8d0' }); if ((t % 2) < 0.4) { R(bx + 5, by - 4, 1, 1, '#ffffff'); R(bx + 6, by - 5, 1, 1, '#ffffff'); } break; }
+      case 'rescueTube': { M(['oooo', 'orro', 'owwo', 'orro', 'orro', 'owwo', 'orro', 'oooo'], ax - 1, ay - 6, { r: '#e8261a', w: '#ffffff' }); break; }
+      case 'chefHat2': {
+        for (const [dx, dy, rr] of [[-3, -12, 3], [0, -13, 3.4], [3, -12, 3]]) E(hx + dx, hy + dy, rr + 1, rr + 1, ol);
+        R(hx - 6, hy - 11, 13, 5, ol);
+        for (const [dx, dy, rr] of [[-3, -12, 3], [0, -13, 3.4], [3, -12, 3]]) E(hx + dx, hy + dy, rr, rr, '#ffffff');
+        R(hx - 5, hy - 11, 11, 4, '#ffffff'); R(hx - 5, hy - 8, 11, 1, '#d8d8e0'); R(hx - 4, hy - 14, 2, 1, '#f0f0f8');
+        break;
+      }
+      case 'pizzaPeel2': {
+        R(ax, ay - 2, 1, 6, '#a87040');
+        M(['..oooooo..', '.oyyryyyo.', 'oyrygyyryo', 'oyyyyryyyo', '.oyryyyyo.', '..oooooo..'], ax - 4, ay - 8, { y: '#ffd860', r: '#d82a1a', g: '#3a9a2a' });
+        if (Math.sin(t * 3) > 0) { c.globalAlpha = 0.5; R(ax - 1, ay - 11, 1, 2, '#ffffff'); R(ax + 2, ay - 12, 1, 2, '#ffffff'); c.globalAlpha = 1; }
+        break;
+      }
+      case 'tux': { suit(by - 5, '#1a1a24'); clipBelow(by - 5, () => E(B.x + 1, B.y, 2, B.ry, '#ffffff')); M(['oo.oo', 'orrro', 'oo.oo'], bx - 1, by - 5, { r: '#e8261a' }); break; }
+      case 'violin2': {
+        M(['.oo..', 'obbo.', 'obhbo', '.obbo', 'obbbo', 'obbo.', '.oo..'], bx + 3, by - 7, { b: '#a0501a', h: '#d07a3a' });
+        line(bx + 5, by - 7, bx + 9, by - 12, '#2a1408');
+        const s = Math.sin(t * 6) * 3; line(ax - 2 + s, ay - 6, ax + 3 + s, ay + 1, '#d8c8a0');
+        if (Math.sin(t * 2) > 0) M(['.oo', '.o.', 'oo.'], bx + 10, hy - 6 - (t * 3 % 4), { o: '#2a1408' });
+        break;
+      }
+      case 'camera2': {
+        M(['.oo...', 'oooooo', 'oggkko', 'ogkwko', 'oggkko', 'oooooo'], ax - 1, ay - 5, { g: '#3a3a44', k: '#1a1a24', w: '#9ad8ff' });
+        R(ax, ay - 5, 1, 1, '#e8261a');
+        if ((t % 2) < 0.1) { c.globalAlpha = 0.8; E(ax + 8, ay - 3, 4, 4, '#ffffff'); c.globalAlpha = 1; }
+        line(hx - 2, hy + 4, hx + 2, hy + 3, '#1a1a24');
+        break;
+      }
+      case 'photoVest': { suit(by - 4, '#c8b07a'); R(bx - 4, by, 3, 2, '#a89060'); R(bx + 2, by, 3, 2, '#a89060'); R(bx, by - 4, 1, 9, '#f4f4f8'); break; }
+      case 'gobHat': {
+        M(['..oooooooo..', '.owwwwwwwwo.', 'owwwwwwwwwwo', 'obbbbbbbbbbo', '.oooooooooo.'], hx - 6, hy - 11, { w: '#ffffff', b: '#2a4ac0' });
+        const f = Math.sin(t * 10) > 0 ? 1 : 0; R(hx - 8, hy - 8 + f, 2, 1, '#2a4ac0'); R(hx - 10, hy - 7 - f, 2, 1, '#2a4ac0');
+        break;
+      }
+      case 'sailorTop': { suit(by - 5, '#ffffff'); for (let y = by - 2; y < by + 6; y += 2) R(bx - 6, y, 13, 1, '#2a5ad0'); M(['ooooooo', 'obbbbbo', '.obrbo.', '..oro..'], bx - 3, by - 5, { b: '#2a4ac0', r: '#e8261a' }); break; }
+      case 'spyglass': { R(ax - 1, ay - 2, 9, 3, ol); R(ax, ay - 1, 3, 1, '#c8a040'); R(ax + 3, ay - 1, 2, 1, '#e8c860'); R(ax + 5, ay - 1, 2, 1, '#ffe08a'); R(ax + 7, ay - 2, 1, 3, '#9ad8ff'); break; }
+      case 'surfBoard2': {
+        M(['..oo..', '.owwo.', 'owbbwo', 'owbbwo', 'owwrwo', 'owwrwo', 'owwrwo', 'owbbwo', 'owbbwo', 'owwwwo', '.owwo.', '..oo..', '..oo..'], bx - 11, by - 12, { w: '#ffffff', b: '#3ab0ff', r: '#ff5a3a' });
+        break;
+      }
+      case 'lei': { for (let i = 0; i < 6; i++) flower(sx + 1 + i * 2, sy + 1 + (i % 2), ['#ff5a8a', '#ffd23a', '#ffffff'][i % 3], '#ff9a2a'); break; }
+      case 'raincoat2': { suit(by - 5, '#ffd23a', '#ffe878'); R(bx + 1, by - 4, 1, 9, '#c89a10'); for (const y of [by - 2, by + 1, by + 4]) R(bx + 2, y, 1, 1, '#3a3a44'); break; }
+      case 'rainHood': { dome(hy - 4, '#ffd23a', '#fff2a0'); R(hx - 8, hy - 5, 17, 1, '#c89a10'); break; }
+      case 'umbrella2': {
+        const sx2 = ax + 1, top = hy - 10;
+        R(sx2, top, 1, ay - top + 2, '#3a2a1a'); R(sx2 - 2, ay + 2, 3, 1, '#3a2a1a'); R(sx2 - 2, ay + 1, 1, 1, '#3a2a1a');
+        for (let i = -8; i <= 8; i++) { const h = r(Math.sqrt(72 - i * i) * 0.55) + 1; R(sx2 + i, top - h - 1, 1, h + 2, ol); }
+        for (let i = -7; i <= 7; i++) { const h = r(Math.sqrt(72 - i * i) * 0.55); R(sx2 + i, top - h, 1, h + (Math.abs(i) % 3 === 0 ? 0 : 1), ((i + 8) >> 2) % 2 ? '#ff4a8a' : '#3ab0ff'); }
+        R(sx2, top - 7, 1, 2, ol);
+        for (let k = 0; k < 4; k++) { const q = (t * 1.6 + k * 0.27) % 1; const x = (k * 9 + 3) % 30; if (Math.abs(x - sx2) > 9) R(x, -6 + q * 40, 1, 2, '#7ab0ff'); }
+        break;
+      }
+      case 'boots': for (const f of [F1, F2]) { E(f.x, f.y, 2.6, 1.6, sk.bootC || '#e8261a'); R(f.x - 2, f.y - 2, 4, 1, sk.bootC || '#e8261a'); } break;
+      case 'nurseCap2': { M(['..oooooo..', '.owwwwwwo.', 'owwwrwwwwo', 'owwrrrwwwo', 'owwwrwwwwo', 'oooooooooo'], hx - 4, hy - 13, { w: '#ffffff', r: '#e8261a' }); break; }
+      case 'scrubs': { suit(by - 5, '#7ad0e8', '#a8e8f8'); R(bx - 3, by - 5, 6, 1, '#4aa0c0'); R(bx + 2, by - 1, 2, 2, '#4aa0c0'); break; }
+      case 'stetho2': { line(bx - 4, by - 5, bx - 3, by + 1, '#3a3a44'); line(bx + 4, by - 5, bx + 3, by - 1, '#3a3a44'); line(bx - 3, by + 1, bx + 1, by + 2, '#3a3a44'); O(bx + 1.5, by + 2.5, 1.2, 1.2, '#c8c8d0'); break; }
+      case 'clipboard': { M(['.oo.', 'ogkgo', 'owwwo', 'okkwo', 'owwwo', 'okkwo', 'ooooo'], ax - 1, ay - 5, { g: '#c8c8d0', k: '#3a3a44', w: '#ffffff' }); break; }
+      case 'luchaMask': {
+        dome(hy + 4, '#e8261a');
+        R(hx - 1, hy - 8, 1, 6, '#ffd23a'); R(hx - 3, hy - 7, 1, 2, '#ffffff'); R(hx + 1, hy - 7, 1, 2, '#ffffff');
+        for (const x of [ex1, ex2]) M(['oooo', 'oyyo', 'oyyo', 'oyyo', 'oooo'].map(s => s), x - 1, ey - 1, { y: '#ffd23a' });
+        if (blink) { R(ex1, ey + 2, 2, 1, '#1a1010'); R(ex2, ey + 2, 2, 1, '#1a1010'); } else for (const x of [ex1, ex2]) { R(x, ey, 2, 3, '#ffffff'); R(x + 1, ey + 1, 1, 2, '#1a1010'); }
+        R(hx + 3, hy + 2, 4, 2, '#ffe6b0'); R(hx + 6, hy, 2, 1, '#ff5a8a');
+        break;
+      }
+      case 'champBelt2': { R(bx - 6, by + 1, 13, 3, ol); R(bx - 5, by + 2, 11, 1, '#ffd23a'); M(['.oooo.', 'oyhyyo', 'oyrryo', 'oyyyyo', '.oooo.'], bx - 2, by, { y: '#ffd23a', h: '#fff6a0', r: '#e8261a' }); break; }
+      case 'labCoat2': { suit(by - 5, '#f4f4f8', '#ffffff'); R(bx, by - 5, 1, 10, '#c8c8d0'); M(['o.o', 'oko'], bx + 3, by - 3, { k: '#3a7aff' }); R(bx + 4, by - 4, 1, 1, '#e8261a'); break; }
+      case 'flask2': {
+        M(['.oo.', '.oo.', 'oggo', 'ogggo'.slice(0, 4), 'ohggo', 'oggggo', 'oooooo'], ax - 1, ay - 5, { g: '#3ae06a', h: '#a8ffb8' });
+        for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; R(ax + 1 + Math.sin(q * 9 + i) * 1.5, ay - 6 - q * 8, 1, 1, '#a8ffb8'); }
+        break;
+      }
+      case 'wildHair': { for (const [x, y] of [[hx - 8, hy - 4], [hx - 9, hy - 2], [hx - 7, hy - 6], [hx + 7, hy - 5]]) R(x, y, 2, 1, '#f4f4f8'); break; }
+      case 'campHat': { M(['...oooooo...', '..okkkkkko..', '..orrrrrro..', 'okkkkkkkkkko', '.oooooooooo.'], hx - 6, hy - 11, { k: '#8a9a5a', r: '#5a6a3a' }); R(hx + 3, hy - 10, 1, 1, '#e8261a'); break; }
+      case 'bigPack': {
+        M(['.oooooo.', 'obbbbbbo', 'oooooooo', 'oggggggo', 'oghhgggo', 'oggggggo', 'oggoogg', 'oggggggo', '.oooooo.'], bx - 12, by - 10, { g: '#c8641a', h: '#e8944a', b: '#3a7aff' });
+        const g = 0.6 + Math.sin(t * 5) * 0.2; c.globalAlpha = g; E(bx - 13, by + 1, 2, 2, '#fff27a'); c.globalAlpha = 1; R(bx - 13, by, 1, 2, '#ffe86a');
+        break;
+      }
+      case 'hikeStick': { line(ax + 2, ay - 4, ax + 3, ay + 7, '#8a5a2a'); R(ax + 1, ay - 5, 3, 1, '#5a3a1a'); R(ax + 2, ay - 1, 2, 1, '#e8261a'); break; }
+      case 'ponytail': {
+        const sw = Math.sin(t * 6) * 1;
+        M(['.oo.', 'ohho', 'ohho', '.ohho', '..oho', '..oo.'], hx - 10, hy - 10 + sw, { h: sk.hair || '#7a4a2a' });
+        M(['oo.oo', 'oppop', 'oo.oo'], hx - 8, hy - 11, { p: '#ff4aa0' });
+        break;
+      }
+      case 'cheerTop': { suit(by - 5, '#e8264a'); suit(by + 2, '#ffffff'); M(['.w.', 'w.w', 'www', 'w.w'], bx, by - 3, { w: '#ffffff' }); R(bx - 5, by + 4, 11, 1, '#e8264a'); break; }
+      case 'pomFront': case 'pomBack': {
+        const P = part === 'pomFront' ? A1 : { x: B.x - 6, y: B.y - 2 - (flying ? 6 : 0) }, sh = Math.sin(t * 14 + (part === 'pomBack' ? 2 : 0)) > 0 ? 1 : 0;
+        const cols = part === 'pomFront' ? ['#ff4aa0', '#ffffff'] : ['#ffd23a', '#ffffff'];
+        E(P.x, P.y - sh, 4, 3.4, ol);
+        for (let i = 0; i < 14; i++) { const a = i * 0.9 + sh; R(P.x + Math.cos(a) * (1 + (i % 3)), P.y - sh + Math.sin(a) * (1 + (i % 3)) * 0.8, 1, 1, cols[i % 2]); }
+        E(P.x, P.y - sh, 1.6, 1.4, cols[0]);
+        break;
+      }
+      case 'bbCap': {
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8, 6, ol); E(Hd.x, hy - 4, 7, 5, '#1a2a6a'); M(['ww', 'w.', 'ww'], hx, hy - 9, { w: '#ffffff' }); });
+        R(hx + 3, hy - 5, 8, 2, ol); R(hx + 4, hy - 5, 6, 1, '#1a2a6a');
+        break;
+      }
+      case 'pinstripe': { suit(by - 5, '#f4f4f8'); for (let x = bx - 5; x <= bx + 5; x += 2) R(x, by - 4, 1, 10, '#a8b8e0'); M(['www', 'w.w', 'www'].map(s => s), bx, by - 3, { w: '#1a2a6a' }); break; }
+      case 'bat2': { line(bx - 2, by + 1, bx - 8, by - 9, '#c8945a', 1); line(bx - 6, by - 6, bx - 10, by - 12, '#c8945a', 2); break; }
+      case 'bbGlove': { O(B.x - 6, B.y, 2.6, 2.6, '#a0602a'); R(bx - 7, by - 1, 2, 1, '#d8a060'); break; }
+      case 'visor2': { R(hx - 7, hy - 7, 15, 2, ol); R(hx - 6, hy - 7, 13, 1, '#ffffff'); R(hx + 3, hy - 6, 8, 2, ol); R(hx + 4, hy - 6, 6, 1, '#3ac04a'); break; }
+      case 'argyle': { suit(by - 5, '#3a8a4a'); for (const [dx, dy] of [[-3, -2], [1, -2], [-1, 1], [3, 1], [-3, 4], [1, 4]]) M(['.y.', 'yyy', '.y.'], bx + dx, by + dy - 1, { y: '#ffd23a' }); break; }
+      case 'golfClub2': {
+        const sw = Math.sin(t * 2.5), a = -0.4 + sw * 0.6;
+        const x1 = ax + Math.sin(a) * 10, y1 = ay + Math.cos(a) * 10;
+        line(ax, ay, x1, y1, '#c8c8d0'); R(x1 - 1, y1, 3, 2, '#5a5a6a'); R(ax, ay - 1, 1, 3, '#1a1a24');
+        R(bx + 10, by + 6, 1, 2, '#ffffff'); O(bx + 10.5, by + 4.5, 1, 1, '#ffffff');
+        break;
+      }
+      case 'hoopKit': { suit(by - 5, '#ff7a1a'); suit(by + 2, '#5a2aa0'); R(bx - 5, by - 5, 11, 1, '#5a2aa0'); M(['ww.', '..w', '.w.', 'w..', 'www'], bx, by - 3, { w: '#ffffff' }); break; }
+      case 'basketball': {
+        const ph = Math.abs(Math.sin(t * 5)), x = ax + 2, y = ay + 2 + ph * 7;
+        O(x, y, 2.8, 2.8, '#ff7a1a'); R(x - 3, y, 6, 1, '#3a1a08'); R(x, y - 3, 1, 6, '#3a1a08'); R(x - 2, y - 2, 1, 1, '#3a1a08'); R(x + 2, y + 2, 1, 1, '#3a1a08'); R(x - 2, y - 2, 1, 1, '#ffb070');
+        break;
+      }
+      case 'cardigan': { suit(by - 5, '#8a5ac0'); R(bx, by - 5, 2, 10, '#f4e8d0'); for (const y of [by - 3, by, by + 3]) R(bx - 1, y, 1, 1, '#ffd23a'); break; }
+      case 'glassChain': { for (let i = 0; i < 6; i++) R(ex1 - 2 - i * 0.3, ey + 3 + i, 1, 1, '#ffd23a'); break; }
+      case 'bookStack': {
+        M(['oooooo', 'orrrro', 'oooooo', 'obbbbo', 'oooooo', 'ogggggo', 'ooooooo'], ax - 2, ay - 5, { r: '#c02a2a', b: '#2a5ac0', g: '#3a8a3a' });
+        R(ax + 2, ay - 4, 1, 1, '#ffd23a');
+        break;
+      }
+      case 'plaid2': { suit(by - 5, '#c0201a'); clipBelow(by - 5, () => { c.save(); c.beginPath(); c.ellipse(B.x, B.y, B.rx, B.ry, 0, 0, 7); c.clip(); for (let x = bx - 6; x <= bx + 6; x += 3) R(x, by - 6, 1, 13, '#2a0a0a'); for (let y = by - 4; y <= by + 6; y += 3) R(bx - 6, y, 13, 1, '#2a0a0a'); c.restore(); }); break; }
+      case 'beard2': { M(['o.....o', 'obbbbbbo', 'obbbbbbbo', '.obbbbbbo', '..obbbbo', '...oooo.'], hx - 2, hy + 1, { b: '#7a4a2a' }); R(hx + 2, hy + 2, 3, 1, '#c87a5a'); break; }
+      case 'axe2': { line(bx - 2, by + 3, bx - 8, by - 9, '#a87040'); M(['oooo.', 'ohggo', 'ogggo', '.oggo', '..oo.'], bx - 13, by - 12, { g: '#a8b0b8', h: '#ffffff' }); break; }
+      case 'scoutHat2': { M(['.....oo.....', '....okko....', '...okkkko...', '..obbbbbbo..', 'okkkkkkkkkko', '.oooooooooo.'], hx - 6, hy - 12, { k: '#a88a4a', b: '#5a3a1a' }); break; }
+      case 'neckerchief': { R(sx, sy, 11, 2, '#ffd23a'); M(['oyyyo', '.oyo.', '..o..'], sx + 6, sy + 2, { y: '#ffd23a' }); R(sx + 7, sy + 1, 2, 2, '#a86a2a'); break; }
+      case 'sash': { for (let i = 0; i < 9; i++) R(bx - 4 + i, by - 4 + i, 2, 1, '#3a8a3a'); for (const [dx, dy, col] of [[-2, -1, '#ffd23a'], [1, 2, '#e8261a'], [3, 5, '#3ab0ff']]) R(bx + dx, by + dy, 1, 1, col); break; }
+      case 'compass': { O(ax + 0.5, ay - 0.5, 2.2, 2.2, '#ffd23a'); E(ax + 0.5, ay - 0.5, 1.4, 1.4, '#ffffff'); R(ax, ay - 2, 1, 2, '#e8261a'); R(ax + 1, ay, 1, 1, '#3a3a44'); break; }
+      case 'plumbCap': {
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8, 6, ol); E(Hd.x, hy - 4, 7, 5, '#1a6a8a'); M(['.g.', 'ggg', '.g.', '.g.'], hx - 1, hy - 10, { g: '#ff9a2a' }); });
+        R(hx + 3, hy - 5, 7, 2, ol); R(hx + 4, hy - 5, 5, 1, '#1a6a8a');
+        break;
+      }
+      case 'coverall': { suit(by - 5, '#5a7a8a', '#7a9aaa'); M(['oooo', 'owwo', 'oooo'], bx + 1, by - 3, { w: '#ffffff' }); R(bx - 5, by + 2, 11, 1, '#3a2a1a'); M(['o.o', 'ooo', '.o.', '.o.'], bx - 4, by + 2, { o: '#c8c8d0' }); break; }
+      case 'plunger': { R(ax + 1, ay - 3, 1, 7, '#c89a5a'); M(['oooooo', 'orrrro', '.orro.', '..oo..'].reverse().reverse(), ax - 1, ay + 4, { r: '#c02a1a' }); break; }
+      case 'nerdGlasses': {
+        for (const x of [ex1, ex2]) { R(x - 2, ey - 2, 5, 6, '#1a1a24'); R(x - 1, ey - 1, 3, 4, '#d8f0ff'); if (blink) R(x - 1, ey + 1, 3, 1, '#1a1010'); else { R(x, ey, 2, 2, '#1a1010'); R(x, ey, 1, 1, '#ffffff'); } }
+        R(ex1 + 3, ey, 1, 2, '#ffffff'); R(hx - 7, ey, 2, 1, '#1a1a24');
+        R(hx + 3, hy + 3, 3, 1, '#c8c8d0');
+        R(hx - 2, hy - 9, 1, 2, ol); R(hx - 1, hy - 10, 1, 1, ol);
+        break;
+      }
+      case 'pocketPens': { M(['rbg', 'ooo', 'ooo'], bx + 2, by - 3, { r: '#e8261a', b: '#3a7aff', g: '#3ac04a', o: '#ffffff' }); R(bx + 2, by - 1, 3, 1, '#c8c8d0'); break; }
+      case 'bigBook': { M(['oooooooo', 'ogggggwo', 'ogyyggwo', 'ogggggwo', 'oggyygwo', 'oooooooo'], ax - 3, ay - 4, { g: '#3a8a3a', y: '#ffd23a', w: '#f4f4e8' }); break; }
+      // ---- остальные редкие: по одной своей детали ----
+      case 'flipperWave': { const f = flying ? (Math.sin(t * 22) > 0 ? -3 : 0) : Math.sin(t * 3) > 0.6 ? -1 : 0; M(['oo..', 'oddo', '.oddo', '..oo.'], bx - 1, by + f, { d: sk.dark }); break; }
+      case 'carrot': { M(['.g.g', '..g.', '.oo.', 'oooo', 'oooo', '.oo.', '.oo.', '..o.'], ax - 1, ay - 8, { g: '#3ac04a', o: '#ff8a1e' }); R(ax, ay - 4, 1, 1, '#c05a10'); break; }
+      case 'honeyPot': { M(['oooooo', 'oyyyyo', 'oooooo', 'okkkko', 'okhkko', 'okkkko', '.oooo.'], ax - 2, ay - 4, { y: '#ffd23a', k: '#c8803a', h: '#e8a85a' }); R(ax + 2, ay - 2, 1, 2 + r((t * 2) % 1 * 2), '#ffd23a'); break; }
+      case 'bananaHand': { M(['...ok', '..oyo', '.oyyo', 'oyyo.', 'oyo..', '.o...'], ax - 1, ay - 5, { y: '#ffe03a', k: '#6a4a1a' }); break; }
+      case 'eucalyptus': { line(ax, ay + 2, ax + 3, ay - 7, '#6a5a3a'); for (const [dx, dy] of [[2, -6], [-1, -3], [3, -2], [0, -8]]) M(['.g', 'gg', 'g.'], ax + dx, ay + dy, { g: '#6ab08a' }); O(hx + 6, hy + 1, 1.4, 1.2, '#3a3a44'); break; }
+      case 'owlFace': {
+        for (const x of [ex1, ex2]) { E(x + 1, ey + 1.5, 2.8, 2.8, '#ffffff'); E(x + 1, ey + 1.5, 1.6, 1.6, '#ff9a2a'); if (blink) R(x - 1, ey + 1, 4, 1, '#1a1010'); else { R(x, ey + 1, 2, 2, '#1a1010'); R(x, ey + 1, 1, 1, '#ffffff'); } }
+        break;
+      }
+      case 'fryPan': { M(['.oooo.', 'okkkko', 'okwwko', 'okwyko', 'okkkko', '.oooo.'], ax + 1, ay - 7, { k: '#3a3a44', w: '#ffffff', y: '#ffd23a' }); R(ax, ay - 2, 2, 3, '#1a1a24'); break; }
+      case 'badge': { M(['.y.', 'yyy', 'y.y'], bx + 2, by - 3, { y: '#ffd23a' }); R(bx + 3, by - 2, 1, 1, '#fff6a0'); break; }
+      case 'diploma': { M(['oooooo', 'owwrwo', 'oooooo'], ax - 2, ay - 2, { w: '#f4f0e0', r: '#e8261a' }); break; }
+      case 'partyHorn': {
+        const q = Math.max(0, Math.sin(t * 3)), L = r(q * 6);
+        R(hx + 7, hy + 2, 2, 2, '#ffd23a');
+        for (let i = 0; i < L; i++) R(hx + 9 + i, hy + 2, 1, 2, i % 2 ? '#ff4aa0' : '#3ab0ff');
+        if (L > 4) for (let k = 0; k < 5; k++) R(hx + 14 + Math.cos(k * 1.7) * 3, hy + Math.sin(k * 2.3) * 4, 1, 1, ['#ffd23a', '#ff4aa0', '#3ae05a'][k % 3]);
+        break;
+      }
+      case 'cowBell': { M(['.oo.', 'oyyo', 'oyyo', 'oooo', '.o..'], sx + 7, sy + 2, { y: '#e8c040' }); break; }
+      case 'cheese': { M(['.....oo', '...ooyo', '.ooyyyo', 'oyyoyyo', 'oyyyyoo', 'ooooo..'], ax - 2, ay - 4, { y: '#ffd23a' }); break; }
+      case 'anchor': { M(['.o.', 'ooo', '.o.', '.o.', 'o.o', '.o.'], ax, ay - 4, { o: '#3a4a6a' }); break; }
+      case 'letter': { M(['ooooooo', 'owwwwwo', 'oowwwoo', 'owowowo', 'owwrwwo', 'ooooooo'], ax - 2, ay - 4, { w: '#ffffff', r: '#ff4a6a' }); break; }
+      case 'tieDye': { suit(by - 5, hsl(t * 40, 80, 70)); E(B.x, B.y, 3, 3, hsl(t * 40 + 120, 80, 70)); E(B.x, B.y, 1.4, 1.4, hsl(t * 40 + 240, 80, 70)); break; }
+      case 'mimeWall': { const p = Math.sin(t * 2.4) > 0 ? 1 : 0; E(ax + 1 + p, ay - 2, 1.8, 2.2, '#ffffff'); R(ax + 1 + p, ay - 4, 1, 1, '#ffffff'); c.globalAlpha = 0.25; R(ax + 4 + p, ay - 10, 1, 16, '#bfe8ff'); c.globalAlpha = 1; break; }
+      case 'acornHat': { M(['..o..', '.okko', 'okkkko', 'oooooo'.slice(0, 6)], hx + 1, hy - 11, { k: '#8a5a2a' }); break; }
+      case 'capyBird': { const h = Math.sin(t * 2) > 0.8 ? 1 : 0; M(['.oo..', 'obbo.', 'obbbo', '.oooy'], hx - 6, hy - 12 - h, { b: '#5a9aff', y: '#ffd23a' }); R(hx - 5, hy - 11 - h, 1, 1, '#1a1010'); break; }
+      case 'leafHand': { M(['..og', '.ogo', 'ogo.', 'go..'], ax, ay - 4, { g: '#3ac04a' }); break; }
+      case 'glowSpots': { const g = 0.5 + Math.sin(t * 3) * 0.3; c.globalAlpha = g; for (const [dx, dy] of [[-2, -1], [2, 2], [-1, 3]]) R(bx + dx, by + dy, 1, 1, '#ffffff'); c.globalAlpha = 1; break; }
+      case 'hippoEars': { for (const dx of [-5, 3]) M(['oo', 'oo'], hx + dx, hy - 8, {}); R(hx - 4, hy - 7, 1, 1, '#ff9ab8'); R(hx + 4, hy - 7, 1, 1, '#ff9ab8'); M(['w.w'], hx + 4, hy + 4, { w: '#ffffff' }); break; }
+      case 'flamLeg': { if (pose === 'idle') R(F2.x, F2.y - 1, 1, 1, sk.dark); break; }
+      case 'goatBell': { M(['.oo.', 'oggo', 'oooo'], sx + 7, sy + 2, { g: '#c8c8d0' }); break; }
+      case 'sealBall': { const y = hy - 9 - Math.abs(Math.sin(t * 4)) * 3, x = hx + 8; O(x, y, 2.4, 2.4, '#e8261a'); R(x - 1, y - 2, 1, 5, '#ffd23a'); R(x + 1, y - 2, 1, 5, '#3ab0ff'); break; }
+      case 'otterShell2': { M(['.ooo.', 'owpwo', 'opwpo', '.ooo.'], ax - 1, ay - 3, { w: '#f4e8f0', p: '#ff9ab8' }); break; }
+      case 'jellyGlow': { const g = 0.25 + Math.sin(t * 2) * 0.12; c.globalAlpha = g; E(B.x, B.y - 4, 10, 10, '#d8a8ff'); c.globalAlpha = 1; break; }
+    }
+  }
 }
 
 function drawTail(c, sk, t, B) {
@@ -4313,10 +5126,13 @@ function mpGot(m) {
   else if (m.t === 'st') { q.rd = m.v ? 1 : 0; if (!m.v && q.r) q.r.d = 1; }
   else if (m.t === 'bye') mpDrop(id);
 }
-const mpPeerLib = () => new Promise((ok, no) => {
+// библиотека связи: сначала jsdelivr, если не грузится — unpkg
+const mpPeerLib = (n = 0) => new Promise((ok, no) => {
   if (window.Peer) return ok(window.Peer);
-  const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-  s.onload = () => window.Peer ? ok(window.Peer) : no(); s.onerror = no; document.head.appendChild(s); setTimeout(no, 8000);
+  const src = ['https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js', 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'][n];
+  if (!src) return no();
+  let done = false; const next = () => { if (done) return; done = true; if (window.Peer) ok(window.Peer); else mpPeerLib(n + 1).then(ok, no); };
+  const s = document.createElement('script'); s.src = src; s.onload = next; s.onerror = next; document.head.appendChild(s); setTimeout(next, 6000);
 });
 function mpStart(role, code) {
   mpLeave(); mp.role = role; mp.code = code || mpCode(); const my = mp.role + mp.code, same = () => mp.role + mp.code === my;
@@ -4347,6 +5163,7 @@ function mpPeer(P, same) {
     if (mp.role === 'host') { mp.tx = d => { for (const o of mp.conns) if (o.open) try { o.send(d); } catch (e) {} }; mpRender(); }
     else { const c = peer.connect(id, { reliable: true }); c.on('open', () => hook(c)); setTimeout(() => { if (same() && !mp.link) mpStatus(tr('Комната не найдена или заполнена.', 'Room not found or full.')); }, 12000); }
   });
+  peer.on('disconnected', () => { if (same() && opened) try { peer.reconnect(); } catch (e) {} });   // сервер-посредник отвалился — комната и связи живы, переподключаемся
   peer.on('connection', c => { if (mp.conns.filter(o => o.open).length >= 5) { c.on('open', () => c.close()); return; } c.on('open', () => hook(c)); });
 }
 async function mpRoom(same) {
@@ -6765,7 +7582,11 @@ const WHEEL_NAMES = {
 };
 const wheelName = i => i === 4 ? tr('РУБИНОВОЕ КОЛЕСО', 'RUBY WHEEL') : i === 3 ? tr('ОГРОМНОЕ КОЛЕСО', 'MEGA WHEEL') : i === 1 ? T('wheel') : (WHEEL_NAMES[lang] || WHEEL_NAMES.en)[i ? 1 : 0];
 const WHL_PREV = { x: 2, y: 276, w: 34, h: 48 }, WHL_NEXT = { x: W - 36, y: 276, w: 34, h: 48 };
-const tabSkins = () => SKINS.filter(k => k.r === shopTab);
+const tabSkins = () => {   // ord — своё место в витрине (вертолётик в верхнем ряду, чтобы была видна шапка)
+  const l = SKINS.filter(k => k.r === shopTab && k.ord === undefined);
+  for (const k of SKINS) if (k.r === shopTab && k.ord !== undefined) l.splice(k.ord, 0, k);
+  return l;
+};
 const pageCount = () => Math.max(1, Math.ceil(tabSkins().length / PER_PAGE));
 const pageSkins = () => tabSkins().slice(shopPage * PER_PAGE, (shopPage + 1) * PER_PAGE);
 const dayNum = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000); };
