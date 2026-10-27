@@ -1,0 +1,45 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "board": {
+      ".read": "auth != null",
+      ".indexOn": ["c", "b", "r", "g", "tr"],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['n', 'av', 'c', 'g', 'r', 'b', 'tr', 't']) && newData.child('t').val() === now && newData.child('n').isString() && newData.child('n').val().length <= 12 && newData.child('c').isNumber() && newData.child('c').val() >= 0 && newData.child('c').val() <= 1000000000 && newData.child('g').isNumber() && newData.child('g').val() >= 0 && newData.child('g').val() <= 1000000000 && newData.child('r').isNumber() && newData.child('r').val() >= 0 && newData.child('r').val() <= 10000000 && newData.child('b').isNumber() && newData.child('b').val() >= 0 && newData.child('b').val() <= 99999 && newData.child('tr').isNumber() && newData.child('tr').val() >= 0 && newData.child('tr').val() <= 100000000 && (!data.exists() || (newData.child('b').val() - data.child('b').val() <= (now - data.child('t').val()) * 0.06 + 30 && newData.child('tr').val() - data.child('tr').val() <= (now - data.child('t').val()) * 0.06 + 100))",
+        "$field": {
+          ".validate": "(newData.isString() && newData.val().length <= 44) || newData.isNumber()"
+        }
+      }
+    },
+    "profiles": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['p', 't'])",
+        "p": { ".validate": "newData.isString() && newData.val().length <= 30000" },
+        "t": { ".validate": "newData.val() === now" },
+        "$other": { ".validate": false }
+      }
+    },
+    "rooms": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('host').val() === auth.uid || now - data.child('t').val() > 7200000)",
+        ".validate": "$code.matches(/^[A-Z0-9]{4,6}$/) && newData.hasChildren(['host', 't']) && newData.child('host').val() === auth.uid && newData.child('t').val() === now",
+        "$other": { ".validate": "$other === 'host' || $other === 't'" }
+      }
+    },
+    "sig": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$msg": {
+          ".write": "auth != null && (auth.uid === $to || !data.exists())",
+          ".validate": "newData.hasChildren(['from', 'type', 'sdp']) && newData.child('from').val() === auth.uid && (newData.child('type').val() === 'offer' || newData.child('type').val() === 'answer') && newData.child('sdp').isString() && newData.child('sdp').val().length <= 20000",
+          "$other": { ".validate": "$other === 'from' || $other === 'type' || $other === 'sdp'" }
+        }
+      }
+    }
+  }
+}

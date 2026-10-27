@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1921,6 +1921,145 @@ async function pushCloud() {
     store.onSet = markDirty;   // дальше каждое сохранение уходит и в облако
   } catch (e) { cloud.status = 'error'; }
 })();
+// ---------- Firebase (бесплатный тариф Spark): вход без регистрации, рейтинг, поиск соперников для мультиплеера ----------
+// Вставь два значения из консоли Firebase (пошагово — в README, раздел «Firebase»). Пока они пустые, Firebase выключен
+// и игра работает как раньше. Нужны только «Authentication → Anonymous» и «Realtime Database» — оба бесплатны на Spark.
+// SDK не грузится: игра говорит с Firebase напрямую по REST (меньше файл, нет зависимости от чужих CDN).
+const FIREBASE = {
+  apiKey: '',          // Project settings → General → Web API Key (пример: 'AIzaSy...')
+  databaseURL: '',     // Realtime Database → адрес сверху (пример: 'https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app')
+  turn: [],            // необязательно: свои TURN-серверы для мультиплеера через строгие сети [{ urls, username, credential }]
+  emu: null,           // только для разработки: { auth: 'http://127.0.0.1:9099', ns: 'demo-x' } — локальный эмулятор
+};
+const FB = { uid: null, tok: null, exp: 0, busy: null };
+const fbOn = () => !!(FIREBASE.apiKey && FIREBASE.databaseURL);
+const fbAuthBase = () => FIREBASE.emu ? FIREBASE.emu.auth + '/identitytoolkit.googleapis.com' : 'https://identitytoolkit.googleapis.com';
+const fbTokBase = () => FIREBASE.emu ? FIREBASE.emu.auth + '/securetoken.googleapis.com' : 'https://securetoken.googleapis.com';
+// вход без регистрации: анонимный аккаунт Firebase; ключ обновления хранится в сохранении игры
+async function fbAuth() {
+  if (FB.tok && Date.now() < FB.exp - 60000) return FB.tok;
+  if (FB.busy) return FB.busy;
+  FB.busy = (async () => {
+    const saved = store.get('fbAuth', null), key = encodeURIComponent(FIREBASE.apiKey);
+    let r, j;
+    if (saved && typeof saved.rt === 'string') {
+      r = await fetch(fbTokBase() + '/v1/token?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(saved.rt) });
+      if (r.ok) { j = await r.json(); FB.tok = j.id_token; FB.uid = j.user_id; FB.exp = Date.now() + (+j.expires_in || 3600) * 1000; store.set('fbAuth', { rt: j.refresh_token, uid: j.user_id }); return FB.tok; }
+    }
+    r = await fetch(fbAuthBase() + '/v1/accounts:signUp?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"returnSecureToken":true}' });
+    if (!r.ok) throw { status: r.status };
+    j = await r.json(); FB.tok = j.idToken; FB.uid = j.localId; FB.exp = Date.now() + (+j.expiresIn || 3600) * 1000;
+    store.set('fbAuth', { rt: j.refreshToken, uid: j.localId });
+    return FB.tok;
+  })();
+  try { return await FB.busy; } finally { FB.busy = null; }
+}
+const fbUrl = (path, q = '') => FIREBASE.databaseURL.replace(/\/$/, '') + '/' + path + '.json?auth=' + encodeURIComponent(FB.tok) + (FIREBASE.emu ? '&ns=' + FIREBASE.emu.ns : '') + q;
+async function fbReq(method, path, body, q) {
+  await fbAuth();
+  const r = await fetch(fbUrl(path, q), { method, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (!r.ok) throw { status: r.status };
+  return r.json();
+}
+const FB_NOW = { '.sv': 'timestamp' };   // время сервера: по нему правила базы проверяют честность результатов
+// живая подписка на ветку базы (поток событий REST): fn(ключ, значение) на каждого ребёнка; возвращает «отписаться»
+function fbStream(path, fn) {
+  let es = null, closed = false;
+  const each = (p, d) => { const k = p.split('/').filter(Boolean)[0]; if (!k) { if (d && typeof d === 'object') for (const c of Object.keys(d)) fn(c, d[c]); } else if (p.split('/').filter(Boolean).length === 1) fn(k, d); };
+  const open = async () => {
+    try { await fbAuth(); } catch (e) { if (!closed) setTimeout(open, 3000); return; }
+    if (closed) return;
+    es = new EventSource(fbUrl(path));
+    const on = ev => { try { const m = JSON.parse(ev.data); if (m) each(m.path || '/', m.data); } catch (e) {} };
+    es.addEventListener('put', on); es.addEventListener('patch', on);
+    es.addEventListener('auth_revoked', () => { es.close(); FB.exp = 0; if (!closed) open(); });
+    es.addEventListener('cancel', () => { es.close(); });
+  };
+  open();
+  return () => { closed = true; if (es) es.close(); };
+}
+
+// ---- мультиплеер: игроки соединяются напрямую (WebRTC), а Firebase только передаёт им приглашения ----
+// FirePeer повторяет ту часть PeerJS, которой пользуется игра: open/connection/error, connect, send, close.
+const fbIce = () => [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }].concat(Array.isArray(FIREBASE.turn) ? FIREBASE.turn : []);
+const fbGather = pc => new Promise(ok => { if (pc.iceGatheringState === 'complete') return ok(); const t = setTimeout(ok, 2500); pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(t); ok(); } }); });
+function FireConn(pc) {
+  const h = {}, me = this; me.open = false; me.pc = pc;
+  me.on = (e, f) => { h[e] = f; }; const emit = (e, a) => { if (h[e]) h[e](a); };
+  me.bind = ch => {
+    me.ch = ch;
+    ch.onopen = () => { me.open = true; emit('open'); };
+    ch.onmessage = ev => { let d; try { d = JSON.parse(ev.data); } catch (e) { return; } emit('data', d); };
+    ch.onclose = () => me.close();
+  };
+  pc.addEventListener('connectionstatechange', () => { if (pc.connectionState === 'failed' || pc.connectionState === 'closed') me.close(); });
+  me.send = d => { if (me.open) try { me.ch.send(JSON.stringify(d)); } catch (e) {} };
+  me.close = () => { const was = me.open; me.open = false; try { me.ch && me.ch.close(); } catch (e) {} try { pc.close(); } catch (e) {} if (was || !me.closedOnce) { me.closedOnce = true; if (was) emit('close'); } };
+}
+function FirePeer(id) {
+  const me = this, h = {}, conns = [], pend = {};
+  let stop = null, dead = false;
+  me.on = (e, f) => { h[e] = f; };
+  const emit = (e, a) => { if (!dead && h[e]) h[e](a); }, err = type => emit('error', { type });
+  me.destroy = () => { if (dead) return; dead = true; if (stop) stop(); for (const c of conns) c.close(); if (me.code) fbReq('DELETE', 'rooms/' + me.code).catch(() => {}); };
+  me.reconnect = () => {};
+  const onSig = async (key, m) => {
+    if (dead || !m || typeof m !== 'object' || typeof m.sdp !== 'string' || typeof m.from !== 'string') return;
+    fbReq('DELETE', 'sig/' + FB.uid + '/' + key).catch(() => {});   // приглашение прочитано — убираем
+    if (m.type === 'offer' && me.code) {   // хост принимает игрока
+      const pc = new RTCPeerConnection({ iceServers: fbIce() }), c = new FireConn(pc);
+      pc.ondatachannel = ev => c.bind(ev.channel);
+      conns.push(c); emit('connection', c);
+      try {
+        await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp });
+        await pc.setLocalDescription(await pc.createAnswer()); await fbGather(pc);
+        await fbReq('POST', 'sig/' + m.from, { from: FB.uid, type: 'answer', sdp: pc.localDescription.sdp });
+      } catch (e) { c.close(); }
+    } else if (m.type === 'answer' && pend[m.from]) {
+      const pc = pend[m.from]; delete pend[m.from];
+      try { await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); } catch (e) {}
+    }
+  };
+  me.connect = hostId => {   // игрок стучится в комнату по коду
+    const pc = new RTCPeerConnection({ iceServers: fbIce() }), c = new FireConn(pc);
+    c.bind(pc.createDataChannel('wp', { ordered: true })); conns.push(c);
+    (async () => {
+      try {
+        const code = String(hostId).replace(/^wallplay-/, '').toUpperCase(), room = await fbReq('GET', 'rooms/' + code);
+        if (!room || typeof room.host !== 'string' || Date.now() - (+room.t || 0) > 2 * 36e5) { err('peer-unavailable'); return; }
+        pend[room.host] = pc;
+        await pc.setLocalDescription(await pc.createOffer()); await fbGather(pc);
+        await fbReq('POST', 'sig/' + room.host, { from: FB.uid, type: 'offer', sdp: pc.localDescription.sdp });
+      } catch (e) { err('network'); }
+    })();
+    return c;
+  };
+  (async () => {
+    try { await fbAuth(); } catch (e) { err('network'); return; }
+    if (id) {   // хост занимает комнату с кодом; занятую чужим (и не брошенную) база не отдаст
+      const code = String(id).replace(/^wallplay-/, '').toUpperCase();
+      try { await fbReq('PUT', 'rooms/' + code, { host: FB.uid, t: FB_NOW }); me.code = code; }
+      catch (e) { err(e && (e.status === 401 || e.status === 403) ? 'unavailable-id' : 'network'); return; }
+    }
+    if (dead) return;
+    stop = fbStream('sig/' + FB.uid, onSig);
+    emit('open', id || FB.uid);
+  })();
+}
+
+// ---- рейтинг в Firebase: короткая строка в board/<uid> (её читают таблицей) и подробности в profiles/<uid> (по нажатию) ----
+async function fbBoardPush(e) {
+  const { own, ic, ach, show, tro, ...row } = e;
+  await fbReq('PUT', 'board/' + FB.uid, { ...row, t: FB_NOW });
+  await fbReq('PUT', 'profiles/' + FB.uid, { p: JSON.stringify({ own, ic, ach, show, tro }).slice(0, 30000), t: FB_NOW });
+}
+async function fbBoardTop(field) {
+  const d = await fbReq('GET', 'board', undefined, '&orderBy=' + encodeURIComponent('"' + field + '"') + '&limitToLast=99');
+  return Object.entries(d || {}).map(([id, v]) => boardClean(id, { ...v, lazy: 1 })).filter(Boolean).map(r => (r.lazy = true, r)).sort((a, b) => b[field] - a[field]);
+}
+async function fbProfile(e) {
+  try { const d = await fbReq('GET', 'profiles/' + e.id); const p = d && typeof d.p === 'string' ? JSON.parse(d.p) : {}; return boardClean(e.id, { ...e, ...p }); } catch (x) { return e; }
+}
 // всё, что читается из сохранения, проверяется: повреждённые или подделанные данные не ломают игру
 const nat = v => Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), 1e9) : 0;
 const strList = v => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.length <= 40).slice(0, 2000) : null;
@@ -5304,12 +5443,13 @@ const mpPeerLib = (n = 0) => new Promise((ok, no) => {
 function mpStart(role, code) {
   mpLeave(); mp.role = role; mp.code = code || mpCode(); const my = mp.role + mp.code, same = () => mp.role + mp.code === my;
   mpStatus(tr('Подключаюсь…', 'Connecting…')); mpRender();
-  mpPeerLib().then(P => mpPeer(P, same), () => mpRoom(same));
+  const viaPeerJs = () => mpPeerLib().then(P => mpPeer(P, same), () => mpRoom(same));
+  if (fbOn() && window.RTCPeerConnection) mpPeer(FirePeer, same, viaPeerJs); else viaPeerJs();   // с Firebase — свой поиск соперников, без него — PeerJS
 }
 function mpWait() { mpStatus(mp.role === 'host' ? tr('Код комнаты: ', 'Room code: ') + mp.code + tr('\nСкажи его друзьям (до 5) и жди…', '\nTell your friends (up to 5) and wait…') : tr('Ищу комнату ', 'Looking for room ') + mp.code + '…'); }
-function mpPeer(P, same) {
+function mpPeer(P, same, next) {
   const id = 'wallplay-' + mp.code.toLowerCase(); let opened = false, peer;
-  const fall = () => { if (opened || !same()) return; opened = true; try { peer.destroy(); } catch (e) {} mpRoom(same); };
+  const fall = () => { if (opened || !same()) return; opened = true; try { peer.destroy(); } catch (e) {} (next || (() => mpRoom(same)))(); };
   const hook = c => {
     c.on('data', d => { if (!d || typeof d !== 'object') return; if (mp.role === 'host') { c.__i = d.i; mpGot(d); for (const o of mp.conns) if (o !== c && o.open) try { o.send(d); } catch (e) {} } else mpGot(d); });
     c.on('close', () => { if (mp.role === 'host') { mp.conns = mp.conns.filter(o => o !== c); if (c.__i) { mpGot({ t: 'bye', i: c.__i }); for (const o of mp.conns) try { o.send({ t: 'bye', i: c.__i }); } catch (e) {} } } else if (same()) { mpLeave(); mpNote(tr('Хост закрыл комнату', 'Host closed the room')); } });
@@ -14412,8 +14552,13 @@ let boardTab = 0, boardCache = {}, boardTimer = 0;
 function boardPush() {
   clearTimeout(boardTimer);
   boardTimer = setTimeout(async () => {
-    if (!cloud.db || !cloud.uid || tampered || quiet) return;
-    try { await cloud.db.doc('board/' + cloud.uid).set({ ...myEntry(), t: Date.now(), v: 1 }); boardCache = {}; } catch (e) {}
+    if (tampered || quiet) return;
+    try {
+      if (cloud.db && cloud.uid) await cloud.db.doc('board/' + cloud.uid).set({ ...myEntry(), t: Date.now(), v: 1 });
+      else if (fbOn()) await fbBoardPush(myEntry());
+      else return;
+      boardCache = {};
+    } catch (e) {}
   }, 3000);
 }
 // чужие строки — непроверенные данные: всё приводим к допустимому виду
@@ -14460,7 +14605,7 @@ function openBoard(keep) {
       box.innerHTML = '';
       if (!rows.length) { box.appendChild(moTxt('div', 'card sm', tr('ПОКА НИКОГО — СЫГРАЙ И СТАНЬ ПЕРВЫМ!', 'NOBODY YET — PLAY AND BE FIRST!'))); return; }
       rows.forEach((e, i) => {
-        const me = e.id === cloud.uid, f = frameStyle(e.fr), r = moEl('div', 'rk' + (me ? ' glow' : ''));
+        const me = e.id === (cloud.db ? cloud.uid : FB.uid), f = frameStyle(e.fr), r = moEl('div', 'rk' + (me ? ' glow' : ''));
         r.style.background = f.bg; r.style.backgroundSize = '300% 100%'; if (f.anim) r.style.animation = 'moFr 5s linear infinite';
         const n = moEl('div', 'n ol'); n.textContent = String(i + 1); if (i < 3) n.style.color = ['#ffd23a', '#e8eef8', '#e0904a'][i];
         const avw = moEl('div'); avw.style.cssText = 'position:relative;flex:none'; avw.appendChild(framed(avatarCnv(e.av, 40), e.fr, 2));
@@ -14470,14 +14615,22 @@ function openBoard(keep) {
         if (titleText(e.ti)) { const tt = moTxt('div', 'sm', '«' + titleText(e.ti) + '»'); tt.style.color = '#ffe680'; nm.appendChild(tt); }
         const v = moEl('div', 'v ol row'); v.style.cssText += ';background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px;gap:4px'; v.append(iconCnv(ic, 0, 20), moTxt('span', '', field === 'b' ? e.b + T('m') : String(e[field])));
         r.append(n, avw, nm, v);
-        r.onclick = () => { sfx.click(); moOpen(e.n, bd2 => profBody(bd2, e, false), true); };
+        r.onclick = async () => { sfx.click(); const full = e.lazy ? await fbProfile(e) : e; moOpen(full.n, bd2 => profBody(bd2, full, false), true); };
         box.appendChild(r);
       });
     };
     const load = async (tries) => {
+      if (!cloud.db && fbOn()) {   // общая таблица в Firebase
+        const hit = boardCache['fb' + field];
+        if (hit && Date.now() - hit.t < 30000) { show(hit.rows); return; }
+        box.innerHTML = ''; box.appendChild(moTxt('div', 'card sm', tr('ЗАГРУЗКА…', 'LOADING…')));
+        try { const rows = await fbBoardTop(field); boardCache['fb' + field] = { t: Date.now(), rows }; if (box.isConnected) show(rows); }
+        catch (e) { if (box.isConnected) { box.innerHTML = ''; box.appendChild(noNetNode([tr('НЕТ СВЯЗИ', 'NO CONNECTION'), tr('ПОПРОБУЙ ЧУТЬ ПОЗЖЕ', 'TRY AGAIN A BIT LATER')])); } }
+        return;
+      }
       if (!cloud.db) {
         if (window.claude && window.claude.use && tries < 12) { if (!tries) box.appendChild(moTxt('div', 'card sm', tr('ПОДКЛЮЧЕНИЕ…', 'CONNECTING…'))); setTimeout(() => { if (box.isConnected) load(tries + 1); }, 1000); return; }
-        box.innerHTML = ''; box.appendChild(noNetNode([tr('РЕЙТИНГ НЕДОСТУПЕН', 'RANKING UNAVAILABLE'), tr('ОБЩАЯ ТАБЛИЦА РАБОТАЕТ В ОНЛАЙН-ВЕРСИИ ИГРЫ НА CLAUDE.AI', 'THE SHARED TABLE WORKS IN THE ONLINE VERSION OF THE GAME ON CLAUDE.AI')])); return;
+        box.innerHTML = ''; box.appendChild(noNetNode([tr('РЕЙТИНГ НЕДОСТУПЕН', 'RANKING UNAVAILABLE'), tr('ОБЩАЯ ТАБЛИЦА РАБОТАЕТ НА CLAUDE.AI ИЛИ С ПОДКЛЮЧЁННЫМ FIREBASE', 'THE SHARED TABLE WORKS ON CLAUDE.AI OR WITH FIREBASE CONNECTED')])); return;
       }
       const hit = boardCache[field];
       if (hit && Date.now() - hit.t < 30000) { show(hit.rows); return; }
