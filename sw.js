@@ -1,5 +1,5 @@
 // Кэш для игры без интернета: только свои файлы, чужие сайты не трогаем
-const CACHE = 'wall-play-v29';
+const CACHE = 'wall-play-v30';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
