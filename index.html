@@ -1860,6 +1860,18 @@ const store = {
   set(k, v) { const s = JSON.stringify(v); memStore['wk3_' + k] = s; try { localStorage.setItem('wk3_' + k, s); } catch (e) {} if (store.onSet) store.onSet(); },
   onSet: null,
 };
+// ---------- Подпись сохранения: правка руками в обход игры ломает её (такой игрок не попадает в рейтинг) ----------
+const SIG_KEYS = ['coins', 'gems', 'rubies', 'best', 'tro', 'ownedIds', 'ach', 'pass'];
+function sigOf() {
+  let h = 0x811c9dc5 >>> 0;
+  const src = 'wp|' + SIG_KEYS.map(k => { try { return localStorage.getItem('wk3_' + k) || ''; } catch (e) { return ''; } }).join('|') + '|v1';
+  for (let i = 0; i < src.length; i++) { h ^= src.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; h = (h ^ (h >>> 13)) >>> 0; }
+  return h.toString(36);
+}
+let tampered = !!store.get('tamp', false);
+try { const s0 = localStorage.getItem('wk3_sig'); if (s0 !== null && JSON.parse(s0) !== sigOf()) { tampered = true; store.set('tamp', true); } } catch (e) {}
+{ const set0 = store.set; store.set = function (k, v) { set0.call(store, k, v); if (SIG_KEYS.includes(k)) set0.call(store, 'sig', sigOf()); }; }
+try { if (localStorage.getItem('wk3_sig') === null) store.set('sig', sigOf()); } catch (e) {}
 // ---------- Облачное сохранение ----------
 // В claude.ai прогресс игрока хранится в его личном приватном документе (без email: аккаунт определяется сам).
 // Без облака (например, на GitHub Pages) всё сохраняется на устройстве.
@@ -1902,6 +1914,7 @@ async function pushCloud() {
       // в облаке свежее (другое устройство) — забираем и перезапускаемся с ним; чужие ключи и мусор не берём
       sessionStorage.setItem('wk3_cloudT', String(d.t));
       for (const k of Object.keys(d.data)) if (/^wk3_[A-Za-z0-9]\w{0,39}$/.test(k) && typeof d.data[k] === 'string' && d.data[k].length < 2e5) localStorage.setItem(k, d.data[k]);
+      if (!('wk3_sig' in d.data)) localStorage.removeItem('wk3_sig');   // сохранение из старой версии — подпись пересчитается
       localStorage.setItem('wk3__savedAt', String(d.t));
       location.reload();
     } else if (!valid || localT > d.t) pushCloud();
@@ -7649,6 +7662,7 @@ function uiClick(pt) {
   if (state === 'play' && paused) { pauseClick(pt); return true; }
   if (state === 'menu') {
     if (mp.link && inRect(pt, BTN_RDY)) { mpReadyClick(); return true; }
+    if (menuMetaClick(pt)) return true;
     if (mp.link && inRect(pt, BTN_TR)) { sfx.click(); trOpen(); return true; }
     const open = main => { audio(); startMusic(); state = 'shop'; shopMain = main; sfx.click(); return true; };
     if (inRect(pt, BTN.shop)) return open(0);
@@ -7660,6 +7674,7 @@ function uiClick(pt) {
     if (inRect(pt, BTN.tent)) { audio(); startMusic(); state = 'tent'; tc = null; sfx.click(); return true; }
     if (inRect(pt, BTN.allies)) { audio(); startMusic(); state = 'allies'; allyScene.last = -1; sfx.click(); return true; }
     if (inRect(pt, BTN.gear)) { audio(); startMusic(); state = 'set'; setFrom = 'menu'; resetArm = -10; sfx.click(); return true; }
+    if (!mp.link && time - menuAt >= 0.5) { menuSw = { x: pt.x, y: pt.y }; return true; }   // старт — на отпускании, если это не свайп
   }
   return false;
 }
@@ -10365,6 +10380,7 @@ function drawMenu() {
   button(BTN.mp, tr('СЕТЬ', 'ONLINE'), '#14b8b8', '#0a7a7a');
   button(BTN.emo, tr('ЭМОЦИИ', 'EMOTES'), '#ff8a1e', '#c05a00');
   mpMenu();
+  drawMenuMeta();
   drawMuteBtn();
   drawGearBtn();
   const hint = IDLE[curSkin().id] ? clamp(1 - (idleT - 9.5) * 2, 0, 1) : 1;   // во время сценки подсказка уходит
@@ -13872,6 +13888,658 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
+// =====================================================================================
+// ---------- Мета-игра: кубки героев и дорожка наград, титулы, рамки, профиль, задания дня,
+// ---------- Wall Play Pass, рейтинг игроков и защита результатов ----------
+// Экраны — HTML поверх холста (как окно «Сеть»), картинки героев и иконок рисуются той же графикой, что в игре.
+// =====================================================================================
+const TRO_ROAD = [1000, 2000, 3000];   // кубки героя: 1000 — золотая иконка, 2000 — титул, 3000 — рамка
+const TITLE_WORDS = [['ПОКОРИТЕЛЬ НЕБА', 'SKY CONQUEROR'], ['КОРОЛЬ ПРЫЖКОВ', 'JUMP KING'], ['ГРОЗА ШИПОВ', 'SPIKE TERROR'], ['МАСТЕР САЛЬТО', 'FLIP MASTER'],
+  ['ЛЕГЕНДА СТЕН', 'WALL LEGEND'], ['НЕУДЕРЖИМЫЙ', 'UNSTOPPABLE'], ['ХОЗЯИН ВЫСОТЫ', 'LORD OF HEIGHTS'], ['ВЕЧНЫЙ ПРЫГУН', 'ETERNAL JUMPER'],
+  ['ГЕРОЙ ОБЛАКОВ', 'CLOUD HERO'], ['ЗВЕЗДА ШАХТЫ', 'SHAFT STAR'], ['БЕССТРАШНЫЙ', 'FEARLESS'], ['ЧЕМПИОН СТОЛБОВ', 'POLE CHAMPION']];
+const idHash = id => [...String(id)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+const heroTitle = id => { const w = TITLE_WORDS[idHash(id) % TITLE_WORDS.length]; return tr(w[0], w[1]); };
+// особые титулы, рамки и иконки из Pass (у героев — свои по id)
+const PASS_TITLES = { pass1: ['ОБЛАДАТЕЛЬ PASS', 'PASS HOLDER'], pass2: ['ЛЕГЕНДА СЕЗОНА', 'SEASON LEGEND'], free1: ['НОВИЧОК СЕЗОНА', 'SEASON ROOKIE'] };
+const FRAME_STYLES = {
+  basic: { bg: 'linear-gradient(90deg,#4a3a7a,#2a1a4a)', bd: '#7a6ab0' },
+  gold: { bg: 'linear-gradient(90deg,#7a4a00,#ffd23a 45%,#fff6a0 50%,#ffd23a 55%,#7a4a00)', bd: '#ffe27a', anim: 1 },
+  fire: { bg: 'linear-gradient(90deg,#5a0a00,#e8261a,#ff8a1e,#ffd23a,#e8261a,#5a0a00)', bd: '#ff8a1e', anim: 1 },
+  ice: { bg: 'linear-gradient(90deg,#0a2a5a,#3ab0ff,#e8f8ff,#3ab0ff,#0a2a5a)', bd: '#bfe8ff', anim: 1 },
+  neon: { bg: 'linear-gradient(90deg,#14002a,#ff3ad0,#3af0ff,#ff3ad0,#14002a)', bd: '#3af0ff', anim: 1 },
+  rainbow: { bg: 'linear-gradient(90deg,#ff3a3a,#ffa02a,#ffe03a,#3ae05a,#3ab0ff,#a64aff,#ff3a3a)', bd: '#ffffff', anim: 1 },
+  galaxy: { bg: 'radial-gradient(circle at 20% 50%,#ff7ad8 0,transparent 30%),radial-gradient(circle at 80% 40%,#7ad8ff 0,transparent 30%),linear-gradient(90deg,#0a0420,#3a1a6a,#0a0420)', bd: '#c8a0ff', anim: 1 },
+};
+const frameStyle = id => {
+  if (FRAME_STYLES[id]) return FRAME_STYLES[id];
+  const k = id && id.startsWith('h:') ? skinById(id.slice(2)) : null;   // рамка героя — в его цветах
+  if (!k) return FRAME_STYLES.basic;
+  const a = /^#/.test(k.body) ? k.body : '#ffb02a', b = /^#/.test(k.scarf || '') ? k.scarf : (k.dark || '#7a4a2a');
+  return { bg: `linear-gradient(90deg,${k.dark || '#2a1408'},${a} 30%,${b} 50%,${a} 70%,${k.dark || '#2a1408'})`, bd: k.r >= 3 ? '#ffe27a' : '#ffffff', anim: 1, hero: k.id };
+};
+const frameName = id => FRAME_STYLES[id] ? ({ basic: tr('ОБЫЧНАЯ', 'BASIC'), gold: tr('ЗОЛОТАЯ', 'GOLDEN'), fire: tr('ОГНЕННАЯ', 'FIRE'), ice: tr('ЛЕДЯНАЯ', 'ICE'), neon: tr('НЕОНОВАЯ', 'NEON'), rainbow: tr('РАДУЖНАЯ', 'RAINBOW'), galaxy: tr('ГАЛАКТИКА', 'GALAXY') })[id]
+  : id && id.startsWith('h:') && skinById(id.slice(2)) ? tr('РАМКА: ', 'FRAME: ') + skinName(skinById(id.slice(2))) : '';
+const titleText = id => !id ? '' : PASS_TITLES[id] ? tr(PASS_TITLES[id][0], PASS_TITLES[id][1]) : skinById(id) ? heroTitle(id) : '';
+
+// ---- данные (всё из сохранения проверяется) ----
+const objNat = v => { const o = {}; if (v && typeof v === 'object' && !Array.isArray(v)) for (const k of Object.keys(v).slice(0, 600)) if (k.length <= 40) { const n = nat(v[k]); if (n) o[k] = n; } return o; };
+const META = {
+  tro: objNat(store.get('tro', {})),                          // кубки каждого героя
+  road: (() => { const v = store.get('road', {}), o = {}; if (v && typeof v === 'object') for (const k of Object.keys(v).slice(0, 600)) o[k] = nat(v[k]) & 7; return o; })(),   // забранные награды дорожки (биты)
+  icons: strList(store.get('icons', [])) || [], titles: strList(store.get('titles', [])) || [], frames: strList(store.get('frames', ['basic'])) || ['basic'],
+  prof: (() => { const v = store.get('prof', {}) || {}; return { av: typeof v.av === 'string' ? v.av.slice(0, 44) : 'hamster', title: typeof v.title === 'string' ? v.title.slice(0, 40) : '', frame: typeof v.frame === 'string' ? v.frame.slice(0, 44) : 'basic', show: (strList(v.show) || []).slice(0, 3) }; })(),
+  stat: objNat(store.get('mstat', {})),
+  runT: 0, runOn: false,
+};
+if (!META.frames.includes('basic')) META.frames.unshift('basic');
+const metaSave = () => { store.set('tro', META.tro); store.set('road', META.road); store.set('icons', META.icons); store.set('titles', META.titles); store.set('frames', META.frames); store.set('prof', META.prof); store.set('mstat', META.stat); };
+const troTotal = () => Object.values(META.tro).reduce((a, b) => a + b, 0);
+const troOf = id => META.tro[id] || 0;
+const roadReady = id => TRO_ROAD.some((need, i) => troOf(id) >= need && !(META.road[id] >> i & 1));
+const anyRoadReady = () => owned.some(roadReady);
+
+// ---- защита результатов ----
+// 1) за забег засчитывается не больше, чем можно честно пролететь за это время (60 м/с даже с ракетой — с запасом);
+// 2) деньги, рекорд, кубки и герои подписаны: правка сохранения руками ломает подпись — такой игрок не попадает в рейтинг;
+// 3) в рейтинг уходят «честные» деньги: при бесконечных деньгах — те, что были до их включения.
+const legitM = m => Math.min(m, Math.floor(META.runT * 60) + 30);
+const legitMoney = () => { if (SET.inf) { const p0 = store.get('preInf', null) || {}; return { c: nat(p0.c), g: nat(p0.g), r: nat(p0.r) }; } return { c: bank, g: gems, r: rubies }; };
+
+// ---- задания дня ----
+const QUEST_POOL = [
+  { id: 'climb', ru: 'Пролети всего {n} м', en: 'Climb {n} m in total', goals: [300, 600, 1000], c: [120, 200, 300], xp: [120, 180, 260] },
+  { id: 'best', ru: 'Долети до {n} м за один забег', en: 'Reach {n} m in one run', goals: [100, 200, 350], c: [120, 220, 350], xp: [120, 200, 300] },
+  { id: 'flips', ru: 'Сделай {n} сальто', en: 'Do {n} flips', goals: [15, 30, 60], c: [100, 180, 260], xp: [100, 160, 240] },
+  { id: 'coins', ru: 'Собери {n} монет в забегах', en: 'Collect {n} coins in runs', goals: [40, 100, 200], c: [100, 180, 280], xp: [100, 160, 240] },
+  { id: 'runs', ru: 'Сыграй {n} забега', en: 'Play {n} runs', goals: [3, 5, 8], c: [80, 140, 220], xp: [100, 150, 220] },
+  { id: 'gems', ru: 'Собери {n} кристаллов в забегах', en: 'Collect {n} gems in runs', goals: [2, 5, 10], c: [120, 200, 300], xp: [120, 180, 260] },
+  { id: 'power', ru: 'Используй силу {n} раз', en: 'Use powers {n} times', goals: [1, 3, 5], c: [100, 160, 240], xp: [100, 150, 220] },
+  { id: 'wheel', ru: 'Покрути колесо {n} раз', en: 'Spin a wheel {n} times', goals: [1, 2, 3], c: [80, 140, 200], xp: [100, 140, 200] },
+  { id: 'chest', ru: 'Открой {n} сундук', en: 'Open {n} chest', goals: [1, 2, 3], c: [100, 160, 240], xp: [100, 150, 220] },
+];
+function questsToday() {
+  const day = dayNum(); let q = store.get('quests', null);
+  if (!q || q.day !== day || !Array.isArray(q.list) || q.list.length !== 3) {
+    const rng = mulberry(day * 104729 + 17), pool = QUEST_POOL.slice(), list = [];
+    for (let i = 0; i < 3; i++) { const d = pool.splice(Math.floor(rng() * pool.length), 1)[0], lv = Math.min(2, Math.floor(rng() * 3)); list.push({ id: d.id, lv, prog: 0, done: false }); }
+    q = { day, list, bonus: false }; store.set('quests', q);
+  }
+  for (const x of q.list) { x.prog = nat(x.prog); x.lv = Math.min(2, nat(x.lv)); }
+  return q;
+}
+const questDef = x => QUEST_POOL.find(d => d.id === x.id) || QUEST_POOL[0];
+const questGoal = x => questDef(x).goals[x.lv];
+const questText = x => { const d = questDef(x); return (lang === 'ru' ? d.ru : d.en).replace('{n}', questGoal(x)); };
+function questAdd(id, n, mode) {
+  if (!n || n < 0) return;
+  const q = questsToday(); let ch = false;
+  for (const x of q.list) if (x.id === id && !x.done) { const g = questGoal(x); x.prog = Math.min(g, mode === 'max' ? Math.max(x.prog, n) : x.prog + n); ch = true; }
+  if (ch) store.set('quests', q);
+}
+const questReady = () => questsToday().list.some(x => !x.done && x.prog >= questGoal(x)) || (questsToday().list.every(x => x.done) && !questsToday().bonus);
+
+// ---- Wall Play Pass: сезон — календарный месяц, 30 уровней, бесплатная и платная (за кристаллы) дорожки ----
+const PASS_TIERS = 30, PASS_XP = 300, PASS_PRICE = 169;
+const passSeason = () => { const d = new Date(); return Math.max(1, d.getFullYear() * 12 + d.getMonth() - (2026 * 12 + 9) + 1); };   // сезон 1 — октябрь 2026
+const passDaysLeft = () => { const d = new Date(), e = new Date(d.getFullYear(), d.getMonth() + 1, 1); return Math.max(1, Math.ceil((e - d) / 864e5)); };
+function passData() {
+  let v = store.get('pass', null);
+  if (!v || typeof v !== 'object' || v.s !== passSeason()) { v = { s: passSeason(), xp: 0, prem: false, cf: 0, cp: 0 }; store.set('pass', v); }
+  v.xp = Math.min(nat(v.xp), PASS_TIERS * PASS_XP); v.cf = Math.min(PASS_TIERS, nat(v.cf)); v.cp = Math.min(PASS_TIERS, nat(v.cp)); v.prem = !!v.prem;
+  return v;
+}
+// награды: [бесплатная, премиум] на каждом уровне (cf/cp — сколько первых уровней уже забрано)
+const PASS_REW = (() => {
+  const L = [];
+  for (let i = 1; i <= PASS_TIERS; i++) {
+    let f, pr;
+    if (i % 10 === 0) f = { k: 'chest', gold: true }; else if (i % 5 === 0) f = { k: 'chest' }; else if (i % 3 === 0) f = { k: 'gems', n: 3 + Math.floor(i / 6) }; else if (i % 4 === 0) f = { k: 'power', n: 2 }; else f = { k: 'coins', n: 100 + i * 10 };
+    if (i === 30) pr = { k: 'skin', r: 3 }; else if (i === 20) pr = { k: 'frame', id: 'rainbow' }; else if (i === 25) pr = { k: 'title', id: 'pass2' }; else if (i === 10) pr = { k: 'frame', id: 'gold' }; else if (i === 15) pr = { k: 'skin', r: 2 };
+    else if (i === 5) pr = { k: 'title', id: 'pass1' }; else if (i % 7 === 0) pr = { k: 'ruby', n: 1 }; else if (i % 2 === 0) pr = { k: 'gems', n: 8 + i } ; else pr = { k: 'coins', n: 300 + i * 20 };
+    if (i === 12) f = { k: 'frame', id: 'ice' }; if (i === 8) f = { k: 'title', id: 'free1' }; if (i === 18) pr = { k: 'frame', id: 'neon' }; if (i === 28) pr = { k: 'frame', id: 'galaxy' }; if (i === 22) f = { k: 'frame', id: 'fire' };
+    L.push([f, pr]);
+  }
+  return L;
+})();
+const passLevel = () => Math.floor(passData().xp / PASS_XP);
+function passXp(n) { if (!n || n <= 0) return; const v = passData(); v.xp = Math.min(PASS_TIERS * PASS_XP, v.xp + Math.floor(n)); store.set('pass', v); }
+const passReady = () => { const v = passData(), lv = passLevel(); return v.cf < lv || (v.prem && v.cp < lv); };
+
+// ---- конец забега: кубки герою, опыт пропуска, задания ----
+function metaRunEnd() {
+  if (quiet || !META.runOn) return;
+  META.runOn = false;
+  const raw = heightM(), m = legitM(raw), id = skinId;
+  if (m > 0) { META.tro[id] = Math.min(99999, troOf(id) + m); META.stat.totM = (META.stat.totM || 0) + m; }
+  META.stat.runs = (META.stat.runs || 0) + 1;
+  passXp(Math.floor(m / 2) + 10);
+  questAdd('climb', m); questAdd('best', m, 'max'); questAdd('flips', flips); questAdd('coins', coinsRun); questAdd('runs', 1); questAdd('gems', gemsRun);
+  metaSave(); boardPush();
+}
+{ const u0 = update; update = function (dt) { u0(dt); if (state === 'play' && !paused && !quiet) { if (!META.runOn) { META.runOn = true; META.runT = 0; } META.runT += dt; } }; }
+{ const d0 = die; die = function () { d0.apply(this, arguments); if (state === 'dead') metaRunEnd(); }; }
+{ const u0 = usePower; usePower = function (id) { const n0 = pw[id]; u0.apply(this, arguments); if (pw[id] < n0) questAdd('power', 1); }; }
+{ const s0 = spinWheel; spinWheel = function () { const w0 = wheel.spinning; s0.apply(this, arguments); if (!w0 && wheel.spinning) questAdd('wheel', 1); }; }
+{ const o0 = openChest; openChest = function () { const c0 = chest; o0.apply(this, arguments); if (chest && chest !== c0) questAdd('chest', 1); }; }
+
+// ---------- Экраны мета-игры (HTML поверх холста) ----------
+let moUi = null, moStack = [], moAnim = [];
+function moCss() {
+  if (moCss.done) return; moCss.done = true;
+  const st = document.createElement('style');
+  st.textContent = `
+#mo{position:fixed;inset:0;z-index:105;display:none;flex-direction:column;align-items:center;background:radial-gradient(circle at 20% 0,#5a2aaa 0,transparent 50%),radial-gradient(circle at 90% 100%,#0a6a9a 0,transparent 55%),linear-gradient(170deg,#24104e,#0a0a24);color:#fff;font:700 14px Montserrat,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.5px;touch-action:pan-y;user-select:none;-webkit-user-select:none;overflow:hidden}
+#mo *{box-sizing:border-box}
+#mo .hd{width:100%;max-width:440px;display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) 12px 8px}
+#mo .ttl{flex:1;text-align:center;font-size:21px;letter-spacing:3px;color:#ffd23a;text-shadow:0 3px 0 #2a1408,2px 0 #2a1408,-2px 0 #2a1408,0 -2px #2a1408,0 0 18px #ffd23a66}
+#mo .bk{width:44px;height:44px;border-radius:50%;border:3px solid #2a1408;background:#fff;color:#2a1408;font:900 22px sans-serif;box-shadow:0 3px 0 #2a1408;cursor:pointer;flex:none}
+#mo .sp{width:44px;flex:none}
+#mo .bd{width:100%;max-width:440px;flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 12px 24px;-webkit-overflow-scrolling:touch}
+#mo .card{background:linear-gradient(180deg,#3a2a6a,#24184a);border:3px solid #2a1408;border-radius:14px;box-shadow:0 4px 0 #120a24,inset 0 2px 0 #ffffff22;padding:12px;margin-bottom:12px}
+#mo .btn{font:inherit;border:3px solid #2a1408;border-radius:11px;padding:9px 14px;color:#fff;cursor:pointer;text-shadow:0 2px 0 #2a1408;box-shadow:0 4px 0 #2a1408,inset 0 3px 0 #ffffff44;background:linear-gradient(#5ae07a,#1a9a3a)}
+#mo .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #2a1408}
+#mo .btn.gold{background:linear-gradient(#ffe27a,#e8a010)} #mo .btn.blue{background:linear-gradient(#5ac8ff,#1a70c0)} #mo .btn.pink{background:linear-gradient(#ff7ac0,#c01f6a)} #mo .btn.red{background:linear-gradient(#ff6a5a,#c01a0a)} #mo .btn.off{background:#5a4a7a;color:#a898c8;cursor:default}
+#mo .row{display:flex;align-items:center;gap:10px}
+#mo .sm{font-size:11px;color:#c8b8f0;letter-spacing:.3px}
+#mo .big{font-size:22px}
+#mo .ol{text-shadow:0 2px 0 #2a1408,2px 0 #2a1408,-2px 0 #2a1408,0 -2px #2a1408}
+#mo .bar{height:16px;border:3px solid #2a1408;border-radius:9px;background:#1a1030;overflow:hidden;position:relative}
+#mo .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#ffe27a,#e8a010);box-shadow:inset 0 3px 0 #ffffff66}
+#mo .bar b{position:absolute;inset:0;text-align:center;font-size:10px;line-height:11px;text-shadow:0 1px 0 #2a1408}
+#mo .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#mo .pick{border:3px solid #2a1408;border-radius:10px;background:#2a1a4a;padding:4px;text-align:center;cursor:pointer;position:relative;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px}
+#mo .pick.on{border-color:#ffd23a;box-shadow:0 0 12px #ffd23a}
+#mo .pick.lock{opacity:.35;cursor:default}
+#mo canvas{image-rendering:pixelated}
+#mo .fr{border-radius:12px;padding:3px;border:3px solid #2a1408;background-size:300% 100%!important}
+#mo .fr.anim{animation:moFr 4s linear infinite}
+@keyframes moFr{from{background-position:0 0}to{background-position:300% 0}}
+#mo .av{border-radius:12px;border:3px solid #2a1408;background:#1a1030;position:relative;overflow:hidden;flex:none}
+#mo .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+#mo .tab{flex:1;min-width:60px;font:inherit;font-size:10px;padding:8px 4px;border:3px solid #2a1408;border-radius:10px;background:#4a3a7a;color:#fff;cursor:pointer;box-shadow:0 3px 0 #2a1408}
+#mo .tab.on{background:linear-gradient(#ffe27a,#e8a010);color:#2a1408}
+#mo .rk{display:flex;align-items:center;gap:8px;padding:6px 8px;border:3px solid #2a1408;border-radius:12px;margin-bottom:6px;background:linear-gradient(90deg,#3a2a6a,#2a1a4a);cursor:pointer;position:relative}
+#mo .rk .n{width:30px;text-align:center;font-size:16px}
+#mo .rk .v{margin-left:auto;font-size:15px;color:#ffe680;white-space:nowrap}
+#mo .glow{animation:moGl 1s ease-in-out infinite alternate}
+@keyframes moGl{from{box-shadow:0 0 4px #ffd23a,0 4px 0 #2a1408}to{box-shadow:0 0 22px #ffd23a,0 4px 0 #2a1408}}
+#mo .pop{position:absolute;inset:0;z-index:5;background:rgba(10,4,30,.82);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;animation:moIn .25s ease-out}
+@keyframes moIn{from{opacity:0;transform:scale(1.2)}to{opacity:1;transform:none}}
+#mo .rays{position:absolute;width:520px;height:520px;left:50%;top:50%;margin:-260px 0 0 -260px;background:repeating-conic-gradient(#ffd23a33 0 10deg,transparent 10deg 20deg);animation:moSpin 8s linear infinite;pointer-events:none;border-radius:50%}
+@keyframes moSpin{to{transform:rotate(360deg)}}
+#mo .cf{position:absolute;width:8px;height:4px;pointer-events:none;animation:moCf linear forwards}
+@keyframes moCf{to{transform:translate(var(--dx),var(--dy)) rotate(720deg);opacity:0}}
+#mo .badge{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#ff2a2a;border:2px solid #2a1408;font-size:11px;line-height:14px;text-align:center}
+#mo .tier{flex:none;width:76px;display:flex;flex-direction:column;gap:6px;align-items:center}
+#mo .rw{width:72px;height:72px;border:3px solid #2a1408;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;position:relative;cursor:pointer;background:linear-gradient(#4a3a8a,#2a1a5a)}
+#mo .rw.p{background:linear-gradient(#ffd23a,#c06a00)}
+#mo .rw.got{opacity:.45} #mo .rw.lock{filter:grayscale(.6) brightness(.7)}
+#mo .rw .ck{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;color:#3ce06a;text-shadow:0 2px 0 #2a1408}
+#mo input{font:inherit;padding:8px 10px;border:3px solid #2a1408;border-radius:10px;background:#fff6d8;color:#2a1408;text-transform:uppercase;width:100%}
+`;
+  document.head.appendChild(st);
+}
+const moEl = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const moTxt = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = txt; return e; };
+// рисование игровой графикой в отдельный холст: подменяем ctx на время
+function withCtx(cnv, fn) { const old = ctx; ctx = cnv.getContext('2d'); ctx.imageSmoothingEnabled = false; try { fn(ctx); } finally { ctx = old; } }
+function iconCnv(kind, n, size = 40) {
+  const c = document.createElement('canvas'); c.width = c.height = 40; c.style.width = c.style.height = size + 'px';
+  withCtx(c, () => {
+    if (kind === 'coins') coinIcon(20, 20, 11); else if (kind === 'gems') gemIcon(20, 21, 1.2); else if (kind === 'ruby') rubyIcon(20, 21, 1.1);
+    else if (kind === 'trophy') trophyIcon(20, 18, 1.3); else if (kind === 'chest') chestIcon(20, 24, false, 0, !!n); else if (kind === 'power') powerIcon('magnet', 20, 20, 1.2);
+    else if (kind === 'gift') giftIcon(20, 26, 1);
+  });
+  return c;
+}
+// герой в холсте; anim — живой (машет, дышит), gold — золотая иконка с дорожки
+function heroCnv(k, size, opt = {}) {
+  const c = document.createElement('canvas'), S = opt.head ? 24 : 48; c.width = S; c.height = S; c.style.width = c.style.height = size + 'px';
+  const paint = t => withCtx(c, g => {
+    g.clearRect(0, 0, S, S);
+    if (opt.gold) { const gr = g.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2); gr.addColorStop(0, '#fff6a0'); gr.addColorStop(1, '#c07a00'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    else if (opt.bg) { g.fillStyle = opt.bg; g.fillRect(0, 0, S, S); }
+    heroSprite(k, opt.pose || 'idle', t, false);
+    if (opt.head) drawRaw.call(g, hcv, SPR_X + 4, SPR_Y + 8 - 4, 24, 24, 0, 0, S, S);   // крупно голова
+    else drawRaw.call(g, hcv, 0, 0, SPR_W, SPR_H, 0, 0, S, S);
+    if (opt.gold) { emoStar(S - 6, 6, 4, '#ffffff'); }
+  });
+  paint(opt.t || 0.4);
+  if (opt.anim) moAnim.push({ c, paint });
+  return c;
+}
+// аватарка: 'id' — герой, 'g:id' — золотая иконка героя с дорожки кубков
+function avatarCnv(av, size) {
+  const gold = String(av).startsWith('g:'), k = skinById(gold ? av.slice(2) : av) || SKINS[0];
+  return heroCnv(k, size, { head: true, gold, bg: gold ? null : '#2a1a4a', t: 0.2 });
+}
+function framed(el, frameId, pad = 3) {
+  const f = frameStyle(frameId), w = moEl('div', 'fr' + (f.anim ? ' anim' : ''));
+  w.style.background = f.bg; w.style.borderColor = '#2a1408'; w.style.boxShadow = `0 0 10px ${f.bd}88`; w.style.padding = pad + 'px'; w.style.display = 'inline-flex';
+  w.appendChild(el); return w;
+}
+function moBuild() {
+  if (moUi) return; moCss();
+  moUi = moEl('div'); moUi.id = 'mo'; document.body.appendChild(moUi);
+  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown', 'wheel']) moUi.addEventListener(ev, e => e.stopPropagation(), { passive: ev === 'wheel' || ev.startsWith('touch') });
+  let sw = null;   // свайп вправо по экрану — назад
+  moUi.addEventListener('pointerdown', e => { sw = { x: e.clientX, y: e.clientY }; });
+  moUi.addEventListener('pointerup', e => { if (!sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y; sw = null; if (dx > 90 && Math.abs(dx) > Math.abs(dy) * 1.6) moBack(); });
+  (function loop(ts) { if (moUi.style.display === 'flex') for (const a of moAnim) if (a.c.isConnected) a.paint(ts / 1000); requestAnimationFrame(loop); })(0);
+}
+// открыть экран: render(body) рисует содержимое; стек — «назад» возвращает к прошлому
+function moOpen(title, render, keep) {
+  moBuild(); if (!keep) moStack = [];
+  moStack.push({ title, render });
+  moShow();
+}
+function moShow() {
+  const top = moStack[moStack.length - 1]; if (!top) { moClose(); return; }
+  moAnim = []; moUi.innerHTML = '';
+  const hd = moEl('div', 'hd'), bk = moTxt('button', 'bk', '‹'), tt = moTxt('div', 'ttl', top.title);
+  bk.onclick = () => { sfx.click(); moBack(); };
+  hd.append(bk, tt, moEl('div', 'sp')); moUi.appendChild(hd);
+  const bd = moEl('div', 'bd'); moUi.appendChild(bd);
+  moUi.style.display = 'flex'; top.render(bd, top);
+}
+function moBack() { moStack.pop(); if (moStack.length) moShow(); else moClose(); }
+function moClose() { if (moUi) { moUi.style.display = 'none'; moUi.innerHTML = ''; } moStack = []; moAnim = []; menuAt = time; }
+const moRefresh = () => { const bd = moUi && moUi.querySelector('.bd'), y = bd ? bd.scrollTop : 0; moShow(); const b2 = moUi.querySelector('.bd'); if (b2) b2.scrollTop = y; };
+// салют и всплывающее окно получения награды
+function moConfetti(host, n = 60) {
+  const r = host.getBoundingClientRect();
+  for (let i = 0; i < n; i++) {
+    const d = moEl('i', 'cf'), a = Math.random() * Math.PI * 2, v = 120 + Math.random() * 260;
+    d.style.left = r.width / 2 + 'px'; d.style.top = r.height / 2 + 'px'; d.style.background = ['#ffd23a', '#ff3d7f', '#3ab0ff', '#3ce06a', '#ffffff', '#c04aff'][i % 6];
+    d.style.setProperty('--dx', Math.cos(a) * v + 'px'); d.style.setProperty('--dy', Math.sin(a) * v + 120 + 'px'); d.style.animationDuration = (0.9 + Math.random() * 0.9) + 's';
+    host.appendChild(d); setTimeout(() => d.remove(), 2000);
+  }
+}
+function moReward(title, node, sub) {
+  const pop = moEl('div', 'pop'); pop.appendChild(moEl('div', 'rays'));
+  const t = moTxt('div', 'ol', title); t.style.cssText = 'font-size:24px;color:#ffd23a;letter-spacing:2px;position:relative;text-align:center;padding:0 10px';
+  const box = moEl('div'); box.style.cssText = 'position:relative;animation:moIn .4s cubic-bezier(.2,2,.4,1)'; box.appendChild(node);
+  pop.append(t, box);
+  if (sub) { const s = moTxt('div', 'ol', sub); s.style.cssText = 'position:relative;font-size:15px;max-width:300px;text-align:center'; pop.appendChild(s); }
+  const ok = moTxt('button', 'btn gold', 'OK'); ok.style.position = 'relative'; ok.onclick = e => { e.stopPropagation(); pop.remove(); sfx.click(); };
+  pop.appendChild(ok); moUi.appendChild(pop); moConfetti(pop, 80);
+  try { sfx.achieve(); } catch (e) {}
+  tone(784, 1568, 0.25, 'triangle', 0.06); tone(1047, 2093, 0.3, 'square', 0.03, 0.12);
+}
+
+// ---- экран героя: кубки и дорожка наград (1000 — иконка, 2000 — титул, 3000 — рамка) ----
+function openHero(id) {
+  const list = SKINS.filter(k => owned.includes(k.id)); let i = Math.max(0, list.findIndex(k => k.id === (id || skinId)));
+  moOpen(tr('ГЕРОЙ', 'HERO'), bd => {
+    const k = list[i] || SKINS[0], tro = troOf(k.id), R = RARITY[k.r];
+    const top = moEl('div', 'card'); top.style.cssText += `text-align:center;position:relative;background:radial-gradient(circle at 50% 40%,${R.col}55,transparent 60%),linear-gradient(180deg,#3a2a6a,#24184a)`;
+    const nav = moEl('div', 'row'); nav.style.justifyContent = 'space-between';
+    const pv = moTxt('button', 'btn blue', '‹'), nx = moTxt('button', 'btn blue', '›');
+    pv.onclick = () => { i = (i - 1 + list.length) % list.length; sfx.click(); moRefresh(); }; nx.onclick = () => { i = (i + 1) % list.length; sfx.click(); moRefresh(); };
+    const mid = moEl('div'); mid.style.cssText = 'display:flex;flex-direction:column;align-items:center';
+    mid.appendChild(heroCnv(k, 150, { anim: true, pose: 'idle' }));
+    nav.append(pv, mid, nx); top.appendChild(nav);
+    const nm = moTxt('div', 'ol big', skinName(k)); top.appendChild(nm);
+    const rr = moTxt('div', 'sm', T('rarity')[k.r]); rr.style.color = R.col; top.appendChild(rr);
+    const tr0 = moEl('div', 'row'); tr0.style.cssText = 'justify-content:center;margin-top:8px;font-size:20px'; tr0.append(iconCnv('trophy', 0, 30), moTxt('span', 'ol', String(tro))); top.appendChild(tr0);
+    if (k.id !== skinId) { const pick = moTxt('button', 'btn', tr('ВЫБРАТЬ', 'SELECT')); pick.style.marginTop = '8px'; pick.onclick = () => { selectSkin(k); sfx.click(); moRefresh(); }; top.appendChild(pick); }
+    else top.appendChild(moTxt('div', 'sm', tr('ВЫБРАН — ИГРАЙ ИМ, ЧТОБЫ ПОЛУЧАТЬ КУБКИ', 'SELECTED — PLAY TO EARN TROPHIES')));
+    bd.appendChild(top);
+    // дорожка кубков
+    const road = moEl('div', 'card');
+    road.appendChild(moTxt('div', 'ol', tr('ДОРОЖКА КУБКОВ', 'TROPHY ROAD')));
+    road.appendChild(moTxt('div', 'sm', tr('1 МЕТР ВВЕРХ ЭТИМ ГЕРОЕМ = 1 КУБОК', '1 METER CLIMBED WITH THIS HERO = 1 TROPHY')));
+    const bar = moEl('div', 'bar'); bar.style.margin = '10px 0'; const nxt = TRO_ROAD.find(n => tro < n) || 3000;
+    bar.innerHTML = `<i style="width:${Math.min(100, tro / 3000 * 100)}%"></i><b>${tro} / ${nxt}</b>`; road.appendChild(bar);
+    const REW = [
+      { need: 1000, nm: tr('ЗОЛОТАЯ ИКОНКА', 'GOLDEN ICON'), node: () => heroCnv(k, 64, { head: true, gold: true }), give: () => { if (!META.icons.includes(k.id)) META.icons.push(k.id); } },
+      { need: 2000, nm: tr('ТИТУЛ', 'TITLE'), node: () => { const d = moTxt('div', 'ol', '«' + heroTitle(k.id) + '»'); d.style.cssText = 'color:#ffe680;font-size:13px;width:150px;text-align:center'; return d; }, give: () => { if (!META.titles.includes(k.id)) META.titles.push(k.id); } },
+      { need: 3000, nm: tr('РАМКА', 'FRAME'), node: () => { const b = moEl('div'); b.style.cssText = 'width:150px;height:30px;border-radius:8px'; return framed(b, 'h:' + k.id, 4); }, give: () => { if (!META.frames.includes('h:' + k.id)) META.frames.push('h:' + k.id); } },
+    ];
+    REW.forEach((rw, j) => {
+      const got = META.road[k.id] >> j & 1, can = tro >= rw.need && !got;
+      const line = moEl('div', 'row'); line.style.cssText = `padding:10px;border:3px solid #2a1408;border-radius:12px;margin-top:8px;background:${can ? 'linear-gradient(90deg,#7a5a00,#3a2a6a)' : '#2a1a4a'}`;
+      if (can) line.classList.add('glow');
+      const need = moEl('div'); need.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:56px'; need.append(iconCnv('trophy', 0, 26), moTxt('div', 'ol', String(rw.need)));
+      const info = moEl('div'); info.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;align-items:flex-start'; info.append(moTxt('div', 'sm', rw.nm), rw.node());
+      const b = moTxt('button', 'btn ' + (can ? 'gold' : 'off'), got ? '✓' : can ? tr('ЗАБРАТЬ', 'CLAIM') : '🔒');
+      if (can) b.onclick = () => { META.road[k.id] = (META.road[k.id] || 0) | (1 << j); rw.give(); metaSave(); boardPush(); moRefresh(); moReward(tr('НОВАЯ НАГРАДА!', 'NEW REWARD!'), rw.node(), rw.nm + ' — ' + skinName(k)); };
+      line.append(need, info, b); road.appendChild(line);
+    });
+    bd.appendChild(road);
+    // титул героя можно поставить в профиль
+    if (META.titles.includes(k.id)) {
+      const c2 = moEl('div', 'card'), on = META.prof.title === k.id;
+      c2.append(moTxt('div', 'sm', tr('ТИТУЛ ГЕРОЯ', 'HERO TITLE')), moTxt('div', 'ol', '«' + heroTitle(k.id) + '»'));
+      const b = moTxt('button', 'btn ' + (on ? 'off' : 'pink'), on ? tr('СТОИТ В ПРОФИЛЕ', 'IN PROFILE') : tr('ПОСТАВИТЬ В ПРОФИЛЬ', 'SET IN PROFILE')); b.style.marginTop = '8px';
+      if (!on) b.onclick = () => { META.prof.title = k.id; metaSave(); boardPush(); sfx.click(); moRefresh(); };
+      c2.appendChild(b); bd.appendChild(c2);
+    }
+  });
+}
+
+// ---- профиль ----
+function profStats(e) {   // e — данные игрока (свои или из рейтинга)
+  return [['trophy', tr('КУБКИ', 'TROPHIES'), e.tr], ['trophy', tr('РЕКОРД', 'BEST'), e.b + T('m')], ['coins', tr('МОНЕТЫ', 'COINS'), e.c], ['gems', tr('КРИСТАЛЛЫ', 'GEMS'), e.g], ['ruby', tr('РУБИНЫ', 'RUBIES'), e.r],
+    ['gift', tr('ГЕРОИ', 'HEROES'), e.sk + ' / ' + SKINS.length], ['trophy', tr('НАГРАДЫ', 'AWARDS'), (e.ach || []).length + ' / ' + ACH.length], ['chest', tr('УРОВЕНЬ PASS', 'PASS LEVEL'), e.pl]];
+}
+function myEntry() {
+  const m = legitMoney();
+  return { n: mp.nick || 'PLAYER', av: META.prof.av, fr: META.prof.frame, ti: META.prof.title, c: m.c, g: m.g, r: m.r, b: best, tr: troTotal(), sk: owned.length, pl: passLevel(),
+    own: owned.slice(0, 600), ic: META.icons.slice(0, 120), ach: achieved.slice(0, 200), show: META.prof.show.slice(0, 3), tro: Object.entries(META.tro).sort((a, b) => b[1] - a[1]).slice(0, 12) };
+}
+function profHead(e, me) {
+  const card = moEl('div', 'card'); card.style.cssText += 'position:relative;overflow:hidden';
+  const f = frameStyle(e.fr); card.style.background = f.bg; card.style.backgroundSize = '300% 100%'; if (f.anim) card.style.animation = 'moFr 5s linear infinite';
+  const inner = moEl('div', 'row'); inner.style.cssText = 'background:rgba(20,10,40,.72);border-radius:10px;padding:10px';
+  inner.appendChild(framed(avatarCnv(e.av, 76), e.fr, 4));
+  const col = moEl('div'); col.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-width:0;flex:1';
+  if (me) { const inp = moEl('input'); inp.maxLength = 10; inp.value = mp.nick || ''; inp.placeholder = tr('ТВОЙ НИК', 'NICKNAME'); inp.oninput = () => { mp.nick = mpClean(inp.value); store.set('mpnick', mp.nick); }; inp.onchange = () => boardPush(); col.appendChild(inp); }
+  else col.appendChild(moTxt('div', 'ol big', e.n));
+  if (titleText(e.ti)) { const t = moTxt('div', 'ol', '«' + titleText(e.ti) + '»'); t.style.cssText = 'color:#ffe680;font-size:12px'; col.appendChild(t); }
+  const trw = moEl('div', 'row'); trw.append(iconCnv('trophy', 0, 24), moTxt('span', 'ol', String(e.tr))); col.appendChild(trw);
+  inner.appendChild(col); card.appendChild(inner); return card;
+}
+function profBody(bd, e, me) {
+  bd.appendChild(profHead(e, me));
+  const st = moEl('div', 'card'), g = moEl('div'); g.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px';
+  for (const [ic, nm, v] of profStats(e)) { const c = moEl('div', 'row'); c.style.cssText = 'background:#1a1030;border:3px solid #2a1408;border-radius:10px;padding:6px'; const t = moEl('div'); t.append(moTxt('div', 'sm', nm), moTxt('div', 'ol', String(v))); c.append(iconCnv(ic, 0, 30), t); g.appendChild(c); }
+  st.appendChild(g); bd.appendChild(st);
+  // витрина достижений
+  const sh = moEl('div', 'card'); sh.appendChild(moTxt('div', 'ol', tr('ВИТРИНА НАГРАД', 'AWARD SHOWCASE')));
+  const shown = (e.show || []).map(id => ACH.find(a => a.id === id)).filter(Boolean);
+  if (!shown.length) sh.appendChild(moTxt('div', 'sm', me ? tr('ВЫБЕРИ ДО 3 НАГРАД НИЖЕ', 'PICK UP TO 3 AWARDS BELOW') : '—'));
+  for (const a of shown) { const r = moEl('div', 'row'); r.style.cssText = 'margin-top:6px;background:linear-gradient(90deg,#7a5a00,#3a2a6a);border:3px solid #2a1408;border-radius:10px;padding:6px'; r.append(iconCnv('trophy', 0, 26), moTxt('div', 'ol', achName(a))); sh.appendChild(r); }
+  bd.appendChild(sh);
+  // золотые иконки с дорожек кубков
+  if ((e.ic || []).length) {
+    const ic = moEl('div', 'card'); ic.appendChild(moTxt('div', 'ol', tr('ИКОНКИ', 'ICONS') + ' ' + e.ic.length));
+    const g2 = moEl('div'); g2.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px';
+    for (const id of e.ic) g2.appendChild(avatarCnv('g:' + id, 44));
+    ic.appendChild(g2); bd.appendChild(ic);
+  }
+  // герои игрока
+  const hs = moEl('div', 'card'); hs.appendChild(moTxt('div', 'ol', tr('ГЕРОИ', 'HEROES') + ' ' + e.sk));
+  const hg = moEl('div'); hg.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px';
+  const ids = (e.own || []).filter(id => skinById(id)).sort((a, b) => skinById(b).r - skinById(a).r).slice(0, me ? 60 : 120);
+  for (const id of ids) { const k = skinById(id), w = moEl('div'); w.style.cssText = `border:2px solid ${RARITY[k.r].col};border-radius:8px;background:#1a1030`; w.appendChild(heroCnv(k, 44, { head: true })); hg.appendChild(w); }
+  hs.appendChild(hg); bd.appendChild(hs);
+  // достижения
+  const ac = moEl('div', 'card'); ac.appendChild(moTxt('div', 'ol', tr('НАГРАДЫ', 'AWARDS') + ' ' + (e.ach || []).length + ' / ' + ACH.length));
+  for (const a of ACH.filter(a => (e.ach || []).includes(a.id))) {
+    const on = (e.show || []).includes(a.id), r = moEl('div', 'row'); r.style.cssText = 'margin-top:5px;font-size:12px';
+    r.append(iconCnv('trophy', 0, 20), moTxt('div', '', achName(a)));
+    if (me) { const b = moTxt('button', 'btn ' + (on ? 'pink' : 'blue'), on ? '★' : '☆'); b.style.cssText += ';margin-left:auto;padding:4px 10px'; b.onclick = () => { const s = META.prof.show; if (on) s.splice(s.indexOf(a.id), 1); else { if (s.length >= 3) s.shift(); s.push(a.id); } metaSave(); boardPush(); sfx.click(); moRefresh(); }; r.appendChild(b); }
+    ac.appendChild(r);
+  }
+  bd.appendChild(ac);
+}
+function openProfile() {
+  moOpen(tr('ПРОФИЛЬ', 'PROFILE'), bd => {
+    const e = myEntry(); profBody(bd, e, true);
+    const quick = moEl('div', 'row'); quick.style.cssText = 'margin-bottom:12px;flex-wrap:wrap';
+    for (const [nm, cls, fn] of [[tr('АВАТАРКА', 'AVATAR'), 'blue', profPickAvatar], [tr('ТИТУЛ', 'TITLE'), 'pink', profPickTitle], [tr('РАМКА', 'FRAME'), 'gold', profPickFrame], [tr('РЕЙТИНГ', 'RANKING'), '', () => openBoard(true)]]) {
+      const b = moTxt('button', 'btn ' + cls, nm); b.style.flex = '1'; b.onclick = () => { sfx.click(); fn(); }; quick.appendChild(b);
+    }
+    bd.insertBefore(quick, bd.children[1]);
+    if (tampered) bd.insertBefore(moTxt('div', 'card sm', tr('СОХРАНЕНИЕ ИЗМЕНЕНО ВРУЧНУЮ — РЕЗУЛЬТАТЫ НЕ ПОПАДАЮТ В РЕЙТИНГ', 'SAVE WAS EDITED BY HAND — RESULTS ARE NOT RANKED')), bd.children[1]);
+  });
+}
+function profPickAvatar() {
+  moOpen(tr('АВАТАРКА', 'AVATAR'), bd => {
+    const c = moEl('div', 'card'), g = moEl('div', 'grid');
+    const opts = [...META.icons.map(id => 'g:' + id), ...owned];
+    for (const av of opts) { const p = moEl('div', 'pick' + (META.prof.av === av ? ' on' : '')); p.appendChild(avatarCnv(av, 56)); p.onclick = () => { META.prof.av = av; metaSave(); boardPush(); sfx.click(); moBack(); }; g.appendChild(p); }
+    c.append(moTxt('div', 'sm', tr('ЗОЛОТЫЕ ИКОНКИ — С ДОРОЖКИ КУБКОВ (1000 КУБКОВ ГЕРОЯ)', 'GOLDEN ICONS COME FROM THE TROPHY ROAD (1000 HERO TROPHIES)')), g); bd.appendChild(c);
+  }, true);
+}
+function profPickTitle() {
+  moOpen(tr('ТИТУЛ', 'TITLE'), bd => {
+    const c = moEl('div', 'card'), all = ['', ...Object.keys(PASS_TITLES).filter(id => META.titles.includes(id)), ...META.titles.filter(id => !PASS_TITLES[id])];
+    if (all.length === 1) c.appendChild(moTxt('div', 'sm', tr('ТИТУЛЫ ДАЮТ ДОРОЖКА КУБКОВ (2000 КУБКОВ ГЕРОЯ) И WALL PLAY PASS', 'TITLES COME FROM THE TROPHY ROAD (2000 HERO TROPHIES) AND WALL PLAY PASS')));
+    for (const id of all) { const b = moTxt('button', 'btn ' + (META.prof.title === id ? 'gold' : 'blue'), id ? '«' + titleText(id) + '»' : tr('БЕЗ ТИТУЛА', 'NO TITLE')); b.style.cssText += ';width:100%;margin-top:8px'; b.onclick = () => { META.prof.title = id; metaSave(); boardPush(); sfx.click(); moBack(); }; c.appendChild(b); }
+    bd.appendChild(c);
+  }, true);
+}
+function profPickFrame() {
+  moOpen(tr('РАМКА', 'FRAME'), bd => {
+    const c = moEl('div', 'card');
+    c.appendChild(moTxt('div', 'sm', tr('РАМКА ВИДНА В ПРОФИЛЕ И ВО ВСЮ ДЛИНУ ТВОЕЙ СТРОКИ В РЕЙТИНГЕ', 'YOUR FRAME SHOWS IN THE PROFILE AND ACROSS YOUR ROW IN THE RANKING')));
+    for (const id of [...Object.keys(FRAME_STYLES), ...META.frames.filter(f => !FRAME_STYLES[f])]) {
+      const have = META.frames.includes(id), f = frameStyle(id), r = moEl('div', 'rk' + (META.prof.frame === id ? ' glow' : ''));
+      r.style.background = f.bg; r.style.backgroundSize = '300% 100%'; if (f.anim) r.style.animation = 'moFr 4s linear infinite'; if (!have) r.style.opacity = '.4';
+      const lab = moTxt('div', 'ol', frameName(id) + (have ? '' : ' 🔒')); lab.style.cssText = 'background:rgba(20,10,40,.6);padding:4px 8px;border-radius:8px'; r.appendChild(lab);
+      if (have) r.onclick = () => { META.prof.frame = id; metaSave(); boardPush(); sfx.click(); moBack(); };
+      c.appendChild(r);
+    }
+    c.appendChild(moTxt('div', 'sm', tr('НОВЫЕ РАМКИ: WALL PLAY PASS И 3000 КУБКОВ ГЕРОЯ', 'MORE FRAMES: WALL PLAY PASS AND 3000 HERO TROPHIES')));
+    bd.appendChild(c);
+  }, true);
+}
+
+// ---- задания дня ----
+function openQuests() {
+  moOpen(tr('ЗАДАНИЯ ДНЯ', 'DAILY QUESTS'), bd => {
+    const q = questsToday();
+    bd.appendChild(moTxt('div', 'sm', tr('НОВЫЕ ЗАДАНИЯ ЧЕРЕЗ ', 'NEW QUESTS IN ') + timeToMidnight()));
+    for (const x of q.list) {
+      const d = questDef(x), goal = questGoal(x), ready = !x.done && x.prog >= goal, c = moEl('div', 'card' + (ready ? ' glow' : ''));
+      c.appendChild(moTxt('div', 'ol', questText(x)));
+      const bar = moEl('div', 'bar'); bar.style.margin = '8px 0'; bar.innerHTML = `<i style="width:${Math.min(100, x.prog / goal * 100)}%"></i><b>${Math.min(x.prog, goal)} / ${goal}</b>`; c.appendChild(bar);
+      const row = moEl('div', 'row'); row.append(iconCnv('coins', 0, 24), moTxt('span', 'ol', '+' + d.c[x.lv]), moTxt('span', 'sm', '  + ' + d.xp[x.lv] + ' XP PASS'));
+      const b = moTxt('button', 'btn ' + (x.done ? 'off' : ready ? 'gold' : 'off'), x.done ? '✓' : ready ? tr('ЗАБРАТЬ', 'CLAIM') : '…'); b.style.marginLeft = 'auto';
+      if (ready) b.onclick = () => { x.done = true; store.set('quests', q); bank += d.c[x.lv]; saveMoney(); passXp(d.xp[x.lv]); moRefresh(); moReward(tr('ЗАДАНИЕ ВЫПОЛНЕНО!', 'QUEST DONE!'), iconCnv('coins', 0, 80), '+' + d.c[x.lv] + '  •  +' + d.xp[x.lv] + ' XP'); };
+      row.appendChild(b); c.appendChild(row); bd.appendChild(c);
+    }
+    const all = q.list.every(x => x.done), c = moEl('div', 'card' + (all && !q.bonus ? ' glow' : ''));
+    c.append(moTxt('div', 'ol', tr('ВСЕ 3 ЗАДАНИЯ — СУНДУК!', 'ALL 3 QUESTS — A CHEST!')));
+    const b = moTxt('button', 'btn ' + (q.bonus ? 'off' : all ? 'gold' : 'off'), q.bonus ? '✓' : tr('ОТКРЫТЬ СУНДУК', 'OPEN CHEST')); b.style.marginTop = '8px';
+    if (all && !q.bonus) b.onclick = () => { q.bonus = true; store.set('quests', q); passXp(150); moClose(); freeChest(false); };
+    c.appendChild(b); bd.appendChild(c);
+  });
+}
+// сундук в подарок (из заданий и Pass): та же лента героев, но бесплатно
+function freeChest(legend) {
+  const ws = legend ? [0, 45, 40, 15] : RARITY.map(r => r.w), r0 = pickIdx(ws), k = randomSkin(r0, true) || randomSkin(r0, false), dup = owned.includes(k.id);
+  if (dup) bank += DUP_REFUND; else grantSkin(k);
+  saveMoney(); state = 'shop'; shopMain = 0;
+  chest = { t: 0, k, dup, reel: makeReel(k, ws), jit: rand(-26, 26), tick: -1, landed: false, gold: legend };
+}
+
+// ---- Wall Play Pass ----
+function passRewNode(rw, size = 40) {
+  const w = moEl('div'); w.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px';
+  if (rw.k === 'coins' || rw.k === 'gems' || rw.k === 'ruby') w.append(iconCnv(rw.k, 0, size * 0.8), moTxt('div', 'ol', String(rw.n)));
+  else if (rw.k === 'chest') w.append(iconCnv('chest', rw.gold, size), moTxt('div', 'sm', rw.gold ? tr('ЛЕГЕНД.', 'LEGEND') : tr('СУНДУК', 'CHEST')));
+  else if (rw.k === 'power') w.append(iconCnv('power', 0, size * 0.8), moTxt('div', 'ol', 'x' + rw.n));
+  else if (rw.k === 'skin') { w.style.position = 'relative'; const gl = moEl('div'); gl.style.cssText = `width:${size}px;height:${size * 0.8}px;border-radius:50%;background:radial-gradient(${RARITY[rw.r].col},transparent 70%)`; w.append(gl, moTxt('div', 'sm', T('one')[rw.r])); }
+  else if (rw.k === 'frame') { const b = moEl('div'); b.style.cssText = `width:${size}px;height:${size * 0.5}px;border-radius:6px`; w.append(framed(b, rw.id, 3), moTxt('div', 'sm', tr('РАМКА', 'FRAME'))); }
+  else if (rw.k === 'title') { const t = moTxt('div', 'ol', '«' + tr(PASS_TITLES[rw.id][0], PASS_TITLES[rw.id][1]) + '»'); t.style.cssText = 'font-size:8px;color:#ffe680;text-align:center'; w.append(t, moTxt('div', 'sm', tr('ТИТУЛ', 'TITLE'))); }
+  return w;
+}
+function passGive(rw) {
+  if (rw.k === 'coins') bank += rw.n; else if (rw.k === 'gems') gems += rw.n; else if (rw.k === 'ruby') rubies += rw.n;
+  else if (rw.k === 'power') { const P = POWERS[Math.floor(Math.random() * POWERS.length)]; pw[P.id] = (pw[P.id] || 0) + rw.n; savePw(); }
+  else if (rw.k === 'frame') { if (!META.frames.includes(rw.id)) META.frames.push(rw.id); }
+  else if (rw.k === 'title') { if (!META.titles.includes(rw.id)) META.titles.push(rw.id); }
+  saveMoney(); metaSave();
+  if (rw.k === 'chest') { moClose(); freeChest(!!rw.gold); return false; }
+  if (rw.k === 'skin') { const k = randomSkin(rw.r, true); moClose(); if (k) { grantSkin(k); state = 'shop'; shopMain = 0; chest = { t: CHEST_END, k, dup: false }; } else { gems += 50; saveMoney(); } return false; }
+  return true;
+}
+function openPass() {
+  moOpen('WALL PLAY PASS', bd => {
+    const v = passData(), lv = passLevel();
+    const head = moEl('div', 'card'); head.style.background = 'linear-gradient(120deg,#ff3d7f,#a64aff 50%,#3ab0ff)';
+    head.append(moTxt('div', 'ol big', tr('СЕЗОН ', 'SEASON ') + v.s), moTxt('div', 'ol', tr('КОНЕЦ СЕЗОНА ЧЕРЕЗ ', 'SEASON ENDS IN ') + passDaysLeft() + tr(' ДН.', ' D')));
+    const lvr = moEl('div', 'row'); lvr.style.marginTop = '8px';
+    const lvb = moTxt('div', 'ol', String(lv)); lvb.style.cssText = 'width:46px;height:46px;border-radius:50%;background:linear-gradient(#ffe27a,#e8a010);border:3px solid #2a1408;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none';
+    const bar = moEl('div', 'bar'); bar.style.flex = '1'; const inLv = lv >= PASS_TIERS ? PASS_XP : v.xp % PASS_XP; bar.innerHTML = `<i style="width:${inLv / PASS_XP * 100}%"></i><b>${inLv} / ${PASS_XP} XP</b>`;
+    lvr.append(lvb, bar); head.appendChild(lvr);
+    head.appendChild(moTxt('div', 'sm', tr('ОПЫТ: МЕТРЫ ВВЕРХ (1 XP ЗА 2 М) И ЗАДАНИЯ ДНЯ', 'XP: METERS CLIMBED (1 XP PER 2 M) AND DAILY QUESTS')));
+    if (!v.prem) {
+      const b = moTxt('button', 'btn gold' + (gems >= PASS_PRICE ? '' : ''), tr('КУПИТЬ PASS', 'BUY PASS')); b.style.cssText += ';margin-top:10px;width:100%;font-size:16px';
+      const pr = moEl('span'); pr.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-left:8px;vertical-align:middle'; pr.append(iconCnv('gems', 0, 22), moTxt('span', '', String(PASS_PRICE))); b.appendChild(pr);
+      b.onclick = () => { if (gems < PASS_PRICE) { sfx.no(); b.textContent = tr('НУЖНО ', 'NEED ') + PASS_PRICE + tr(' КРИСТАЛЛОВ', ' GEMS'); return; } gems -= PASS_PRICE; saveMoney(); v.prem = true; store.set('pass', v); moRefresh(); moReward('PASS!', iconCnv('chest', 1, 90), tr('ОТКРЫТА ЗОЛОТАЯ ДОРОЖКА НАГРАД', 'GOLDEN REWARD TRACK UNLOCKED')); };
+      head.appendChild(b);
+    } else head.appendChild(moTxt('div', 'ol', '★ PASS ' + tr('КУПЛЕН', 'ACTIVE') + ' ★'));
+    bd.appendChild(head);
+    // дорожка: уровни слева направо, сверху бесплатная, снизу золотая
+    const wrap = moEl('div', 'card'); wrap.style.padding = '10px 6px';
+    const lab = moEl('div', 'row'); lab.style.cssText = 'justify-content:space-between;padding:0 4px 6px'; lab.append(moTxt('span', 'sm', tr('БЕСПЛАТНО ▲', 'FREE ▲')), moTxt('span', 'sm', tr('▼ PASS', '▼ PASS'))); wrap.appendChild(lab);
+    const sc = moEl('div'); sc.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding:6px 4px 10px;touch-action:pan-x';
+    PASS_REW.forEach(([f, pr], i) => {
+      const t = i + 1, col = moEl('div', 'tier');
+      const mk = (rw, prem) => {
+        const got = prem ? v.cp >= t : v.cf >= t, open = lv >= t && (!prem || v.prem), can = open && !got && (prem ? v.cp === t - 1 : v.cf === t - 1);
+        const c = moEl('div', 'rw' + (prem ? ' p' : '') + (got ? ' got' : '') + (!open ? ' lock' : '') + (can ? ' glow' : ''));
+        c.appendChild(passRewNode(rw, 40)); if (got) c.appendChild(moTxt('div', 'ck', '✓')); else if (!open) { const l = moTxt('div', '', '🔒'); l.style.cssText = 'position:absolute;top:2px;right:4px;font-size:12px'; c.appendChild(l); }
+        if (can) c.onclick = () => { if (prem) v.cp = t; else v.cf = t; store.set('pass', v); const stay = passGive(rw); if (stay) { moRefresh(); moReward(tr('НАГРАДА PASS!', 'PASS REWARD!'), passRewNode(rw, 80)); } };
+        return c;
+      };
+      const num = moTxt('div', 'ol', String(t)); num.style.cssText = `width:30px;height:30px;border-radius:50%;border:3px solid #2a1408;display:flex;align-items:center;justify-content:center;background:${lv >= t ? 'linear-gradient(#ffe27a,#e8a010)' : '#4a3a7a'}`;
+      col.append(mk(f, false), num, mk(pr, true)); sc.appendChild(col);
+    });
+    wrap.appendChild(sc); bd.appendChild(wrap);
+    setTimeout(() => { sc.scrollLeft = Math.max(0, Math.min(v.cf, v.prem ? v.cp : v.cf) - 1) * 84; }, 0);
+  });
+}
+
+// ---- рейтинг игроков: общая таблица в облаке claude.ai (документ board/<id> у каждого игрока) ----
+// Таблица общая только там, где есть облачная база (игра открыта на claude.ai). Без интернета или без базы — заглушка.
+const BOARD_TABS = [['c', 'coins', ['ЗОЛОТО', 'GOLD']], ['b', 'trophy', ['ВЫСОТА', 'HEIGHT']], ['r', 'ruby', ['РУБИНЫ', 'RUBIES']], ['g', 'gems', ['КРИСТАЛЛЫ', 'GEMS']], ['tr', 'trophy', ['КУБКИ', 'TROPHIES']]];
+let boardTab = 0, boardCache = {}, boardTimer = 0;
+function boardPush() {
+  clearTimeout(boardTimer);
+  boardTimer = setTimeout(async () => {
+    if (!cloud.db || !cloud.uid || tampered || quiet) return;
+    try { await cloud.db.doc('board/' + cloud.uid).set({ ...myEntry(), t: Date.now(), v: 1 }); boardCache = {}; } catch (e) {}
+  }, 3000);
+}
+// чужие строки — непроверенные данные: всё приводим к допустимому виду
+function boardClean(id, d) {
+  if (!d || typeof d !== 'object') return null;
+  const okAv = a => typeof a === 'string' && !!skinById(a.startsWith('g:') ? a.slice(2) : a);
+  const okId = a => typeof a === 'string' && a.length <= 44 && (FRAME_STYLES[a] || (a.startsWith('h:') && skinById(a.slice(2))));
+  const lst = v => (strList(v) || []);
+  return { id, n: mpClean(d.n) || 'PLAYER', av: okAv(d.av) ? d.av : 'hamster', fr: okId(d.fr) ? d.fr : 'basic', ti: typeof d.ti === 'string' && (PASS_TITLES[d.ti] || skinById(d.ti)) ? d.ti : '',
+    c: Math.min(nat(d.c), 1e9), g: Math.min(nat(d.g), 1e9), r: Math.min(nat(d.r), 1e7), b: Math.min(nat(d.b), 99999), tr: Math.min(nat(d.tr), 1e8), sk: Math.min(nat(d.sk), SKINS.length), pl: Math.min(nat(d.pl), PASS_TIERS),
+    own: lst(d.own).filter(x => skinById(x)), ic: lst(d.ic).filter(x => skinById(x)).slice(0, 120), ach: lst(d.ach).filter(x => ACH.some(a => a.id === x)), show: lst(d.show).filter(x => ACH.some(a => a.id === x)).slice(0, 3) };
+}
+function crownCnv(size) {
+  const c = document.createElement('canvas'); c.width = 24; c.height = 16; c.style.width = size + 'px'; c.style.height = size * 2 / 3 + 'px';
+  withCtx(c, g => { const P = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    P(2, 6, 20, 10, OL); P(0, 2, 6, 8, OL); P(9, 0, 6, 8, OL); P(18, 2, 6, 8, OL); P(3, 8, 18, 6, '#ffd23a'); P(1, 4, 4, 6, '#ffd23a'); P(10, 2, 4, 6, '#ffd23a'); P(19, 4, 4, 6, '#ffd23a'); P(4, 9, 4, 2, '#fff6a0'); P(11, 10, 2, 2, '#ff3d7f'); P(5, 11, 2, 2, '#3ab0ff'); P(17, 11, 2, 2, '#3ab0ff'); });
+  return c;
+}
+// заглушка: голова хомяка качается, над ней прыгает «?»
+function noNetNode(msg) {
+  const c = moEl('div', 'card'); c.style.cssText += 'text-align:center;padding:24px 12px';
+  const cv2 = document.createElement('canvas'); cv2.width = cv2.height = 96; cv2.style.width = cv2.style.height = '180px';
+  const q = moTxt('div', 'ol', '?'); q.style.cssText = 'font:900 56px Montserrat,sans-serif;color:#ffd23a;height:56px;line-height:56px;margin-bottom:-30px;position:relative;z-index:1';
+  const paint = t => withCtx(cv2, g => {
+    g.clearRect(0, 0, 96, 96);
+    heroSprite(SKINS[0], 'idle', t, Math.sin(t * 2.3) > 0.97);
+    g.save(); g.translate(48, 62); g.rotate(Math.sin(t * 2.2) * 0.18); drawRaw.call(g, hcv, SPR_X + 5, SPR_Y + 4, 22, 22, -33, -38, 66, 66); g.restore();
+    q.style.transform = `translate(${Math.sin(t * 1.7) * 6}px,${-Math.abs(Math.sin(t * 3.4)) * 16}px) rotate(${Math.sin(t * 2.6) * 12}deg)`;
+  });
+  paint(0); moAnim.push({ c: cv2, paint });
+  const t = moTxt('div', 'ol big', msg[0]); t.style.marginTop = '8px';
+  c.append(q, cv2, t, moTxt('div', 'sm', msg[1]));
+  return c;
+}
+function openBoard(keep) {
+  moOpen(tr('РЕЙТИНГ', 'RANKING'), bd => {
+    const tabs = moEl('div', 'tabs');
+    BOARD_TABS.forEach(([f, ic, nm], i) => { const b = moTxt('button', 'tab' + (i === boardTab ? ' on' : ''), tr(nm[0], nm[1])); b.onclick = () => { boardTab = i; sfx.click(); moRefresh(); }; tabs.appendChild(b); });
+    bd.appendChild(tabs);
+    if (!navigator.onLine) { bd.appendChild(noNetNode([tr('НЕТ ИНТЕРНЕТА', 'NO INTERNET'), tr('РЕЙТИНГ ПОЯВИТСЯ, КОГДА ВЕРНЁТСЯ СВЯЗЬ', 'THE RANKING COMES BACK WITH THE CONNECTION')])); return; }
+    const box = moEl('div'); bd.appendChild(box);
+    const field = BOARD_TABS[boardTab][0], ic = BOARD_TABS[boardTab][1];
+    const show = rows => {
+      box.innerHTML = '';
+      if (!rows.length) { box.appendChild(moTxt('div', 'card sm', tr('ПОКА НИКОГО — СЫГРАЙ И СТАНЬ ПЕРВЫМ!', 'NOBODY YET — PLAY AND BE FIRST!'))); return; }
+      rows.forEach((e, i) => {
+        const me = e.id === cloud.uid, f = frameStyle(e.fr), r = moEl('div', 'rk' + (me ? ' glow' : ''));
+        r.style.background = f.bg; r.style.backgroundSize = '300% 100%'; if (f.anim) r.style.animation = 'moFr 5s linear infinite';
+        const n = moEl('div', 'n ol'); n.textContent = String(i + 1); if (i < 3) n.style.color = ['#ffd23a', '#e8eef8', '#e0904a'][i];
+        const avw = moEl('div'); avw.style.cssText = 'position:relative;flex:none'; avw.appendChild(framed(avatarCnv(e.av, 40), e.fr, 2));
+        if (i === 0) { const cr = crownCnv(30); cr.style.cssText += ';position:absolute;left:50%;top:-16px;margin-left:-15px'; avw.appendChild(cr); }
+        const nm = moEl('div'); nm.style.cssText = 'min-width:0;background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px';
+        nm.appendChild(moTxt('div', 'ol', e.n + (me ? tr(' (ТЫ)', ' (YOU)') : '')));
+        if (titleText(e.ti)) { const tt = moTxt('div', 'sm', '«' + titleText(e.ti) + '»'); tt.style.color = '#ffe680'; nm.appendChild(tt); }
+        const v = moEl('div', 'v ol row'); v.style.cssText += ';background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px;gap:4px'; v.append(iconCnv(ic, 0, 20), moTxt('span', '', field === 'b' ? e.b + T('m') : String(e[field])));
+        r.append(n, avw, nm, v);
+        r.onclick = () => { sfx.click(); moOpen(e.n, bd2 => profBody(bd2, e, false), true); };
+        box.appendChild(r);
+      });
+    };
+    const load = async (tries) => {
+      if (!cloud.db) {
+        if (window.claude && window.claude.use && tries < 12) { if (!tries) box.appendChild(moTxt('div', 'card sm', tr('ПОДКЛЮЧЕНИЕ…', 'CONNECTING…'))); setTimeout(() => { if (box.isConnected) load(tries + 1); }, 1000); return; }
+        box.innerHTML = ''; box.appendChild(noNetNode([tr('РЕЙТИНГ НЕДОСТУПЕН', 'RANKING UNAVAILABLE'), tr('ОБЩАЯ ТАБЛИЦА РАБОТАЕТ В ОНЛАЙН-ВЕРСИИ ИГРЫ НА CLAUDE.AI', 'THE SHARED TABLE WORKS IN THE ONLINE VERSION OF THE GAME ON CLAUDE.AI')])); return;
+      }
+      const hit = boardCache[field];
+      if (hit && Date.now() - hit.t < 30000) { show(hit.rows); return; }
+      box.innerHTML = ''; box.appendChild(moTxt('div', 'card sm', tr('ЗАГРУЗКА…', 'LOADING…')));
+      try {
+        const snap = await cloud.db.collection('board').orderBy(field, 'desc').limit(99).get();
+        const rows = snap.docs.map(d => boardClean(d.id, d.data())).filter(Boolean);
+        boardCache[field] = { t: Date.now(), rows }; if (box.isConnected) show(rows);
+      } catch (e) { if (box.isConnected) { box.innerHTML = ''; box.appendChild(noNetNode([tr('НЕТ СВЯЗИ', 'NO CONNECTION'), tr('ПОПРОБУЙ ЧУТЬ ПОЗЖЕ', 'TRY AGAIN A BIT LATER')])); } }
+    };
+    if (!tampered) boardPush();
+    load(0);
+  }, keep);
+}
+
+// ---- меню: профиль слева сверху, рейтинг справа, задания и Pass внизу, кубки над героем; свайп — рейтинг/профиль ----
+Object.assign(BTN, { hero: { x: 12, y: 584, w: 132, h: 46 }, prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: W - 112, y: 196, w: 100, h: 32 }, quest: { x: 12, y: 438, w: 100, h: 34 }, pass: { x: 248, y: 438, w: 100, h: 34 } });
+BTN.emo = { x: 118, y: 438, w: 124, h: 34 };
+const heroRect = () => ({ x: p.x - 20, y: p.y - camR - 44, w: 40, h: 50 });
+let menuSw = null;
+function drawMenuMeta() {
+  // профиль: аватарка, ник и кубки
+  const b = BTN.prof;
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 6); ctx.fillStyle = '#3a2a6a'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(b.x, b.y, b.w, 4);
+  const av = META.prof.av, gold = av.startsWith('g:'), k = skinById(gold ? av.slice(2) : av) || SKINS[0];
+  ctx.fillStyle = gold ? '#ffd23a' : '#1a1030'; ctx.fillRect(b.x + 2, b.y + 2, 30, 30);
+  heroSprite(k, 'idle', time, false); ctx.save(); ctx.beginPath(); ctx.rect(b.x + 2, b.y + 2, 30, 30); ctx.clip(); drawRaw.call(ctx, hcv, SPR_X + 4, SPR_Y + 6, 24, 24, b.x + 2, b.y + 2, 30, 30); ctx.restore();
+  text(mp.nick || tr('ПРОФИЛЬ', 'PROFILE'), b.x + 38, b.y + 15, 1, '#ffffff', 'left', OL, b.w - 42);
+  trophyIcon(b.x + 44, b.y + 25, 0.5); text(String(troTotal()), b.x + 52, b.y + 30, 1, '#ffe680', 'left', OL, b.w - 56);
+  button(BTN.rank, tr('РЕЙТИНГ', 'RANKING'), '#ffb02a', '#c06a00');
+  button(BTN.quest, tr('ЗАДАНИЯ', 'QUESTS'), '#3ab0ff', '#1a70c0');
+  button(BTN.pass, 'PASS', '#ff3d7f', '#a01a6a');
+  if (questReady()) badge(BTN.quest.x + BTN.quest.w - 4, BTN.quest.y + 2);
+  if (passReady()) badge(BTN.pass.x + BTN.pass.w - 4, BTN.pass.y + 2);
+  // плашка героя внизу слева: голова, имя и кубки; если на дорожке есть награда — восклицательный знак
+  const hb = BTN.hero, hk = curSkin(), bob = Math.sin(time * 3) * 1.5;
+  ctx.fillStyle = OL; ctx.fillRect(hb.x - 3, hb.y - 3 + bob, hb.w + 6, hb.h + 8); ctx.fillStyle = '#ffb02a'; ctx.fillRect(hb.x, hb.y + bob, hb.w, hb.h);
+  ctx.fillStyle = '#ffe27a'; ctx.fillRect(hb.x, hb.y + bob, hb.w, 5); ctx.fillStyle = '#c06a00'; ctx.fillRect(hb.x, hb.y + hb.h - 4 + bob, hb.w, 4);
+  ctx.fillStyle = '#3a2a6a'; ctx.fillRect(hb.x + 4, hb.y + 4 + bob, 38, 38);
+  heroSprite(hk, 'idle', time, false); ctx.save(); ctx.beginPath(); ctx.rect(hb.x + 4, hb.y + 4 + bob, 38, 38); ctx.clip(); drawRaw.call(ctx, hcv, SPR_X + 4, SPR_Y + 6, 24, 24, hb.x + 4, hb.y + 4 + bob, 38, 38); ctx.restore();
+  text(skinName(hk), hb.x + 48, hb.y + 18 + bob, 1, '#ffffff', 'left', OL, hb.w - 52);
+  trophyIcon(hb.x + 56, hb.y + 30 + bob, 0.55); text(String(troOf(hk.id)), hb.x + 66, hb.y + 36 + bob, 2, '#ffffff', 'left', OL, hb.w - 70);
+  if (roadReady(hk.id)) badge(hb.x + hb.w - 4, hb.y + 2 + bob);
+}
+function menuMetaClick(pt) {
+  const act = fn => { audio(); startMusic(); sfx.click(); fn(); return true; };
+  if (inRect(pt, BTN.prof)) return act(openProfile);
+  if (inRect(pt, BTN.rank)) return act(() => openBoard());
+  if (inRect(pt, BTN.quest)) return act(openQuests);
+  if (inRect(pt, BTN.pass)) return act(openPass);
+  if (inRect(pt, BTN.hero) || inRect(pt, heroRect())) return act(() => openHero(skinId));
+  return false;
+}
+window.addEventListener('pointerup', e => {
+  if (!menuSw) return;
+  const s = menuSw; menuSw = null;
+  if (state !== 'menu') return;
+  const q = toGame(e), dx = q.x - s.x, dy = q.y - s.y;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) { audio(); startMusic(); sfx.click(); if (dx < 0) openBoard(); else openProfile(); return; }
+  press(); release();   // не свайп — обычное касание: прыжок и старт
+});
+
 reset();
 window.__game = { get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; } };
 requestAnimationFrame(frame);
