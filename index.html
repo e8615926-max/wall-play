@@ -1706,19 +1706,19 @@ const RARE_LOOK = {
   bear: { rp: ['honeyPot'] },
   monkey: { rp: ['bananaHand'] },
   koala: { rp: ['eucalyptus'] },
-  owl: { rp: ['owlFace'] },
+  owl: { rp: ['owlFace'], noEyes: true, noMuzzle: true, beak: null, eyeRing: null },
   chef: { rp: ['fryPan'] },
   cowboy: { ears: 'none', parts: null, dark: '#5a3018', rp: ['cowVest', 'cowHat', 'lasso'] },
-  firefighter: { ears: 'none', parts: null, noScarf: true, dark: '#2a2a34', rp: ['fireCoat', 'fireHelm', 'hose'] },
+  firefighter: { ears: 'none', parts: null, dark: '#2a2a34', rp: ['fireCoat', 'fireHelm', 'hose'] },
   police: { rp: ['badge'] },
   doctor: { rp: ['stetho2'] },
-  miner: { ...HAM, ears: 'none', parts: null, scarf: '#ff8a1e', scarfD: '#c05a10', rp: ['mineHelm', 'pickaxe'] },
+  miner: { ...HAM, ears: 'none', parts: null, scarf: '#ff8a1e', scarfD: '#c05a10', rp: ['mineHelm', 'pickaxe', 'dirt'] },
   pig: { ears: 'none', parts: null, noMuzzle: true, tail: 'curl', rp: ['pigEars', 'pigSnout2', 'mud'] },
-  graduate: { rp: ['diploma'] },
+  graduate: { parts: ['wingsOwl', 'gradCap'], wing: '#7a4a2a', rp: ['diploma'] },
   propeller: { parts: null, ears: 'none', rp: ['propCap', 'lollipop'], ord: 14 },
-  party: { rp: ['partyHorn'] },
+  party: { rp: ['partyGlasses', 'lei', 'partyHorn'], noScarf: true },
   sheep: { scarf: '#ffffff', scarfD: '#d0d0dc', rp: ['bell'] },
-  cow: { rp: ['cowBell'] },
+  cow: { parts: ['cowSpots'], rp: ['cowHorns', 'cowBell'] },
   chick: { rp: ['chickWings'] },
   mouse: { rp: ['cheese'] },
   hedgehog: { parts: null, rp: ['hogSpikes', 'hogNose'] },
@@ -1736,12 +1736,12 @@ const RARE_LOOK = {
   tourist: { ears: 'none', parts: null, rp: ['backPack2', 'safariHat', 'camNeck', 'mapHand'], pack: '#3a8a4a' },
   drummer: { parts: null, rp: ['drum2', 'sticks2'] },
   beekeeper: { ears: 'none', parts: null, noScarf: true, rp: ['beeSuit2', 'beeVeil', 'smoker', 'bees2'] },
-  skater: { ...HAM, ears: 'none', parts: null, noScarf: true, cap: '#e8261a', capD: '#a01008', hood: '#3a7aff', hoodD: '#2a5ac0', rp: ['hoodie', 'capBack', 'kneePads', 'board2'] },
-  cupcake: { ...HAM, ears: 'none', parts: null, scarf: '#ff8ac8', scarfD: '#d05a98', rp: ['cupWrap', 'frostSwirl'] },
+  skater: { ...HAM, ears: 'none', parts: null, noScarf: true, cap: '#e8261a', capD: '#a01008', hood: '#1a2a6a', hoodD: '#0e1a48', hoodL: '#2a3a8a', rp: ['hoodie', 'capBack', 'kneePads', 'board2'] },
+  cupcake: { ...HAM, body: '#ff9ac8', head: '#ffb0d8', dark: '#d05a98', light: '#ffd8ec', ear: '#ff9ac8', ol: '#6a1a4a', ears: 'none', parts: null, rp: ['cupWrap', 'sprinkleAll', 'frostSwirl'], ord: 37 },
   donut: { parts: null, rp: ['donutHat2', 'donutFloat'] },
-  marshmallow: { parts: null, rp: ['toasty', 'smoreStick'] },
+  marshmallow: { parts: null, noEyes: true, noMuzzle: true, rp: ['marshHead', 'smoreStick'] },
   waffle: { ...HAM, body: '#f0b860', dark: '#c0803a', light: '#ffe0a8', ears: 'none', parts: null, scarf: '#a0501a', scarfD: '#6a3010', rp: ['waffleGrid2', 'butter'] },
-  banana: { ears: 'none', parts: null, body: '#fff2b8', light: '#fffbe0', dark: '#e0c060', noScarf: true, rp: ['peel2'] },
+  banana: { ears: 'none', parts: null, body: '#ffd83a', light: '#fff2a0', dark: '#c8a010', noEyes: true, noMuzzle: true, rp: ['peel2'] },
   sleepy: { ears: 'none', parts: ['sleepEyes', 'zzz'], noScarf: true, rp: ['nightCapTail', 'pajama', 'nightCap2', 'pillow2', 'slippers'] },
   farmer: { ears: 'none', parts: ['wheatStraw'], rp: ['overalls2', 'strawHat3', 'pitchfork'] },
   skier: { parts: null, noScarf: true, rp: ['skiJacket', 'skiGog2', 'skis2'] },
@@ -1782,11 +1782,43 @@ const RARE_LOOK = {
   seal: { parts: null, rp: ['sealBall'] },
   lemur: { tail: null, ringA: '#ffffff', ringB: '#2a2a34', rp: ['ringTail', 'bananaHand'] },
   axolotl: { rp: ['glowSpots'] },
+  mermaid: { parts: ['trident'], hair: '#ff6aa8', hairD: '#c03a7a', tail2: '#3ad8b0', tail2D: '#1a9a8a', noMuzzle: true, rp: ['merHair', 'merTail', 'merShells', 'merBangs'] },
 };
 for (const [id, v] of Object.entries(RARE_LOOK)) {
   const k = SKINS.find(s => s.id === id); if (!k) continue;
   for (const [key, val] of Object.entries(v)) { if (val === null) delete k[key]; else k[key] = val; }
   if (v.rp && k.rp !== v.rp) k.rp = v.rp;
+}
+// у каждого обычного и редкого героя — шарф со своим узором (у кого шарф особый — свой рисунок)
+const PAT_KINDS = ['dots', 'stripes', 'zig', 'check', 'hearts', 'stars', 'line', 'fir'];
+const SCARF_LOOK = {   // заказанные цвета: [шарф, тень, узор, вид узора]
+  frog: ['#ffffff', '#c8d8e0', '#3ac04a', 'dots'], cat: ['#1a6a3a', '#0a4a22', '#9af0a8', 'stripes'], raccoon: ['#e8261a', '#a01008', '#ffffff', 'check'],
+  bunny: ['#1a2a8a', '#0a1458', '#ffd23a', 'stars'], owl: ['#ff7ab8', '#d0407a', '#ffffff', 'hearts'], firefighter: ['#ffd23a', '#c89a10', '#e8261a', 'stripes'],
+  sheep: ['#ffffff', '#d0d0dc', '#ff9ad8', 'hearts'],
+  sailor: ['#e8261a', '#a01008', '#ffffff', 'stripes'], footballer: ['#2a6aff', '#1a4ac0', '#ffffff', 'line'], swimmer: ['#ff4a4a', '#c01a1a', '#ffffff', 'dots'],
+  builder: ['#ff7a1a', '#c04a0a', '#e8f0f8', 'line'], beekeeper: ['#ffd23a', '#c89a10', '#1a1010', 'stripes'], skater: ['#ffd23a', '#c89a10', '#1a2a6a', 'check'],
+  cupcake: ['#ff8ac8', '#d05a98', '#ffffff', 'dots'], donut: ['#ff8ac8', '#d05a98', '#3ab0ff', 'dots'], marshmallow: ['#bfe8ff', '#8ac0e8', '#ffffff', 'hearts'],
+  waffle: ['#a0501a', '#6a3010', '#ffe86a', 'check'], banana: ['#5a3a1a', '#3a2010', '#ffe03a', 'zig'], sleepy: ['#3a5ac0', '#2a3a90', '#fff27a', 'stars'],
+  farmer: ['#e8261a', '#a01008', '#ffffff', 'check'], skier: ['#ffffff', '#c8d0e0', '#e8261a', 'fir'], gamer: ['#2a2a3a', '#14141e', '#3ce06a', 'zig'],
+  sushichef: ['#1a1a24', '#000000', '#e8261a', 'dots'], lifeguard: ['#e8261a', '#a01008', '#ffffff', 'line'], violinist: ['#e8261a', '#a01008', '#ffd23a', 'dots'],
+  cabinboy: ['#2a4ac0', '#1a2a80', '#ffffff', 'stripes'], umbrella: ['#3ab0ff', '#1a70c0', '#ffffff', 'dots'], nurse: ['#ff9ab8', '#d06a8a', '#ffffff', 'hearts'],
+  scientist: ['#3ae06a', '#1a9a3a', '#ffffff', 'zig'], wrestler: ['#ffd23a', '#c89a10', '#e8261a', 'stars'], cheerleader: ['#e8264a', '#a01030', '#ffffff', 'stripes'],
+  golfer: ['#3ac04a', '#1a8a2a', '#ffffff', 'check'], baseball: ['#1a2a6a', '#0a1440', '#e8261a', 'line'], basketball: ['#5a2aa0', '#3a1470', '#ff7a1a', 'stripes'],
+  librarian: ['#c08a4a', '#8a5a2a', '#fff6e0', 'fir'], lumberjack: ['#2a2a34', '#14141e', '#e8261a', 'check'], plumber: ['#ff9a2a', '#c06a10', '#1a6a8a', 'dots'],
+  nerd: ['#3a7aff', '#1a4ac0', '#ffffff', 'check'], mime: ['#e8261a', '#a01008', '#ffffff', 'dots'], capybara: ['#ff9a2a', '#c06a10', '#ffffff', 'dots'],
+  axolotl: ['#ffd23a', '#c89a10', '#ff5a9a', 'hearts'], jellyfish: ['#7ad8ff', '#3aa0d0', '#ffffff', 'zig'], tanuki: ['#e8261a', '#a01008', '#ffd23a', 'fir'],
+  cowboy: ['#e8261a', '#a01008', '#ffffff', 'dots'], miner: ['#ff8a1e', '#c05a10', '#3a3a44', 'check'], panda: ['#5ac03a', '#3a8a2a', '#ffffff', 'fir'], fox: ['#3ab0ff', '#1a70c0', '#ffffff', 'zig'],
+};
+for (const k of SKINS) {
+  if (k.r > 1 || k.cape) continue;
+  const own = SCARF_LOOK[k.id];
+  if (own) { [k.scarf, k.scarfD, k.patC, k.pat] = own; delete k.noScarf; continue; }
+  if (k.noScarf) continue;
+  if ((k.rp || []).some(p => ['berryScarf', 'dotScarf', 'nightStars', 'tennisBand', 'lei', 'neckerchief'].includes(p))) continue;
+  const h = [...k.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
+  const [r, g, b] = hexToRgb(k.scarf), lum = r * 0.3 + g * 0.59 + b * 0.11;
+  const toward = (v, q, f) => Math.round(v + (q - v) * f), [q, f] = lum > 150 ? [30, 0.55] : [255, 0.7];
+  k.pat = PAT_KINDS[h % PAT_KINDS.length]; k.patC = `rgb(${toward(r, q, f)},${toward(g, q, f)},${toward(b, q, f)})`;
 }
 // герои по мотивам фильмов и игр — свои цвета, чтобы не повторять оригиналы один в один
 const OWN_HUE = { darklord: 280, lightknight: 250, wargod: 200, spiderhero: 290, ironhero: 200, greengiant: 70, youngwizard: 130, iceracer: 250, f1racer: 210, shieldcaptain: 60, nightguard: 190, ninjabot: 120, antman: 40, titanglove: 170, youngsuper: 150, mustachetitan: 200, sorcerer: 150, yellowninja: 200, iceninja: 320, hellmarine: 150, baldhero: 170, titanfighter: 60, superwarrior: 200, foxninja: 160, rubberpirate: 120, hunterborg: 150, sewerclown: 120, suithitman: 180, redmerc: 250, turtleblue: 40, turtlered: 40, turtleorange: 40, turtlepurple: 40, yellowhelper: 160, spacemarine: 200, evilgenius: 150, electromouse: 300, assassin: 200, ngkai: 30, ngjay: 40, ngcole: 200, ngzane: 60, nglloyd: 60, star7: 230, jason: 160, ghostrider: 120 };
@@ -2480,12 +2512,26 @@ function sring(c, cx, cy, rx, ry, col, ol) {
 }
 
 // ---------- Спрайт героя ----------
-const hcv = document.createElement('canvas'); hcv.width = 32; hcv.height = 40;   // сверху 8 px запаса для шляп
+// холст героя 48×48: логически спрайт по-прежнему 32×40 (сверху 8 px под шляпы), а вокруг ещё запас —
+// 8 px слева, справа и сверху, чтобы удочки, зонты, мячи и короны не обрезались по краю
+const SPR_W = 48, SPR_H = 48, SPR_X = 8, SPR_Y = 8;
+const hcv = document.createElement('canvas'); hcv.width = SPR_W; hcv.height = SPR_H; hcv.__spr = true;
+// все рисовавшие спрайт считают его 32×40: drawImage сам переводит их координаты в большой холст
+const drawRaw = CanvasRenderingContext2D.prototype.drawImage;
+CanvasRenderingContext2D.prototype.drawImage = function (img, a, b, c, d) {
+  if (img && img.__spr) {
+    const n = arguments.length;
+    if (n === 5) return drawRaw.call(this, img, a - c * SPR_X / 32, b - d * SPR_Y / 40, c * SPR_W / 32, d * SPR_H / 40);
+    if (n === 3 && !this.canvas.__spr) return drawRaw.call(this, img, a - SPR_X, b - SPR_Y);
+    if (n === 9) { const q = [...arguments]; q[1] += SPR_X; q[2] += SPR_Y; return drawRaw.apply(this, q); }
+  }
+  return drawRaw.apply(this, arguments);
+};
 const hctx = hcv.getContext('2d');
 // мармеладка: каждые 5 секунд новый цвет мармелада поднимается снизу вверх
 const GUMMY = [['#ff5a7a', '#c02a4a', '#ffb0c0', '#5a0a1a'], ['#ff9a2a', '#c0600a', '#ffd8a0', '#5a2a00'], ['#ffe03a', '#c8a010', '#fff8b0', '#5a4a00'],
   ['#5ae05a', '#2a9a2a', '#c8ffc0', '#0a3a0a'], ['#3ab0ff', '#1a70c0', '#c0e8ff', '#0a2a5a'], ['#a64aff', '#6a1ac0', '#e0c0ff', '#2a0a4a']];
-const mkCanvas = () => { const c = document.createElement('canvas'); c.width = 32; c.height = 40; return c; };
+const mkCanvas = () => { const c = document.createElement('canvas'); c.width = SPR_W; c.height = SPR_H; c.__spr = true; return c; };
 const gcv = mkCanvas(), xcv = [mkCanvas(), mkCanvas()];
 // герои «по мотивам» фильмов и игр перекрашены в свои цвета: костюм меняет оттенок, кожа, контур, белый и чёрный остаются
 // перекраска: на время рисования спрайта каждый цвет, который ставится в hctx, пропускается через сдвиг оттенка (с кэшем)
@@ -2530,40 +2576,40 @@ function heroSprite0(sk, pose, t, blink) {
   heroSpriteRaw(col(i), pose, t, blink);
   if (ph >= 1) return;
   const g = gcv.getContext('2d');
-  g.clearRect(0, 0, 32, 40); g.drawImage(hcv, 0, 0);
+  g.clearRect(0, 0, SPR_W, SPR_H); g.drawImage(hcv, 0, 0);
   heroSpriteRaw(col((i + n - 1) % n), pose, t, blink);
   hctx.setTransform(1, 0, 0, 1, 0, 0);
-  const cut = 38 - ph * 36;
-  for (let x = 0; x < 32; x++) {
+  const cut = 38 - ph * 36 + SPR_Y;
+  for (let x = 0; x < SPR_W; x++) {
     const cy = Math.round(cut + Math.sin(x * 0.7 + t * 9) * 1.5);
-    if (cy >= 40) continue;
+    if (cy >= SPR_H) continue;
     const y0 = Math.max(0, cy);
-    hctx.clearRect(x, y0, 1, 40 - y0);
-    hctx.drawImage(gcv, x, y0, 1, 40 - y0, x, y0, 1, 40 - y0);
+    hctx.clearRect(x, y0, 1, SPR_H - y0);
+    drawRaw.call(hctx, gcv, x, y0, 1, SPR_H - y0, x, y0, 1, SPR_H - y0);
   }
   hctx.globalCompositeOperation = 'source-atop'; hctx.fillStyle = 'rgba(255,255,255,0.75)';
-  for (let x = 0; x < 32; x++) hctx.fillRect(x, Math.round(cut + Math.sin(x * 0.7 + t * 9) * 1.5), 1, 1);
+  for (let x = 0; x < SPR_W; x++) hctx.fillRect(x, Math.round(cut + Math.sin(x * 0.7 + t * 9) * 1.5), 1, 1);
   hctx.globalCompositeOperation = 'source-over';
 }
 // силуэт спрайта одним цветом (для тока, вспышек и глитча)
 function tintSprite(col, n = 0) {
   const c = xcv[n], g = c.getContext('2d');
-  g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, 32, 40); g.drawImage(hcv, 0, 0);
-  g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, 32, 40);
+  g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, SPR_W, SPR_H); g.drawImage(hcv, 0, 0);
+  g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, SPR_W, SPR_H);
   g.globalCompositeOperation = 'source-over';
   return c;
 }
 // рентген: героя бьёт током — на миг виден скелет
 function xraySprite() {
   const c = tintSprite('#2a4ad8', 1), g = c.getContext('2d');
-  g.globalCompositeOperation = 'source-atop';
+  g.globalCompositeOperation = 'source-atop'; g.save(); g.translate(SPR_X, SPR_Y);
   const F = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); }, bone = '#e8f4ff', hole = '#0a1440';
   sell(g, 16.5, 19.5, 5.5, 4.8, bone); F(13, 23, 7, 2, bone);
   F(14, 18, 2, 2, hole); F(18, 18, 2, 2, hole); F(17, 21, 1, 1, hole); for (let i = 0; i < 4; i++) F(13 + i * 2, 24, 1, 1, hole);
   F(16, 25, 1, 9, bone); for (const y of [27, 29, 31]) F(13, y, 7, 1, bone);
   for (let i = 0; i < 5; i++) { F(13 - i, 26 - i * 1.5, 1, 2, bone); F(19 + i, 26 - i * 1.5, 1, 2, bone); }
   F(14, 33, 1, 2, bone); F(18, 33, 1, 2, bone); F(12, 35, 3, 1, bone); F(18, 35, 3, 1, bone);
-  g.globalCompositeOperation = 'source-over';
+  g.restore(); g.globalCompositeOperation = 'source-over';
   return c;
 }
 // спрайт в витрине: прозрачность, исчезающий кот, RGB-раздвоение глитча
@@ -2582,7 +2628,7 @@ function heroSpriteRaw(sk, pose, t, blink) {
     sk = { ...sk, body: hsl(h), dark: hsl(h + 40, 80, 40), light: hsl(h + 180, 90, 85), scarf: hsl(h + 90), scarfD: hsl(h + 150) };
   }
   const c = hctx;
-  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, 32, 40); c.setTransform(1, 0, 0, 1, 0, 8);
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, SPR_W, SPR_H); c.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y);
   const B = { x: 16, y: 20.5, rx: 5.5, ry: 5 };
   const Hd = { x: 16, y: 12, rx: 7.5, ry: 6.5 };
   let F1 = { x: 13, y: 25.5 }, F2 = { x: 19.5, y: 25.5 }, A1 = { x: 21, y: 20 }, A2 = null;
@@ -2690,7 +2736,9 @@ function heroSpriteRaw(sk, pose, t, blink) {
       const yy = Math.round(sy + Math.sin(t * 14 - i * 0.9) * 1.3 + i * (sk.cape ? 0.7 : 0.35));
       c.fillStyle = i % 2 ? sk.scarfD : sk.scarf;
       c.fillRect(sx - 1 - i, yy, 1, sk.cape ? 4 : 2);
+      if (sk.pat && !sk.cape && i === tail - 1) { c.fillStyle = sk.patC; c.fillRect(sx - 1 - i, yy + 1, 1, 1); }   // бахрома на кончике
     }
+    if (sk.pat && !sk.cape) scarfPat(c, sk, sx, sy, t);
   }
   if (sk.special) drawSpecial(c, sk, t, pose, blink, Hd, B, A1, E2, ex1, ex2, ey);
   if (sk.look) drawTheme(c, sk, t, Hd, B);
@@ -2707,7 +2755,7 @@ function pxMap(c, rows, x0, y0, pal) {
     for (let x = 0; x < s.length; x++) { const col = pal[s[x]]; if (col) { c.fillStyle = col; c.fillRect(x0 + x, y0 + y, 1, 1); } }
   }
 }
-const RARE_BACK = new Set(['ringTail', 'bat2', 'axe2', 'pitchfork', 'pickaxe', 'skyCloud', 'hogSpikes', 'ladyWings', 'bigPack', 'surfBoard2', 'nightCapTail', 'pandaBamboo', 'backPack2', 'pomBack', 'jellyGlow']);
+const RARE_BACK = new Set(['merHair', 'ringTail', 'bat2', 'axe2', 'pitchfork', 'pickaxe', 'skyCloud', 'hogSpikes', 'ladyWings', 'bigPack', 'surfBoard2', 'nightCapTail', 'pandaBamboo', 'backPack2', 'pomBack', 'jellyGlow']);
 function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) {
   const r = Math.round, ol = sk.ol, hx = r(Hd.x), hy = r(Hd.y), bx = r(B.x), by = r(B.y);
   const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(r(x), r(y), w, h); };
@@ -2820,19 +2868,19 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
         else for (const x of [ex1, ex2]) { R(x, ey, 2, 3, '#ffffff'); R(x + 1, ey + 1, 1, 2, '#1a1010'); }
         break;
       }
-      case 'cowHat': {
-        const h = '#9a6230', d = '#6a3a18', l = '#c08a50';
-        R(hx - 5, hy - 14, 11, 8, ol); R(hx - 4, hy - 13, 9, 6, h); R(hx - 1, hy - 13, 3, 1, d); R(hx - 4, hy - 13, 2, 1, l);
-        R(hx - 4, hy - 9, 9, 1, '#3a2010'); R(hx + 2, hy - 9, 1, 1, '#ffd23a');
-        R(hx - 9, hy - 7, 19, 3, ol); R(hx - 8, hy - 6, 17, 1, h);
-        R(hx - 11, hy - 9, 3, 3, ol); R(hx - 10, hy - 8, 2, 1, h); R(hx + 9, hy - 9, 3, 3, ol); R(hx + 9, hy - 8, 2, 1, h);
+      case 'cowHat': {   // настоящая ковбойская шляпа: круглая тулья с ямкой, лента с пряжкой, поля загнуты вверх
+        M(['........ooo.ooo........', '.......ohhhohhho.......', '......ohlhhhhhhho......', '......ohlhhhhhhho......', '......ohhhhhhhhho......',
+           '......obbbbybbbbo......', 'oo....ohhhhhhhhho....oo', 'oho.ooohhhhhhhhhooo.oho', '.ohhhhhhhhhhhhhhhhhhho.', '..oddddddddddddddddddo..', '...ooooooooooooooooo...'],
+          hx - 11, hy - 16, { h: '#a06a34', l: '#d09a60', d: '#6a3a18', b: '#3a2010', y: '#ffd23a' });
         break;
       }
       case 'cowVest': { R(bx - 5, by - 3, 3, 6, '#7a4a2a'); R(bx + 3, by - 3, 2, 5, '#7a4a2a'); M(['.y.', 'yyy', 'y.y'], bx + 3, by - 2, { y: '#ffd23a' }); break; }
-      case 'lasso': {
-        const sp = Math.sin(t * 9), cx = ax + 4, cy = ay - 6;
-        line(ax, ay, cx - 1, cy + 2, '#c8985a');
-        sring(c, cx, cy, 3.5 + sp * 0.8, 1.6, '#d8a860', ol);
+      case 'lasso': {   // верёвка: витая, петля крутится над рукой
+        const sp = Math.sin(t * 9), cx = ax + 4, cy = ay - 8, rx = 3.8 + sp * 0.9;
+        for (let i = 0; i <= 6; i++) { const x = ax + (cx - rx + 1 - ax) * i / 6, y = ay + (cy + 1 - ay) * i / 6 + Math.sin(i * 0.9) * 0.6; R(x, y, 1, 1, i % 2 ? '#a87038' : '#e0b070'); }
+        sring(c, cx, cy, rx, 1.8, '#e0b070', ol);
+        R(cx - rx * 0.5, cy - 1.5, 1, 1, '#a87038'); R(cx + rx * 0.5, cy + 1.5, 1, 1, '#a87038');
+        M(['.oo.', 'orro', '.oo.'], ax - 1, ay + 1, { r: '#c89050' });
         break;
       }
       case 'mineHelm': {
@@ -2937,6 +2985,58 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
         P.forEach(([x, y], i) => E(x, y, 1.7, 1.7, (i >> 1) % 2 ? sk.ringA || '#ffffff' : sk.ringB || '#1a1a24'));
         break;
       }
+      case 'dirt': { c.globalAlpha = 0.75; for (const [x, y, w] of [[hx - 4, hy + 1, 2], [hx + 4, hy - 4, 1], [hx - 6, hy - 2, 1], [bx - 3, by + 2, 2], [bx + 2, by - 1, 1], [bx - 1, by + 4, 2], [bx + 3, by + 3, 1]]) R(x, y, w, 1, '#4a3020'); R(hx + 5, hy + 3, 1, 1, '#4a3020'); c.globalAlpha = 1; break; }
+      case 'partyGlasses': {   // праздничные очки-звёздочки
+        for (const x of [ex1 - 2, ex2]) M(['..p..', '.pcp.', 'pcccp', '.pcp.', '.p.p.'], x, ey - 1, { p: '#ff3aa0', c: '#9af0ff' });
+        R(ex1 + 3, ey + 1, 1, 1, '#ff3aa0'); if (!blink) { R(ex1, ey + 1, 1, 1, '#1a1010'); R(ex2 + 2, ey + 1, 1, 1, '#1a1010'); }
+        if (Math.sin(t * 4) > 0.7) R(ex2 + 4, ey - 2, 1, 1, '#ffffff');
+        break;
+      }
+      case 'cowHorns': {
+        M(['oo....', 'otoo..', 'owwwo.', '.owwwo', '..owww'], hx - 10, hy - 12, { t: '#b89060', w: '#fff6e0' });
+        M(['....oo', '..ooto', '.owwwo', 'owwwo.', 'wwwo..'], hx + 4, hy - 12, { t: '#b89060', w: '#fff6e0' });
+        break;
+      }
+      case 'sprinkleAll': { const S = [[-5, -4], [-2, -6], [3, -5], [-6, 1], [-4, 3], [bx - hx - 3, by - hy - 2], [bx - hx + 2, by - hy], [bx - hx - 1, by - hy + 3], [bx - hx + 4, by - hy + 4], [bx - hx - 5, by - hy + 2]], C = ['#ffffff', '#3ab0ff', '#ffd23a', '#3ae05a', '#a64aff', '#ff5a5a'];
+        S.forEach(([dx, dy], i) => R(hx + dx, hy + dy, i % 3 ? 2 : 1, i % 3 ? 1 : 2, C[i % C.length])); break; }
+      case 'marshHead': {   // квадратная зефирная голова: скруглённые углы, поджаристая макушка, румянец
+        const x0 = hx - 7, y0 = hy - 7, w = 15, h = 13;
+        R(x0, y0 - 1, w, h + 2, ol); R(x0 - 1, y0, w + 2, h, ol);
+        R(x0, y0, w, h, sk.body); R(x0 + 1, y0, w - 2, 2, '#f4d8b8'); R(x0 + 2, y0, 4, 1, '#ffeedd'); R(x0 + w - 2, y0 + 2, 2, h - 2, '#f0d8e8');
+        eyes('#3a2a3a'); R(hx + 2, hy + 2, 1, 1, '#3a2a3a'); R(hx + 4, hy + 2, 1, 1, '#3a2a3a'); R(hx + 3, hy + 3, 1, 1, '#3a2a3a');
+        R(hx - 2, hy + 1, 2, 1, '#ffb0c8'); R(hx + 7, hy + 1, 1, 1, '#ffb0c8');
+        break;
+      }
+      case 'merHair': {   // длинные волнистые волосы за спиной
+        const hc = sk.hair || '#ff6aa8', hd = sk.hairD || '#c03a7a';
+        for (let pass = 0; pass < 2; pass++) for (let i = 0; i < 12; i++) {
+          const y = hy - 6 + i * 2, x = hx - 4 - i * 0.55 + Math.sin(t * 3 - i * 0.6) * (0.4 + i * 0.12), rx = 4.2 - i * 0.18, ry = 2.2;
+          if (pass === 0) E(x, y, rx + 1, ry + 1, ol); else { E(x, y, rx, ry, i % 3 === 2 ? hd : hc); R(x - 1, y - 1, 2, 1, '#ffc0e0'); }
+        }
+        break;
+      }
+      case 'merBangs': {   // чёлка, прядь у щеки и морская звезда-заколка
+        const hc = sk.hair || '#ff6aa8', hd = sk.hairD || '#c03a7a';
+        clipTop(hy - 4, () => { E(Hd.x, Hd.y, Hd.rx + 1.5, Hd.ry + 1.5, ol); E(Hd.x, Hd.y, Hd.rx + 0.5, Hd.ry + 0.5, hc); R(hx - 4, hy - 8, 4, 1, '#ffc0e0'); });
+        for (const [dx, h] of [[-7, 5], [-5, 3], [-2, 1], [7, 2]]) R(hx + dx, hy - 4, 2, h, hc);
+        R(hx + 6, hy, 2, 1, '#ff8a9a'); R(hx + 3, hy + 3, 3, 1, '#c0405a'); R(hx + 2, hy + 2, 1, 1, '#c0405a'); R(hx - 1, hy + 2, 2, 1, '#ffaac0');
+        R(hx - 8, hy - 3, 2, 8, hc); R(hx - 9, hy - 3, 1, 8, ol); R(hx - 8, hy + 5, 2, 1, hd);
+        M(['..y..', 'yyyyy', '.yyy.', 'y...y'], hx + 2, hy - 9, { y: '#ffd23a' }); R(hx + 4, hy - 8, 1, 1, '#ff8a1e');
+        break;
+      }
+      case 'merShells': { for (const x of [bx - 2, bx + 2]) M(['.oo.', 'opqo', 'oqpo', 'oooo'], x - 1, by - 4, { p: '#ffb0e0', q: '#ff7ac0' }); R(bx - 4, by - 3, 9, 1, '#ffd0ec'); break; }
+      case 'merTail': {   // хвост с чешуёй и плавником, плавник машет
+        const tc = sk.tail2 || '#3ad8b0', td = sk.tail2D || '#1a8a7a', f = Math.sin(t * 5);
+        suit(by - 1, tc);
+        for (let y = by; y < by + 6; y += 2) for (let x = bx - 5 + ((y - by) / 2 % 2); x < bx + 5; x += 2) R(x, y, 1, 1, '#a8fff0');
+        for (const [dx, dy, rx, ry] of [[-2, 6, 3.6, 2.4], [-5, 8, 2.6, 2], [-8, 9, 1.8, 1.6]]) E(bx + dx, by + dy, rx + 1, ry + 1, ol);
+        for (const [dx, dy, rx, ry] of [[-2, 6, 3.6, 2.4], [-5, 8, 2.6, 2], [-8, 9, 1.8, 1.6]]) E(bx + dx, by + dy, rx, ry, tc);
+        R(bx - 4, by + 6, 1, 1, '#a8fff0'); R(bx - 1, by + 5, 1, 1, '#a8fff0');
+        M(f > 0 ? ['oo....', 'offo..', '.offfo', '.offfo', 'offo..', 'oo....'] : ['.oo...', '.offo.', 'offffo', 'offffo', '.offo.', '.oo...'], bx - 15, by + 6, { f: td });
+        for (let k = 0; k < 3; k++) { const q = (t * 0.5 + k / 3) % 1; c.globalAlpha = 1 - q; sring(c, bx + 8 + k * 2, by - 2 - q * 22, 1.2, 1.2, '#d8f8ff', '#7ad8ff'); }
+        c.globalAlpha = 1;
+        break;
+      }
       case 'dotScarf': for (let i = 1; i < 11; i += 3) R(sx + i, sy + (i % 2), 1, 1, sk.dotC || '#e8261a'); break;
       case 'beret2': {
         M(['....oo....', '..oorroo..', '.orrrrrro.', 'orrhrrrrro', 'orrrrrrrro', '.oooooooo.'], hx - 9, hy - 11, { r: '#d82a4a', h: '#ff7a8a' });
@@ -3032,7 +3132,11 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
       }
       case 'hiVis': { suit(by - 4, '#ff7a1a'); R(bx - 5, by - 1, 11, 1, '#e8f0f8'); R(bx - 4, by + 2, 9, 1, '#e8f0f8'); R(bx - 5, by + 4, 11, 1, '#6a3a1a'); R(bx - 1, by + 4, 2, 2, '#a86a2a'); break; }
       case 'hammer2': { R(bx - 7, by + 1, 1, 7, '#a87040'); M(['oooooo', 'oggggo', 'oggo..', '.oo...'], bx - 9, by - 2, { g: '#a8b0b8' }); R(bx - 8, by - 1, 2, 1, '#e8f0f8'); M(['.ooo.', 'owwwo', 'oooo.'], ax - 1, ay - 2, { w: '#f4f4f8' }); break; }
-      case 'safariHat': { M(['...oooooo...', '..okkkkkko..', '..obbbbbbo..', 'okkkkkkkkkko', '.oooooooooo.'], hx - 6, hy - 11, { k: '#d8c088', b: '#8a5a2a' }); break; }
+      case 'safariHat': {   // круглый пробковый шлем: купол, лента, широкие поля
+        E(hx, hy - 5.5, 10.5, 2.4, ol); E(hx, hy - 5.5, 9.5, 1.5, '#c8a868');
+        E(hx, hy - 8, 6.5, 5, ol); E(hx, hy - 8, 5.5, 4, '#e0c888'); R(hx - 5, hy - 7, 11, 2, '#7a5a2a'); R(hx - 3, hy - 11, 2, 1, '#fff2c8'); R(hx - 1, hy - 13, 2, 1, ol);
+        break;
+      }
       case 'camNeck': {
         line(bx - 3, by - 5, bx + 2, by - 1, '#3a2a1a');
         M(['.oo...', 'oooooo', 'oggwgo', 'ogkkgo', 'oooooo'], bx + 1, by - 2, { g: '#4a4a54', k: '#1a1a24', w: '#9ad8ff' });
@@ -3070,12 +3174,20 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
         break;
       }
       case 'bees2': for (let k = 0; k < 3; k++) { const an = t * 3.2 + k * 2.1, x = hx + 1 + Math.cos(an) * 12, y = hy - 2 + Math.sin(an * 1.4) * 7; M(['.w.', 'yky'], x - 1, y - 1, { w: '#ffffff', y: '#ffd23a', k: '#1a1010' }); } break;
-      case 'capBack': {
-        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8, 6, ol); E(Hd.x, hy - 4, 7, 5, sk.cap || '#e8261a'); R(hx - 3, hy - 8, 2, 1, '#ffffff'); });
-        R(hx - 12, hy - 6, 6, 2, ol); R(hx - 11, hy - 6, 5, 1, sk.capD || '#a01008'); R(hx, hy - 10, 2, 1, ol);
+      case 'capBack': {   // кепка козырьком назад: швы, пуговка, застёжка надо лбом
+        clipTop(hy - 4, () => { E(Hd.x, hy - 4, 8, 6, ol); E(Hd.x, hy - 4, 7, 5, sk.cap || '#e8261a'); R(hx - 1, hy - 9, 1, 5, sk.capD || '#a01008'); R(hx + 3, hy - 8, 1, 4, sk.capD || '#a01008'); R(hx - 4, hy - 8, 2, 1, '#ffffff'); });
+        R(hx, hy - 10, 1, 1, '#ffffff');
+        M(['oooooooo', '.oddddddo', '..ooooooo'], hx - 14, hy - 7, { d: sk.capD || '#a01008' });
+        R(hx + 4, hy - 5, 3, 1, '#ffffff'); R(hx + 5, hy - 5, 1, 1, ol);
         break;
       }
-      case 'hoodie': { suit(by - 5, sk.hood || '#3a7aff'); R(bx - 1, by + 1, 5, 2, sk.hoodD || '#2a5ac0'); R(bx, by - 4, 1, 3, '#ffffff'); R(bx + 2, by - 4, 1, 2, '#ffffff'); break; }
+      case 'hoodie': {   // толстовка: капюшон за шеей, шнурки, карман-кенгуру
+        suit(by - 5, sk.hood || '#3a7aff', sk.hoodL);
+        E(bx - 4, by - 5, 3.5, 2.4, ol); E(bx - 4, by - 5, 2.6, 1.6, sk.hoodD || '#2a5ac0');
+        R(bx - 3, by + 1, 7, 3, sk.hoodD || '#2a5ac0'); R(bx - 3, by + 1, 7, 1, ol);
+        R(bx + 1, by - 4, 1, 3, '#ffffff'); R(bx + 3, by - 4, 1, 2, '#ffffff'); R(bx + 1, by - 2, 1, 1, '#c8c8d0');
+        break;
+      }
       case 'board2': {
         const fl = flying ? Math.floor(t * 10) % 4 : 0, y = by + 8;
         if (fl === 1 || fl === 3) { R(bx - 6, y - 1, 13, 2, ol); R(bx - 5, y - 1, 11, 1, '#ffd23a'); }
@@ -3101,16 +3213,20 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
         O(hx + 0.5, hy - 14, 1.4, 1.4, '#e8261a'); R(hx, hy - 15, 1, 1, '#ff9a9a'); R(hx + 1, hy - 17, 1, 2, '#3a8a2a');
         break;
       }
-      case 'donutFloat': {
+      case 'donutFloat': {   // пончик-круг: тесто, клубничная глазурь с подтёками и посыпка
         const y = by + 2;
-        for (const [rx, ry, col] of [[7.5, 3.2, ol], [6.5, 2.4, '#d89a5a'], [6.5, 1.8, '#ff8ac8']]) E(bx, y + (col === '#ff8ac8' ? -0.4 : 0), rx, ry, col);
-        E(bx, y - 0.5, 3.2, 1, sk.light);
-        for (const [dx, dy, col] of [[-5, -1, '#3ab0ff'], [-2, -2, '#ffd23a'], [4, -1, '#3ae05a'], [1, 1, '#ffffff'], [5, 1, '#a64aff']]) R(bx + dx, y + dy, 1, 1, col);
+        E(bx, y, 8, 3.6, ol); E(bx, y, 7, 2.8, '#d89050'); E(bx, y - 0.6, 7, 2.1, '#ff7ab8');
+        for (const dx of [-5, -1, 3]) R(bx + dx, y + 1, 1, 2, '#ff7ab8');
+        E(bx, y - 0.6, 3, 0.9, sk.light); R(bx - 6, y - 2, 3, 1, '#ffc0dc');
+        for (const [dx, dy, col] of [[-5, -1, '#3ab0ff'], [-2, -2, '#ffd23a'], [4, -1, '#3ae05a'], [2, 1, '#ffffff'], [6, 0, '#a64aff'], [-4, 1, '#ffffff']]) R(bx + dx, y + dy, 1, 1, col);
         break;
       }
-      case 'donutHat2': {
-        O(hx - 1, hy - 8, 4.5, 2.4, '#d89a5a'); E(hx - 1, hy - 8.6, 4, 1.8, '#5a3018'); E(hx - 1, hy - 8.4, 1.6, 0.8, sk.body);
-        R(hx - 4, hy - 9, 1, 1, '#ff8ac8'); R(hx + 1, hy - 10, 1, 1, '#ffffff'); R(hx + 2, hy - 8, 1, 1, '#ffd23a');
+      case 'donutHat2': {   // голова в клубничной глазури с посыпкой, глазурь стекает каплями
+        clipTop(hy - 3, () => { E(Hd.x, Hd.y, Hd.rx + 0.5, Hd.ry + 0.5, '#ff7ab8'); });
+        for (const [dx, h] of [[-6, 2], [-3, 2], [4, 1]]) R(hx + dx, hy - 3, 2, h, '#ff7ab8');
+        R(hx - 5, hy - 5, 3, 1, '#ffc0dc');
+        for (const [dx, dy, col] of [[-4, -4, '#ffffff'], [-1, -6, '#3ab0ff'], [2, -4, '#ffd23a'], [5, -5, '#3ae05a'], [-6, -2, '#a64aff']]) R(hx + dx, hy + dy, 1, 1, col);
+        M(['.oo.', 'orro', 'orwo', '.oo.'], hx - 2, hy - 11, { r: '#e8261a', w: '#ffb0b0' }); R(hx - 1, hy - 12, 1, 1, '#3ac04a');
         break;
       }
       case 'toasty': { clipTop(hy - 4, () => E(Hd.x, Hd.y, Hd.rx, Hd.ry, '#f0d0a8')); R(hx - 4, hy - 6, 3, 1, '#d8a878'); R(hx - 3, hy + 2, 3, 1, '#ffb0c8'); break; }
@@ -3120,25 +3236,29 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
         const f = Math.sin(t * 15) > 0; M(f ? ['.y.', 'yry', '.r.'] : ['y..', 'yry', '.r.'], ax + 7, ay - 6, { y: '#ffd23a', r: '#ff5a1a' });
         break;
       }
-      case 'waffleGrid2': {
+      case 'waffleGrid2': {   // вафля: ячейки с тенью и светлыми донышками
         c.save(); c.beginPath(); c.ellipse(B.x, B.y, B.rx, B.ry, 0, 0, 7); c.clip();
-        for (let x = bx - 6; x <= bx + 6; x += 3) R(x, by - 6, 1, 12, '#c8803a');
-        for (let y = by - 4; y <= by + 6; y += 3) R(bx - 6, y, 13, 1, '#c8803a');
+        for (let x = bx - 7; x <= bx + 6; x += 3) for (let y = by - 6; y <= by + 6; y += 3) { R(x + 1, y + 1, 2, 2, '#ffd890'); R(x + 1, y + 1, 2, 1, '#e0a050'); }
+        for (let x = bx - 7; x <= bx + 6; x += 3) R(x, by - 6, 1, 13, '#b8702a');
+        for (let y = by - 6; y <= by + 6; y += 3) R(bx - 7, y, 14, 1, '#b8702a');
         c.restore();
         break;
       }
-      case 'butter': {
-        M(['oooooo', 'oyyyho', 'oyyyyo', 'oooooo'], hx - 2, hy - 10, { y: '#ffe86a', h: '#fffbd0' });
-        const q = (t * 0.7) % 1; R(hx - 5, hy - 6, 1, 2 + r(q * 3), '#a0501a'); R(hx + 4, hy - 6, 1, 2, '#a0501a'); R(hx - 6, hy - 7, 12, 1, '#a0501a');
+      case 'butter': {   // на голове — кусочек вафли с маслом, клубникой и стекающим сиропом
+        M(['ooooooooo', 'ogdgdgdgo', 'odgdgdgdo', 'ogdgdgdgo', 'ooooooooo'], hx - 5, hy - 10, { g: '#f0b860', d: '#c0803a' });
+        M(['oooo', 'oyho', 'oooo'], hx - 3, hy - 12, { y: '#ffe86a', h: '#fffbd0' });
+        M(['.g.', 'oro', 'orro'.slice(0, 3), '.o.'], hx + 1, hy - 13, { g: '#3ac04a', r: '#e8261a' });
+        const q = (t * 0.7) % 1; R(hx - 4, hy - 6, 1, 2 + r(q * 3), '#8a3a10'); R(hx + 2, hy - 6, 1, 2, '#8a3a10'); R(hx - 5, hy - 6, 9, 1, '#8a3a10');
         break;
       }
-      case 'peel2': {
-        const pl = '#ffd23a', pd = '#c89a10';
-        M(['...oo...', '..okko..', '.ooyyoo.'], hx - 3, hy - 14, { k: '#6a4a1a', y: pl });
-        M(['oo.......', 'oyo......', 'oyyo.....', '.oyyo....', '..oyyo...', '..oydo...', '..oyo....', '...o.....'], hx - 10, hy - 9, { y: pl, d: pd });
-        M(['.......oo', '......oyo', '.....oyyo', '....oyyo.', '...oyyo..', '...odyo..', '....oyo..', '.....o...'], hx + 2, hy - 10, { y: pl, d: pd });
-        for (let i = -5; i <= 5; i += 5) M(['oyyo', 'oyyo', '.oo.'], bx + i - 1, by + 2, { y: pl });
-        R(bx - 2, by - 2, 1, 1, '#a07a2a'); R(hx - 4, hy + 1, 1, 1, '#a07a2a');
+      case 'peel2': {   // костюм банана: жёлтый капюшон с вырезом для лица, хвостик сверху, бурые крапинки
+        dome(hy + 5, '#ffd83a');
+        E(hx + 3, hy + 1, 5.6, 4.6, ol); E(hx + 3, hy + 1, 4.8, 3.8, '#f0a040'); E(hx + 4.5, hy + 2.5, 3, 2, '#ffe6b0');
+        for (const [dx, dy] of [[-6, -1], [-4, 3], [-7, 2], [-2, -5]]) R(hx + dx, hy + dy, 1, 1, '#a07a1a');
+        R(hx - 7, hy - 5, 1, 7, '#e8b820'); R(hx - 3, hy - 7, 1, 3, '#e8b820');
+        M(['..oo', '.oko', 'oko.', 'oo..'], hx - 1, hy - 13, { k: '#6a4a1a' });
+        eyes(); R(hx + 6, hy + 1, 2, 1, '#ff5a8a'); R(hx + 1, hy + 3, 2, 1, '#ff9ab8');
+        suit(by - 5, '#ffd83a', '#fff2a0'); R(bx - 4, by - 3, 1, 8, '#e8b820'); R(bx + 4, by - 3, 1, 6, '#e8b820'); R(bx - 1, by + 1, 1, 1, '#a07a1a');
         break;
       }
       case 'nightCap2': {
@@ -3363,8 +3483,16 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
       case 'honeyPot': { M(['oooooo', 'oyyyyo', 'oooooo', 'okkkko', 'okhkko', 'okkkko', '.oooo.'], ax - 2, ay - 4, { y: '#ffd23a', k: '#c8803a', h: '#e8a85a' }); R(ax + 2, ay - 2, 1, 2 + r((t * 2) % 1 * 2), '#ffd23a'); break; }
       case 'bananaHand': { M(['...ok', '..oyo', '.oyyo', 'oyyo.', 'oyo..', '.o...'], ax - 1, ay - 5, { y: '#ffe03a', k: '#6a4a1a' }); break; }
       case 'eucalyptus': { line(ax, ay + 2, ax + 3, ay - 7, '#6a5a3a'); for (const [dx, dy] of [[2, -6], [-1, -3], [3, -2], [0, -8]]) M(['.g', 'gg', 'g.'], ax + dx, ay + dy, { g: '#6ab08a' }); O(hx + 6, hy + 1, 1.4, 1.2, '#3a3a44'); break; }
-      case 'owlFace': {
-        for (const x of [ex1, ex2]) { E(x + 1, ey + 1.5, 2.8, 2.8, '#ffffff'); E(x + 1, ey + 1.5, 1.6, 1.6, '#ff9a2a'); if (blink) R(x - 1, ey + 1, 4, 1, '#1a1010'); else { R(x, ey + 1, 2, 2, '#1a1010'); R(x, ey + 1, 1, 1, '#ffffff'); } }
+      case 'owlFace': {   // мордочка-сердечко, большие блестящие глазки, маленький клювик и румянец
+        const fc = '#f6e4c4';
+        E(hx + 1.5, hy - 1.5, 3.4, 3.2, fc); E(hx + 5.5, hy - 1.5, 3.4, 3.2, fc); E(hx + 3.5, hy + 1.5, 4.2, 3, fc);
+        R(hx + 3, hy - 5, 1, 2, sk.dark);
+        for (const x of [hx - 1, hx + 5]) {
+          if (blink) { R(x, ey + 2, 3, 1, '#2a1408'); R(x - 1, ey + 1, 1, 1, '#2a1408'); R(x + 3, ey + 1, 1, 1, '#2a1408'); }
+          else { R(x, ey, 3, 3, '#2a1408'); R(x, ey, 1, 1, '#ffffff'); R(x + 2, ey + 2, 1, 1, '#c8b8a8'); }
+        }
+        R(hx + 3, hy + 1, 2, 1, '#ff9a2a'); R(hx + 3, hy + 2, 1, 1, '#d06a10');
+        R(hx - 1, hy + 2, 2, 1, '#ff9ab8'); R(hx + 7, hy + 2, 2, 1, '#ff9ab8');
         break;
       }
       case 'fryPan': { M(['.oooo.', 'okkkko', 'okwwko', 'okwyko', 'okkkko', '.oooo.'], ax + 1, ay - 7, { k: '#3a3a44', w: '#ffffff', y: '#ffd23a' }); R(ax, ay - 2, 2, 3, '#1a1a24'); break; }
@@ -3397,6 +3525,21 @@ function drawRare(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey, F1, F2) 
   }
 }
 
+// узор на шарфе: горошек, полоски, зигзаг, клетка, сердечки, звёздочки, ёлочка
+function scarfPat(c, sk, sx, sy, t) {
+  const P = (x, y) => c.fillRect(x, y, 1, 1);
+  c.fillStyle = sk.patC;
+  switch (sk.pat) {
+    case 'dots': for (let k = 0; k < 4; k++) P(sx + 1 + k * 3, sy + (k % 2)); break;
+    case 'stripes': for (let x = sx + 1; x < sx + 11; x += 3) { P(x, sy); P(x, sy + 1); } break;
+    case 'zig': for (let k = 0; k < 11; k++) P(sx + k, sy + ((k >> 1) % 2)); break;
+    case 'check': for (let k = 0; k < 11; k++) P(sx + k, sy + (k % 2)); break;
+    case 'hearts': for (const x of [sx + 1, sx + 6]) { P(x, sy); P(x + 2, sy); P(x + 1, sy + 1); } break;
+    case 'stars': for (const x of [sx + 2, sx + 7]) { P(x, sy); P(x - 1, sy + 1); P(x + 1, sy + 1); } if (Math.sin(t * 5) > 0.6) { c.fillStyle = '#ffffff'; P(sx + 2, sy); } break;
+    case 'line': c.fillRect(sx, sy + 1, 11, 1); break;
+    case 'fir': for (let k = 0; k < 11; k += 2) { P(sx + k, sy); P(sx + k + 1, sy + 1); } break;
+  }
+}
 function drawTail(c, sk, t, B) {
   const ol = sk.ol, wag = Math.sin(t * 5) > 0 ? 1 : 0, r = Math.round;
   if (sk.tail === 'bushy' || sk.tail === 'ring') {
