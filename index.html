@@ -1936,6 +1936,22 @@ const fbOn = () => !!(FIREBASE.apiKey && FIREBASE.databaseURL);
 const fbAuthBase = () => FIREBASE.emu ? FIREBASE.emu.auth + '/identitytoolkit.googleapis.com' : 'https://identitytoolkit.googleapis.com';
 const fbTokBase = () => FIREBASE.emu ? FIREBASE.emu.auth + '/securetoken.googleapis.com' : 'https://securetoken.googleapis.com';
 // вход без регистрации: анонимный аккаунт Firebase; ключ обновления хранится в сохранении игры
+// ошибка Firebase с причиной: шаг (вход или база), код ответа и текст Firebase — или «сеть не пустила»
+async function fbFetch(step, url, init) {
+  let r;
+  try { r = await fetch(url, init); } catch (e) { throw { step, net: true }; }
+  if (!r.ok) { let msg = ''; try { const j = await r.json(); msg = String((j.error && (j.error.message || j.error)) || '').slice(0, 80); } catch (e) {} throw { step, status: r.status, msg }; }
+  return r;
+}
+function fbErrText(e) {
+  const where = e && e.step === 'auth' ? tr('вход', 'sign-in') : tr('база', 'database');
+  if (!e || !e.step) return tr('ПОПРОБУЙ ЧУТЬ ПОЗЖЕ', 'TRY AGAIN A BIT LATER');
+  if (e.net) return tr('FIREBASE (' + where + '): ЭТО ОКНО НЕ ПУСКАЕТ В СЕТЬ. ОТКРОЙ ИГРУ В CHROME ИЛИ ПО ССЫЛКЕ НА САЙТ', 'FIREBASE (' + where + '): THIS WINDOW BLOCKS THE NETWORK. OPEN THE GAME IN CHROME OR FROM A WEBSITE');
+  if (e.step === 'auth' && /ADMIN_ONLY|OPERATION_NOT_ALLOWED/.test(e.msg)) return tr('FIREBASE: ВЫКЛЮЧЕН АНОНИМНЫЙ ВХОД (AUTHENTICATION → SIGN-IN METHOD → ANONYMOUS)', 'FIREBASE: ANONYMOUS SIGN-IN IS OFF');
+  if (e.step === 'db' && (e.status === 401 || e.status === 403)) return tr('FIREBASE: БАЗА ЗАПРЕТИЛА ЧТЕНИЕ — ПРОВЕРЬ ПРАВИЛА (RULES → PUBLISH)', 'FIREBASE: THE DATABASE DENIED READING — CHECK THE RULES');
+  if (e.step === 'db' && e.status === 400 && /index/i.test(e.msg)) return tr('FIREBASE: В ПРАВИЛАХ НЕТ .indexOn ДЛЯ РЕЙТИНГА', 'FIREBASE: THE RULES LACK .indexOn FOR THE RANKING');
+  return 'FIREBASE (' + where + '): ' + (e.status || '') + ' ' + (e.msg || '');
+}
 async function fbAuth() {
   if (FB.tok && Date.now() < FB.exp - 60000) return FB.tok;
   if (FB.busy) return FB.busy;
@@ -1943,11 +1959,10 @@ async function fbAuth() {
     const saved = store.get('fbAuth', null), key = encodeURIComponent(FIREBASE.apiKey);
     let r, j;
     if (saved && typeof saved.rt === 'string') {
-      r = await fetch(fbTokBase() + '/v1/token?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(saved.rt) });
-      if (r.ok) { j = await r.json(); FB.tok = j.id_token; FB.uid = j.user_id; FB.exp = Date.now() + (+j.expires_in || 3600) * 1000; store.set('fbAuth', { rt: j.refresh_token, uid: j.user_id }); return FB.tok; }
+      r = await fetch(fbTokBase() + '/v1/token?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(saved.rt) }).catch(() => null);
+      if (r && r.ok) { j = await r.json(); FB.tok = j.id_token; FB.uid = j.user_id; FB.exp = Date.now() + (+j.expires_in || 3600) * 1000; store.set('fbAuth', { rt: j.refresh_token, uid: j.user_id }); return FB.tok; }
     }
-    r = await fetch(fbAuthBase() + '/v1/accounts:signUp?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"returnSecureToken":true}' });
-    if (!r.ok) throw { status: r.status };
+    r = await fbFetch('auth', fbAuthBase() + '/v1/accounts:signUp?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"returnSecureToken":true}' });
     j = await r.json(); FB.tok = j.idToken; FB.uid = j.localId; FB.exp = Date.now() + (+j.expiresIn || 3600) * 1000;
     store.set('fbAuth', { rt: j.refreshToken, uid: j.localId });
     return FB.tok;
@@ -1957,8 +1972,7 @@ async function fbAuth() {
 const fbUrl = (path, q = '') => FIREBASE.databaseURL.replace(/\/$/, '') + '/' + path + '.json?auth=' + encodeURIComponent(FB.tok) + (FIREBASE.emu ? '&ns=' + FIREBASE.emu.ns : '') + q;
 async function fbReq(method, path, body, q) {
   await fbAuth();
-  const r = await fetch(fbUrl(path, q), { method, body: body === undefined ? undefined : JSON.stringify(body) });
-  if (!r.ok) throw { status: r.status };
+  const r = await fbFetch('db', fbUrl(path, q), { method, body: body === undefined ? undefined : JSON.stringify(body) });
   return r.json();
 }
 const FB_NOW = { '.sv': 'timestamp' };   // время сервера: по нему правила базы проверяют честность результатов
@@ -2049,6 +2063,7 @@ function FirePeer(id) {
 
 // ---- рейтинг в Firebase: короткая строка в board/<uid> (её читают таблицей) и подробности в profiles/<uid> (по нажатию) ----
 async function fbBoardPush(e) {
+  await fbAuth();   // сначала вход: без него FB.uid ещё пуст и строка ушла бы в board/null
   const { own, ic, ach, show, tro, ...row } = e;
   await fbReq('PUT', 'board/' + FB.uid, { ...row, t: FB_NOW });
   await fbReq('PUT', 'profiles/' + FB.uid, { p: JSON.stringify({ own, ic, ach, show, tro }).slice(0, 30000), t: FB_NOW });
@@ -14625,7 +14640,7 @@ function openBoard(keep) {
         if (hit && Date.now() - hit.t < 30000) { show(hit.rows); return; }
         box.innerHTML = ''; box.appendChild(moTxt('div', 'card sm', tr('ЗАГРУЗКА…', 'LOADING…')));
         try { const rows = await fbBoardTop(field); boardCache['fb' + field] = { t: Date.now(), rows }; if (box.isConnected) show(rows); }
-        catch (e) { if (box.isConnected) { box.innerHTML = ''; box.appendChild(noNetNode([tr('НЕТ СВЯЗИ', 'NO CONNECTION'), tr('ПОПРОБУЙ ЧУТЬ ПОЗЖЕ', 'TRY AGAIN A BIT LATER')])); } }
+        catch (e) { if (box.isConnected) { box.innerHTML = ''; box.appendChild(noNetNode([tr('НЕТ СВЯЗИ', 'NO CONNECTION'), fbErrText(e)])); } }
         return;
       }
       if (!cloud.db) {
