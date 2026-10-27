@@ -2044,7 +2044,7 @@ function FirePeer(id) {
         pend[room.host] = pc;
         await pc.setLocalDescription(await pc.createOffer()); await fbGather(pc);
         await fbReq('POST', 'sig/' + room.host, { from: FB.uid, type: 'offer', sdp: pc.localDescription.sdp });
-      } catch (e) { err('network'); }
+      } catch (e) { err('fb-down'); }
     })();
     return c;
   };
@@ -2626,7 +2626,27 @@ function prect(c, x, y, w, h, col) {
   const x0 = even(x), y0 = even(y), x1 = even(x + w), y1 = even(y + h);
   if (x1 > x0 && y1 > y0) { c.fillStyle = col; c.fillRect(x0, y0, x1 - x0, y1 - y0); }
 }
+// пиксельный овал: большие (от 5 строк) рисуются один раз в маленький холст и потом ставятся одной картинкой
+// вместо десятков полосок — монеты, солнце, облака, значки и кнопки; центр — на сетке 2 px, как и сами полоски
+const PELL_CACHE = new Map();
 function pell(c, cx, cy, rx, ry, col) {
+  if (ry >= 5 && typeof col === 'string' && c.imageSmoothingEnabled === false && rx > 0) {
+    rx = Math.round(rx * 2) / 2; ry = Math.round(ry * 2) / 2;
+    const key = rx + ',' + ry + ',' + col;
+    let e = PELL_CACHE.get(key);
+    if (!e) {
+      e = document.createElement('canvas'); e.width = Math.ceil((rx * 2 + 4) / 4) * 4; e.height = Math.ceil((ry * 2 + 4) / 4) * 4;
+      pell0(e.getContext('2d'), e.width / 2, e.height / 2, rx, ry, col);
+      if (PELL_CACHE.size > 500) PELL_CACHE.delete(PELL_CACHE.keys().next().value);
+      PELL_CACHE.set(key, e);
+    }
+    drawRaw.call(c, e, even(cx) - e.width / 2, even(cy) - e.height / 2);
+    c.fillStyle = col;   // как и раньше: после овала кисть остаётся его цвета
+    return;
+  }
+  pell0(c, cx, cy, rx, ry, col);
+}
+function pell0(c, cx, cy, rx, ry, col) {
   c.fillStyle = col;
   const g0 = Math.floor((cy - ry) / 2), g1 = Math.ceil((cy + ry) / 2);
   for (let g = g0; g < g1; g++) {
@@ -2732,9 +2752,22 @@ for (const prop of ['fillStyle', 'strokeStyle']) {   // и заливка, и о
   const D = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, prop);
   Object.defineProperty(hctx, prop, { get() { return D.get.call(this); }, set(v) { D.set.call(this, hueNow && typeof v === 'string' ? hueColor(v.toLowerCase(), hueNow) : v); } });
 }
+// кэш готовых спрайтов: тот же герой в той же позе перерисовывается не чаще 20 раз в секунду (магазин, колёса, меню),
+// между кадрами берётся готовая картинка; у каждого объекта героя — свой номер (копии с другими цветами не путаются)
+const SPR_FPS = 20, SPR_MAX = 160, SPR_CACHE = new Map(), SPR_IDS = new WeakMap();
+let sprN = 0;
 function heroSprite(sk, pose, t, blink) {
+  let id = SPR_IDS.get(sk); if (!id) SPR_IDS.set(sk, id = ++sprN);
+  const tq = Math.floor(t * SPR_FPS), key = id + '|' + pose + '|' + (blink ? 1 : 0) + '|' + tq;
+  let c = SPR_CACHE.get(key);
+  hctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (c) { hctx.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(hctx, c, 0, 0); hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y); return; }
   hueNow = sk.hue || 0;
-  try { heroSprite0(sk, pose, t, blink); } finally { hueNow = 0; }
+  try { heroSprite0(sk, pose, tq / SPR_FPS, blink); } finally { hueNow = 0; }
+  if (SPR_CACHE.size >= SPR_MAX) { const old = SPR_CACHE.keys().next().value; c = SPR_CACHE.get(old); SPR_CACHE.delete(old); }
+  else { c = document.createElement('canvas'); c.width = SPR_W; c.height = SPR_H; }
+  const g = c.getContext('2d'); g.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(g, hcv, 0, 0);
+  SPR_CACHE.set(key, c);
 }
 function heroSprite0(sk, pose, t, blink) {
   if (!sk.gummy) return heroSpriteRaw(sk, pose, t, blink);
@@ -5477,6 +5510,7 @@ function mpPeer(P, same, next) {
   peer.on('error', e => {
     if (!same()) return;
     if (e.type === 'unavailable-id' && mp.role === 'host') { mpStart('host'); return; }
+    if (e.type === 'fb-down' && mp.role !== 'host') { opened = false; fall(); return; }   // база Firebase не отвечает — ищем комнату через PeerJS
     if (e.type === 'peer-unavailable') { mpStatus(tr('Комната не найдена. Проверь код.', 'Room not found. Check the code.')); mp.role = ''; mpRender(); return; }
     if (!opened) fall();
   });
@@ -6265,12 +6299,13 @@ const SV_WIN = { x: 12, y: 52, w: 336, h: 536 };
 const SV_X = { x: SV_WIN.x + SV_WIN.w - 44, y: SV_WIN.y + 6, w: 38, h: 38 };
 const SV_BUY = { x: SV_WIN.x + SV_WIN.w - 158, y: SV_WIN.y + SV_WIN.h - 58, w: 146, h: 44 };
 const SV_NO = { x: SV_WIN.x + 12, y: SV_WIN.y + SV_WIN.h - 58, w: 110, h: 44 };
+const SV_ROAD = { x: SV_WIN.x + 12, y: SV_WIN.y + SV_WIN.h - 58, w: 150, h: 44 };   // «дорожка кубков» у своего героя
 const SV_GP = { x: SV_WIN.x + SV_WIN.w - 176, y: SV_WIN.y + 66, w: 168, h: 336 };
 function svOpen(k, pr) { sv = { k, pr, confirm: false, t0: time, no: -9 }; sfx.click(); }
 function svClick(pt) {
   if (inRect(pt, SV_X) || !inRect(pt, SV_WIN)) { sv = null; sfx.click(); return; }
   const k = sv.k;
-  if (owned.includes(k.id)) { if (inRect(pt, SV_BUY) && k.id !== skinId) { selectSkin(k); sfx.click(); sv = null; } return; }
+  if (owned.includes(k.id)) { if (inRect(pt, SV_ROAD)) { sv = null; sfx.click(); openHero(k.id); return; } if (inRect(pt, SV_BUY) && k.id !== skinId) { selectSkin(k); sfx.click(); sv = null; } return; }
   if (sv.confirm) { if (inRect(pt, SV_NO)) { sv.confirm = false; sfx.click(); } else if (inRect(pt, SV_BUY)) { const pr = sv.pr; sv = null; buySkin(k, pr); } return; }
   if (inRect(pt, SV_BUY)) { if (canPay(sv.pr)) { sv.confirm = true; sfx.click(); } else { sv.no = time; sfx.no(); } }
 }
@@ -6539,6 +6574,14 @@ function svDraw() {
   const py = SV_BUY.y - 22, pr = sv.pr, bad = time - sv.no < 0.5;
   if (!own) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(Wn.x + 8, py - 18, Wn.w - 16, 30); if (pr.ruby) rubyIcon(SV_BUY.x + 40, py, 1.2); else if (pr.gems) gemIcon(SV_BUY.x + 40, py, 1.2); else coinIcon(SV_BUY.x + 40, py, 9); text(String(pr.ruby || pr.gems || pr.coins), SV_BUY.x + 58, py + 7, 2, bad || !canPay(pr) ? '#ff9a9a' : '#ffffff', 'left', OL); }
+  if (own) {   // свой герой: кубки, ранг и дорожка
+    const tro = troOf(k.id), rk = rankOf(tro);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(Wn.x + 8, py - 18, Wn.w - 16, 30);
+    trophyIcon(Wn.x + 26, py - 4, 0.7); text(String(tro), Wn.x + 40, py + 7, 2, '#ffffff', 'left', OL);
+    if (rk >= 0) { rankBadge(Wn.x + Wn.w - 30, py - 3, 0.8, rk); text(rankName(rk), Wn.x + Wn.w - 46, py + 4, 1, '#ffe680', 'right', OL); }
+    else text(tr('РАНГ С 500', 'RANK AT 500'), Wn.x + Wn.w - 16, py + 4, 1, '#d8d0ff', 'right', OL);
+    button(SV_ROAD, tr('ДОРОЖКА', 'ROAD'), '#a64aff', '#5a1aa0'); if (roadReady(k.id)) badge(SV_ROAD.x + SV_ROAD.w - 4, SV_ROAD.y + 2);
+  }
   if (own) button(SV_BUY, k.id === skinId ? tr('НАДЕТО', 'EQUIPPED') : tr('ВЫБРАТЬ', 'EQUIP'), k.id === skinId ? '#777777' : '#3ce06a', k.id === skinId ? '#444444' : '#1a7a3a');
   else if (sv.confirm) { button(SV_NO, tr('ОТМЕНА', 'CANCEL'), '#e8261a', '#a01008'); button(SV_BUY, tr('ПОДТВЕРДИТЬ', 'CONFIRM'), '#3ce06a', '#1a7a3a'); }
   else button(SV_BUY, tr('КУПИТЬ', 'BUY'), canPay(pr) ? '#ffb02a' : '#8a7a6a', canPay(pr) ? '#c06a00' : '#5a4a3a');
@@ -14087,6 +14130,8 @@ const META = {
   runT: 0, runOn: false,
 };
 if (!META.frames.includes('basic')) META.frames.unshift('basic');
+// раньше кубки копились за каждый метр; теперь это рекорд героя — старые суммы не выше общего рекорда высоты
+if (!store.get('troV2', 0)) { for (const id in META.tro) META.tro[id] = Math.min(nat(META.tro[id]), nat(store.get('best', 0))); store.set('tro', META.tro); store.set('troV2', 1); }
 const metaSave = () => { store.set('tro', META.tro); store.set('road', META.road); store.set('icons', META.icons); store.set('titles', META.titles); store.set('frames', META.frames); store.set('prof', META.prof); store.set('mstat', META.stat); };
 const troTotal = () => Object.values(META.tro).reduce((a, b) => a + b, 0);
 const troOf = id => META.tro[id] || 0;
@@ -14131,7 +14176,10 @@ function questAdd(id, n, mode) {
   for (const x of q.list) if (x.id === id && !x.done) { const g = questGoal(x); x.prog = Math.min(g, mode === 'max' ? Math.max(x.prog, n) : x.prog + n); ch = true; }
   if (ch) store.set('quests', q);
 }
-const questReady = () => questsToday().list.some(x => !x.done && x.prog >= questGoal(x)) || (questsToday().list.every(x => x.done) && !questsToday().bonus);
+const questReady0 = () => { const q = questsToday(); return q.list.some(x => !x.done && x.prog >= questGoal(x)) || (q.list.every(x => x.done) && !q.bonus); };
+// меню спрашивает каждый кадр — ответ живёт полсекунды (иначе 60 раз в секунду разбирается сохранение)
+const memo = (fn, ms = 500) => { let v, at = -1e9; return () => { const n = performance.now(); if (n - at > ms) { v = fn(); at = n; } return v; }; };
+const questReady = memo(questReady0);
 
 // ---- Wall Play Pass: сезон — календарный месяц, 30 уровней, бесплатная и платная (за кристаллы) дорожки ----
 const PASS_TIERS = 30, PASS_XP = 300, PASS_PRICE = 169;
@@ -14158,20 +14206,21 @@ const PASS_REW = (() => {
 })();
 const passLevel = () => Math.floor(passData().xp / PASS_XP);
 function passXp(n) { if (!n || n <= 0) return; const v = passData(); v.xp = Math.min(PASS_TIERS * PASS_XP, v.xp + Math.floor(n)); store.set('pass', v); }
-const passReady = () => { const v = passData(), lv = passLevel(); return v.cf < lv || (v.prem && v.cp < lv); };
+const passReady = memo(() => { const v = passData(), lv = passLevel(); return v.cf < lv || (v.prem && v.cp < lv); });
 
 // ---- конец забега: кубки герою, опыт пропуска, задания ----
 function metaRunEnd() {
   if (quiet || !META.runOn) return;
   META.runOn = false;
   const raw = heightM(), m = legitM(raw), id = skinId;
-  if (m > 0) { META.tro[id] = Math.min(99999, troOf(id) + m); META.stat.totM = (META.stat.totM || 0) + m; }
+  if (m > troOf(id)) { META.troGain = { id, n: Math.min(99999, m) - troOf(id), t: Date.now() }; META.tro[id] = Math.min(99999, m); }   // кубки = рекорд высоты этим героем: дают только за новый рекорд
+  if (m > 0) META.stat.totM = (META.stat.totM || 0) + m;
   META.stat.runs = (META.stat.runs || 0) + 1;
   passXp(Math.floor(m / 2) + 10);
   questAdd('climb', m); questAdd('best', m, 'max'); questAdd('flips', flips); questAdd('coins', coinsRun); questAdd('runs', 1); questAdd('gems', gemsRun);
   metaSave(); boardPush();
 }
-{ const u0 = update; update = function (dt) { u0(dt); if (state === 'play' && !paused && !quiet) { if (!META.runOn) { META.runOn = true; META.runT = 0; } META.runT += dt; } }; }
+{ const u0 = update; update = function (dt) { u0(dt); if (state === 'play' && !paused && !quiet) { if (!META.runOn || META.runRef !== p) { META.runOn = true; META.runT = 0; META.runRef = p; } META.runT += dt; } }; }
 { const d0 = die; die = function () { d0.apply(this, arguments); if (state === 'dead') metaRunEnd(); }; }
 { const u0 = usePower; usePower = function (id) { const n0 = pw[id]; u0.apply(this, arguments); if (pw[id] < n0) questAdd('power', 1); }; }
 { const s0 = spinWheel; spinWheel = function () { const w0 = wheel.spinning; s0.apply(this, arguments); if (!w0 && wheel.spinning) questAdd('wheel', 1); }; }
@@ -14280,7 +14329,6 @@ function moBuild() {
   let sw = null;   // свайп вправо по экрану — назад
   moUi.addEventListener('pointerdown', e => { sw = { x: e.clientX, y: e.clientY }; });
   moUi.addEventListener('pointerup', e => { if (!sw) return; const dx = e.clientX - sw.x, dy = e.clientY - sw.y; sw = null; if (dx > 90 && Math.abs(dx) > Math.abs(dy) * 1.6) moBack(); });
-  (function loop(ts) { if (moUi.style.display === 'flex') for (const a of moAnim) if (a.c.isConnected) a.paint(ts / 1000); requestAnimationFrame(loop); })(0);
 }
 // открыть экран: render(body) рисует содержимое; стек — «назад» возвращает к прошлому
 function moOpen(title, render, keep) {
@@ -14296,6 +14344,7 @@ function moShow() {
   hd.append(bk, tt, moEl('div', 'sp')); moUi.appendChild(hd);
   const bd = moEl('div', 'bd'); moUi.appendChild(bd);
   moUi.style.display = 'flex'; top.render(bd, top);
+  if (!moShow.loop) { moShow.loop = true; (function loop(ts) { if (moUi.style.display !== 'flex') { moShow.loop = false; return; } for (const a of moAnim) if (a.c.isConnected) a.paint(ts / 1000); requestAnimationFrame(loop); })(performance.now()); }
 }
 function moBack() { moStack.pop(); if (moStack.length) moShow(); else moClose(); }
 function moClose() { if (moUi) { moUi.style.display = 'none'; moUi.innerHTML = ''; } moStack = []; moAnim = []; menuAt = time; }
@@ -14323,46 +14372,89 @@ function moReward(title, node, sub) {
 }
 
 // ---- экран героя: кубки и дорожка наград (1000 — иконка, 2000 — титул, 3000 — рамка) ----
+// ---- ранги героев, как в Brawl Stars: каждые 500 кубков новый (бронза, серебро, золото…) ----
+const RANKS = [
+  [500, 'БРОНЗА', 'BRONZE', '#d0844a', '#8a4a1a'], [1000, 'СЕРЕБРО', 'SILVER', '#dfe6f0', '#7a8aa0'], [1500, 'ЗОЛОТО', 'GOLD', '#ffd23a', '#c08a00'],
+  [2000, 'ПЛАТИНА', 'PLATINUM', '#8af0dc', '#2a9a8a'], [2500, 'АЛМАЗ', 'DIAMOND', '#8ad8ff', '#2a6ad8'], [3000, 'МАСТЕР', 'MASTER', '#d07aff', '#6a1ab0'],
+  [3500, 'ГРАНДМАСТЕР', 'GRANDMASTER', '#ff6a9a', '#a01a4a'], [4000, 'ЛЕГЕНДА', 'LEGEND', '#ffa04a', '#c04a00'], [4500, 'МИФИК', 'MYTHIC', '#ff5ac0', '#7a0a5a'],
+  [5000, 'ЧЕМПИОН', 'CHAMPION', 'rainbow', '#3a0a6a'],
+];
+const rankOf = n => { let i = -1; for (let j = 0; j < RANKS.length; j++) if (n >= RANKS[j][0]) i = j; return i; };
+const rankName = i => i < 0 ? tr('БЕЗ РАНГА', 'UNRANKED') : tr(RANKS[i][1], RANKS[i][2]);
+// значок ранга: щит с каймой, светлой гранью и звездой; у чемпиона — радужный, с короной
+function rankBadge(x, y, s, i) {
+  if (i < 0) return;
+  const [, , , col, dk] = RANKS[i], g = ctx;
+  const shield = (k) => { g.beginPath(); g.moveTo(x, y - 11 * k); g.lineTo(x + 9 * k, y - 7 * k); g.lineTo(x + 8 * k, y + 3 * k); g.lineTo(x, y + 11 * k); g.lineTo(x - 8 * k, y + 3 * k); g.lineTo(x - 9 * k, y - 7 * k); g.closePath(); };
+  g.save();
+  shield(s * 1.18); g.fillStyle = OL; g.fill();
+  shield(s); if (col === 'rainbow') { const gr = g.createLinearGradient(x - 9 * s, y - 11 * s, x + 9 * s, y + 11 * s); ['#ff3a3a', '#ffd23a', '#3ae05a', '#3ab0ff', '#a64aff'].forEach((c, j) => gr.addColorStop(j / 4, c)); g.fillStyle = gr; } else g.fillStyle = col; g.fill();
+  g.beginPath(); g.moveTo(x, y - 11 * s); g.lineTo(x + 9 * s, y - 7 * s); g.lineTo(x + 8 * s, y + 3 * s); g.lineTo(x, y + 11 * s); g.closePath(); g.fillStyle = 'rgba(0,0,0,0.18)'; g.fill();
+  g.fillStyle = dk; emoStar(x, y, 5.2 * s, dk); emoStar(x, y - 0.5 * s, 4 * s, '#ffffff');
+  g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(x - 6 * s, y - 7 * s, 3 * s, 1.5 * s);
+  if (i >= 9) { g.fillStyle = OL; g.fillRect(x - 6 * s, y - 17 * s, 12 * s, 5 * s); g.fillStyle = '#ffd23a'; for (const dx of [-5, -1, 3]) g.fillRect(x + dx * s, y - 18 * s, 2 * s, 4 * s); g.fillRect(x - 5 * s, y - 15 * s, 10 * s, 2 * s); }
+  g.restore();
+}
+function rankCnv(i, size) {
+  const c = document.createElement('canvas'); c.width = c.height = 48; c.style.width = c.style.height = size + 'px';
+  withCtx(c, () => rankBadge(24, 27, 1.7, i)); return c;
+}
+// маленький значок ранга в правом верхнем углу иконки героя
+function withRank(node, n, size = 18) {
+  const w = moEl('div'); w.style.cssText = 'position:relative;display:inline-flex'; w.appendChild(node);
+  const i = rankOf(n); if (i >= 0) { const b = rankCnv(i, size); b.style.cssText += ';position:absolute;top:-' + Math.round(size / 3) + 'px;right:-' + Math.round(size / 3) + 'px'; w.appendChild(b); }
+  return w;
+}
+
+// ---- экран героя: кубки = рекорд высоты этим героем; дорожка — ранг каждые 500, награды на 1000, 2000 и 3000 ----
 function openHero(id) {
   const list = SKINS.filter(k => owned.includes(k.id)); let i = Math.max(0, list.findIndex(k => k.id === (id || skinId)));
   moOpen(tr('ГЕРОЙ', 'HERO'), bd => {
-    const k = list[i] || SKINS[0], tro = troOf(k.id), R = RARITY[k.r];
+    const k = list[i] || SKINS[0], tro = troOf(k.id), R = RARITY[k.r], rk = rankOf(tro);
     const top = moEl('div', 'card'); top.style.cssText += `text-align:center;position:relative;background:radial-gradient(circle at 50% 40%,${R.col}55,transparent 60%),linear-gradient(180deg,#3a2a6a,#24184a)`;
     const nav = moEl('div', 'row'); nav.style.justifyContent = 'space-between';
     const pv = moTxt('button', 'btn blue', '‹'), nx = moTxt('button', 'btn blue', '›');
     pv.onclick = () => { i = (i - 1 + list.length) % list.length; sfx.click(); moRefresh(); }; nx.onclick = () => { i = (i + 1) % list.length; sfx.click(); moRefresh(); };
     const mid = moEl('div'); mid.style.cssText = 'display:flex;flex-direction:column;align-items:center';
-    mid.appendChild(heroCnv(k, 150, { anim: true, pose: 'idle' }));
+    mid.appendChild(withRank(heroCnv(k, 150, { anim: true, pose: 'idle' }), tro, 46));
     nav.append(pv, mid, nx); top.appendChild(nav);
-    const nm = moTxt('div', 'ol big', skinName(k)); top.appendChild(nm);
+    top.appendChild(moTxt('div', 'ol big', skinName(k)));
     const rr = moTxt('div', 'sm', T('rarity')[k.r]); rr.style.color = R.col; top.appendChild(rr);
-    const tr0 = moEl('div', 'row'); tr0.style.cssText = 'justify-content:center;margin-top:8px;font-size:20px'; tr0.append(iconCnv('trophy', 0, 30), moTxt('span', 'ol', String(tro))); top.appendChild(tr0);
+    const tr0 = moEl('div', 'row'); tr0.style.cssText = 'justify-content:center;margin-top:8px;font-size:20px;gap:6px'; tr0.append(iconCnv('trophy', 0, 30), moTxt('span', 'ol', String(tro)));
+    if (rk >= 0) { const rn = moTxt('span', 'ol', rankName(rk)); rn.style.cssText = 'font-size:14px;color:' + (RANKS[rk][3] === 'rainbow' ? '#ffe680' : RANKS[rk][3]); tr0.append(rankCnv(rk, 30), rn); }
+    top.appendChild(tr0);
+    top.appendChild(moTxt('div', 'sm', tr('КУБКИ = ТВОЙ РЕКОРД ВЫСОТЫ ЭТИМ ГЕРОЕМ. ПОБЕЙ РЕКОРД — ПОЛУЧИШЬ КУБКИ', 'TROPHIES = YOUR HEIGHT RECORD WITH THIS HERO. BEAT IT TO EARN MORE')));
     if (k.id !== skinId) { const pick = moTxt('button', 'btn', tr('ВЫБРАТЬ', 'SELECT')); pick.style.marginTop = '8px'; pick.onclick = () => { selectSkin(k); sfx.click(); moRefresh(); }; top.appendChild(pick); }
-    else top.appendChild(moTxt('div', 'sm', tr('ВЫБРАН — ИГРАЙ ИМ, ЧТОБЫ ПОЛУЧАТЬ КУБКИ', 'SELECTED — PLAY TO EARN TROPHIES')));
     bd.appendChild(top);
-    // дорожка кубков
+    // дорожка
     const road = moEl('div', 'card');
     road.appendChild(moTxt('div', 'ol', tr('ДОРОЖКА КУБКОВ', 'TROPHY ROAD')));
-    road.appendChild(moTxt('div', 'sm', tr('1 МЕТР ВВЕРХ ЭТИМ ГЕРОЕМ = 1 КУБОК', '1 METER CLIMBED WITH THIS HERO = 1 TROPHY')));
-    const bar = moEl('div', 'bar'); bar.style.margin = '10px 0'; const nxt = TRO_ROAD.find(n => tro < n) || 3000;
-    bar.innerHTML = `<i style="width:${Math.min(100, tro / 3000 * 100)}%"></i><b>${tro} / ${nxt}</b>`; road.appendChild(bar);
-    const REW = [
-      { need: 1000, nm: tr('ЗОЛОТАЯ ИКОНКА', 'GOLDEN ICON'), node: () => heroCnv(k, 64, { head: true, gold: true }), give: () => { if (!META.icons.includes(k.id)) META.icons.push(k.id); } },
-      { need: 2000, nm: tr('ТИТУЛ', 'TITLE'), node: () => { const d = moTxt('div', 'ol', '«' + heroTitle(k.id) + '»'); d.style.cssText = 'color:#ffe680;font-size:13px;width:150px;text-align:center'; return d; }, give: () => { if (!META.titles.includes(k.id)) META.titles.push(k.id); } },
-      { need: 3000, nm: tr('РАМКА', 'FRAME'), node: () => { const b = moEl('div'); b.style.cssText = 'width:150px;height:30px;border-radius:8px'; return framed(b, 'h:' + k.id, 4); }, give: () => { if (!META.frames.includes('h:' + k.id)) META.frames.push('h:' + k.id); } },
-    ];
-    REW.forEach((rw, j) => {
-      const got = META.road[k.id] >> j & 1, can = tro >= rw.need && !got;
-      const line = moEl('div', 'row'); line.style.cssText = `padding:10px;border:3px solid #2a1408;border-radius:12px;margin-top:8px;background:${can ? 'linear-gradient(90deg,#7a5a00,#3a2a6a)' : '#2a1a4a'}`;
-      if (can) line.classList.add('glow');
-      const need = moEl('div'); need.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:56px'; need.append(iconCnv('trophy', 0, 26), moTxt('div', 'ol', String(rw.need)));
-      const info = moEl('div'); info.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;align-items:flex-start'; info.append(moTxt('div', 'sm', rw.nm), rw.node());
-      const b = moTxt('button', 'btn ' + (can ? 'gold' : 'off'), got ? '✓' : can ? tr('ЗАБРАТЬ', 'CLAIM') : '🔒');
-      if (can) b.onclick = () => { META.road[k.id] = (META.road[k.id] || 0) | (1 << j); rw.give(); metaSave(); boardPush(); moRefresh(); moReward(tr('НОВАЯ НАГРАДА!', 'NEW REWARD!'), rw.node(), rw.nm + ' — ' + skinName(k)); };
-      line.append(need, info, b); road.appendChild(line);
+    const REW = {
+      1000: { j: 0, nm: tr('ЗОЛОТАЯ ИКОНКА', 'GOLDEN ICON'), node: () => heroCnv(k, 56, { head: true, gold: true }), give: () => { if (!META.icons.includes(k.id)) META.icons.push(k.id); } },
+      2000: { j: 1, nm: tr('ТИТУЛ', 'TITLE'), node: () => { const d = moTxt('div', 'ol', '«' + heroTitle(k.id) + '»'); d.style.cssText = 'color:#ffe680;font-size:12px;max-width:140px'; return d; }, give: () => { if (!META.titles.includes(k.id)) META.titles.push(k.id); } },
+      3000: { j: 2, nm: tr('РАМКА', 'FRAME'), node: () => { const b = moEl('div'); b.style.cssText = 'width:130px;height:26px;border-radius:8px'; return framed(b, 'h:' + k.id, 4); }, give: () => { if (!META.frames.includes('h:' + k.id)) META.frames.push('h:' + k.id); } },
+    };
+    let scrollTo = null;
+    RANKS.forEach(([need], ri) => {
+      const rw = REW[need], reached = tro >= need, got = rw && (META.road[k.id] >> rw.j & 1), can = rw && reached && !got;
+      const line = moEl('div', 'row' + (can ? ' glow' : ''));
+      line.style.cssText += `;padding:8px;border:3px solid #2a1408;border-radius:12px;margin-top:8px;background:${can ? 'linear-gradient(90deg,#7a5a00,#3a2a6a)' : reached ? 'linear-gradient(90deg,#2a5a3a,#2a1a4a)' : '#2a1a4a'};opacity:${reached || can ? 1 : 0.75}`;
+      const left = moEl('div'); left.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:64px;flex:none';
+      left.append(rankCnv(ri, 34), moTxt('div', 'sm', rankName(ri)));
+      const info = moEl('div'); info.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:0';
+      const nr = moEl('div', 'row'); nr.style.gap = '4px'; nr.append(iconCnv('trophy', 0, 20), moTxt('span', 'ol', String(need))); info.appendChild(nr);
+      if (!reached) { const bar = moEl('div', 'bar'); bar.style.width = '100%'; const prev = ri ? RANKS[ri - 1][0] : 0; bar.innerHTML = `<i style="width:${Math.max(0, Math.min(100, (tro - prev) / (need - prev) * 100))}%"></i><b>${tro} / ${need}</b>`; info.appendChild(bar); if (scrollTo === null) scrollTo = line; }
+      if (rw) info.append(moTxt('div', 'sm', rw.nm), rw.node());
+      line.append(left, info);
+      if (rw) {
+        const b = moTxt('button', 'btn ' + (can ? 'gold' : 'off'), got ? '✓' : can ? tr('ЗАБРАТЬ', 'CLAIM') : '🔒');
+        if (can) b.onclick = () => { META.road[k.id] = (META.road[k.id] || 0) | (1 << rw.j); rw.give(); metaSave(); boardPush(); moRefresh(); moReward(tr('НОВАЯ НАГРАДА!', 'NEW REWARD!'), rw.node(), rw.nm + ' — ' + skinName(k)); };
+        line.appendChild(b);
+      } else if (reached) line.appendChild(moTxt('div', 'ol', '✓'));
+      road.appendChild(line);
     });
     bd.appendChild(road);
-    // титул героя можно поставить в профиль
+    if (scrollTo) setTimeout(() => { const b2 = moUi.querySelector('.bd'); if (b2 && b2.scrollTop === 0) b2.scrollTop = Math.max(0, scrollTo.offsetTop - 160); }, 0);
     if (META.titles.includes(k.id)) {
       const c2 = moEl('div', 'card'), on = META.prof.title === k.id;
       c2.append(moTxt('div', 'sm', tr('ТИТУЛ ГЕРОЯ', 'HERO TITLE')), moTxt('div', 'ol', '«' + heroTitle(k.id) + '»'));
@@ -14417,7 +14509,9 @@ function profBody(bd, e, me) {
   const hs = moEl('div', 'card'); hs.appendChild(moTxt('div', 'ol', tr('ГЕРОИ', 'HEROES') + ' ' + e.sk));
   const hg = moEl('div'); hg.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px';
   const ids = (e.own || []).filter(id => skinById(id)).sort((a, b) => skinById(b).r - skinById(a).r).slice(0, me ? 60 : 120);
-  for (const id of ids) { const k = skinById(id), w = moEl('div'); w.style.cssText = `border:2px solid ${RARITY[k.r].col};border-radius:8px;background:#1a1030`; w.appendChild(heroCnv(k, 44, { head: true })); hg.appendChild(w); }
+  const troMap = me ? META.tro : Object.fromEntries(e.tro || []), trOf = id => nat(troMap[id]);
+  ids.sort((a, b) => trOf(b) - trOf(a));   // сверху — самые прокачанные
+  for (const id of ids) { const k = skinById(id), w = moEl('div'); w.style.cssText = `border:2px solid ${RARITY[k.r].col};border-radius:8px;background:#1a1030;display:flex;justify-content:center;margin-top:6px`; w.appendChild(withRank(heroCnv(k, 44, { head: true }), trOf(id), 18)); if (me) { w.style.cursor = 'pointer'; w.onclick = () => { sfx.click(); openHero(id); }; } hg.appendChild(w); }
   hs.appendChild(hg); bd.appendChild(hs);
   // достижения
   const ac = moEl('div', 'card'); ac.appendChild(moTxt('div', 'ol', tr('НАГРАДЫ', 'AWARDS') + ' ' + (e.ach || []).length + ' / ' + ACH.length));
@@ -14539,9 +14633,9 @@ function openPass() {
       head.appendChild(b);
     } else head.appendChild(moTxt('div', 'ol', '★ PASS ' + tr('КУПЛЕН', 'ACTIVE') + ' ★'));
     bd.appendChild(head);
-    // дорожка: уровни слева направо, сверху бесплатная, снизу золотая
+    // дорожка: уровни слева направо, сверху золотая (Pass), снизу бесплатная
     const wrap = moEl('div', 'card'); wrap.style.padding = '10px 6px';
-    const lab = moEl('div', 'row'); lab.style.cssText = 'justify-content:space-between;padding:0 4px 6px'; lab.append(moTxt('span', 'sm', tr('БЕСПЛАТНО ▲', 'FREE ▲')), moTxt('span', 'sm', tr('▼ PASS', '▼ PASS'))); wrap.appendChild(lab);
+    const lab = moEl('div', 'row'); lab.style.cssText = 'justify-content:space-between;padding:0 4px 6px'; lab.append(moTxt('span', 'sm', tr('PASS ▲', 'PASS ▲')), moTxt('span', 'sm', tr('▼ БЕСПЛАТНО', '▼ FREE'))); wrap.appendChild(lab);
     const sc = moEl('div'); sc.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding:6px 4px 10px;touch-action:pan-x';
     PASS_REW.forEach(([f, pr], i) => {
       const t = i + 1, col = moEl('div', 'tier');
@@ -14553,7 +14647,7 @@ function openPass() {
         return c;
       };
       const num = moTxt('div', 'ol', String(t)); num.style.cssText = `width:30px;height:30px;border-radius:50%;border:3px solid #2a1408;display:flex;align-items:center;justify-content:center;background:${lv >= t ? 'linear-gradient(#ffe27a,#e8a010)' : '#4a3a7a'}`;
-      col.append(mk(f, false), num, mk(pr, true)); sc.appendChild(col);
+      col.append(mk(pr, true), num, mk(f, false)); sc.appendChild(col);
     });
     wrap.appendChild(sc); bd.appendChild(wrap);
     setTimeout(() => { sc.scrollLeft = Math.max(0, Math.min(v.cf, v.prem ? v.cp : v.cf) - 1) * 84; }, 0);
@@ -14562,8 +14656,7 @@ function openPass() {
 
 // ---- рейтинг игроков: общая таблица в облаке claude.ai (документ board/<id> у каждого игрока) ----
 // Таблица общая только там, где есть облачная база (игра открыта на claude.ai). Без интернета или без базы — заглушка.
-const BOARD_TABS = [['c', 'coins', ['ЗОЛОТО', 'GOLD']], ['b', 'trophy', ['ВЫСОТА', 'HEIGHT']], ['r', 'ruby', ['РУБИНЫ', 'RUBIES']], ['g', 'gems', ['КРИСТАЛЛЫ', 'GEMS']], ['tr', 'trophy', ['КУБКИ', 'TROPHIES']]];
-let boardTab = 0, boardCache = {}, boardTimer = 0;
+let boardCache = {}, boardTimer = 0;
 function boardPush() {
   clearTimeout(boardTimer);
   boardTimer = setTimeout(async () => {
@@ -14584,7 +14677,8 @@ function boardClean(id, d) {
   const lst = v => (strList(v) || []);
   return { id, n: mpClean(d.n) || 'PLAYER', av: okAv(d.av) ? d.av : 'hamster', fr: okId(d.fr) ? d.fr : 'basic', ti: typeof d.ti === 'string' && (PASS_TITLES[d.ti] || skinById(d.ti)) ? d.ti : '',
     c: Math.min(nat(d.c), 1e9), g: Math.min(nat(d.g), 1e9), r: Math.min(nat(d.r), 1e7), b: Math.min(nat(d.b), 99999), tr: Math.min(nat(d.tr), 1e8), sk: Math.min(nat(d.sk), SKINS.length), pl: Math.min(nat(d.pl), PASS_TIERS),
-    own: lst(d.own).filter(x => skinById(x)), ic: lst(d.ic).filter(x => skinById(x)).slice(0, 120), ach: lst(d.ach).filter(x => ACH.some(a => a.id === x)), show: lst(d.show).filter(x => ACH.some(a => a.id === x)).slice(0, 3) };
+    own: lst(d.own).filter(x => skinById(x)), ic: lst(d.ic).filter(x => skinById(x)).slice(0, 120), ach: lst(d.ach).filter(x => ACH.some(a => a.id === x)), show: lst(d.show).filter(x => ACH.some(a => a.id === x)).slice(0, 3),
+    tro: (Array.isArray(d.tro) ? d.tro : []).filter(q => Array.isArray(q) && skinById(q[0])).slice(0, 12).map(q => [q[0], Math.min(nat(q[1]), 99999)]) };
 }
 function crownCnv(size) {
   const c = document.createElement('canvas'); c.width = 24; c.height = 16; c.style.width = size + 'px'; c.style.height = size * 2 / 3 + 'px';
@@ -14609,26 +14703,28 @@ function noNetNode(msg) {
   return c;
 }
 function openBoard(keep) {
-  moOpen(tr('РЕЙТИНГ', 'RANKING'), bd => {
-    const tabs = moEl('div', 'tabs');
-    BOARD_TABS.forEach(([f, ic, nm], i) => { const b = moTxt('button', 'tab' + (i === boardTab ? ' on' : ''), tr(nm[0], nm[1])); b.onclick = () => { boardTab = i; sfx.click(); moRefresh(); }; tabs.appendChild(b); });
-    bd.appendChild(tabs);
+  moOpen(tr('РЕЙТИНГ', 'RANKING'), bd => {   // один общий рейтинг: по кубкам, в строке — все цифры игрока
     if (!navigator.onLine) { bd.appendChild(noNetNode([tr('НЕТ ИНТЕРНЕТА', 'NO INTERNET'), tr('РЕЙТИНГ ПОЯВИТСЯ, КОГДА ВЕРНЁТСЯ СВЯЗЬ', 'THE RANKING COMES BACK WITH THE CONNECTION')])); return; }
-    const box = moEl('div'); bd.appendChild(box);
-    const field = BOARD_TABS[boardTab][0], ic = BOARD_TABS[boardTab][1];
+    bd.appendChild(moTxt('div', 'sm', tr('МЕСТО — ПО КУБКАМ (СУММА РЕКОРДОВ ВСЕХ ГЕРОЕВ). ЗНАЧОК — РАНГ ЛУЧШЕГО ГЕРОЯ', 'PLACE BY TROPHIES (SUM OF ALL HERO RECORDS). BADGE — BEST HERO RANK')));
+    const box = moEl('div'); box.style.marginTop = '8px'; bd.appendChild(box);
+    const field = 'tr';
+    const stat = (ic, v) => { const s = moEl('span', 'row'); s.style.gap = '2px'; s.append(iconCnv(ic, 0, 14), moTxt('span', '', String(v))); return s; };
     const show = rows => {
       box.innerHTML = '';
       if (!rows.length) { box.appendChild(moTxt('div', 'card sm', tr('ПОКА НИКОГО — СЫГРАЙ И СТАНЬ ПЕРВЫМ!', 'NOBODY YET — PLAY AND BE FIRST!'))); return; }
+      const myId = cloud.db ? cloud.uid : FB.uid;
       rows.forEach((e, i) => {
-        const me = e.id === (cloud.db ? cloud.uid : FB.uid), f = frameStyle(e.fr), r = moEl('div', 'rk' + (me ? ' glow' : ''));
+        const me = e.id === myId, f = frameStyle(e.fr), r = moEl('div', 'rk' + (me ? ' glow' : ''));
         r.style.background = f.bg; r.style.backgroundSize = '300% 100%'; if (f.anim) r.style.animation = 'moFr 5s linear infinite';
         const n = moEl('div', 'n ol'); n.textContent = String(i + 1); if (i < 3) n.style.color = ['#ffd23a', '#e8eef8', '#e0904a'][i];
-        const avw = moEl('div'); avw.style.cssText = 'position:relative;flex:none'; avw.appendChild(framed(avatarCnv(e.av, 40), e.fr, 2));
+        const avw = moEl('div'); avw.style.cssText = 'position:relative;flex:none'; avw.appendChild(withRank(framed(avatarCnv(e.av, 40), e.fr, 2), e.b, 18));
         if (i === 0) { const cr = crownCnv(30); cr.style.cssText += ';position:absolute;left:50%;top:-16px;margin-left:-15px'; avw.appendChild(cr); }
-        const nm = moEl('div'); nm.style.cssText = 'min-width:0;background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px';
+        const nm = moEl('div'); nm.style.cssText = 'min-width:0;flex:1;background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px';
         nm.appendChild(moTxt('div', 'ol', e.n + (me ? tr(' (ТЫ)', ' (YOU)') : '')));
         if (titleText(e.ti)) { const tt = moTxt('div', 'sm', '«' + titleText(e.ti) + '»'); tt.style.color = '#ffe680'; nm.appendChild(tt); }
-        const v = moEl('div', 'v ol row'); v.style.cssText += ';background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px;gap:4px'; v.append(iconCnv(ic, 0, 20), moTxt('span', '', field === 'b' ? e.b + T('m') : String(e[field])));
+        const line = moEl('div', 'row'); line.style.cssText = 'gap:6px;flex-wrap:wrap;font-size:10px;color:#e8e0ff;margin-top:2px';
+        line.append(stat('coins', e.c), stat('trophy', e.b + T('m')), stat('gems', e.g), stat('ruby', e.r)); nm.appendChild(line);
+        const v = moEl('div', 'v ol row'); v.style.cssText += ';background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px;gap:4px;font-size:17px'; v.append(iconCnv('trophy', 0, 22), moTxt('span', '', String(e.tr)));
         r.append(n, avw, nm, v);
         r.onclick = async () => { sfx.click(); const full = e.lazy ? await fbProfile(e) : e; moOpen(full.n, bd2 => profBody(bd2, full, false), true); };
         box.appendChild(r);
@@ -14661,11 +14757,27 @@ function openBoard(keep) {
   }, keep);
 }
 
-// ---- меню: профиль слева сверху, рейтинг справа, задания и Pass внизу, кубки над героем; свайп — рейтинг/профиль ----
-Object.assign(BTN, { hero: { x: 12, y: 584, w: 132, h: 46 }, prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: W - 112, y: 196, w: 100, h: 32 }, quest: { x: 12, y: 438, w: 100, h: 34 }, pass: { x: 248, y: 438, w: 100, h: 34 } });
-BTN.emo = { x: 118, y: 438, w: 124, h: 34 };
+// ---- меню: профиль слева сверху, рейтинг справа, задания и эмоции над кнопками, Pass внизу слева, герой внизу справа; свайп — рейтинг/профиль ----
+Object.assign(BTN, { hero: { x: W - 144, y: 584, w: 132, h: 46 }, prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: W - 112, y: 196, w: 100, h: 32 }, quest: { x: 12, y: 438, w: 162, h: 34 }, pass: { x: 12, y: 584, w: 132, h: 46 } });
+BTN.emo = { x: 186, y: 438, w: 162, h: 34 };
 const heroRect = () => ({ x: p.x - 20, y: p.y - camR - 44, w: 40, h: 50 });
 let menuSw = null;
+// кнопка Pass внизу слева: кружок с уровнем, полоска опыта, звезда у купленного
+function drawPassBtn() {
+  const b = BTN.pass, v = passData(), lv = passLevel(), bob = Math.sin(time * 3 + 1.4) * 1.5, y = b.y + bob;
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 3, y - 3, b.w + 6, b.h + 8);
+  const g = ctx.createLinearGradient(b.x, 0, b.x + b.w, 0); g.addColorStop(0, '#ff3d7f'); g.addColorStop(0.55, '#a64aff'); g.addColorStop(1, '#3ab0ff'); ctx.fillStyle = g; ctx.fillRect(b.x, y, b.w, b.h);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(b.x, y, b.w, 5); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(b.x, y + b.h - 4, b.w, 4);
+  const sx = b.x + ((time * 70) % (b.w + 60)) - 30; ctx.save(); ctx.beginPath(); ctx.rect(b.x, y, b.w, b.h); ctx.clip(); ctx.globalAlpha = 0.22; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + 12, y); ctx.lineTo(sx - 4, y + b.h); ctx.lineTo(sx - 16, y + b.h); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
+  const cx = b.x + 23, cy = y + 23;
+  pell(ctx, cx, cy, 21, 21, OL); pell(ctx, cx, cy, 17, 17, '#e8a010'); pell(ctx, cx, cy - 2, 15, 13, '#ffd23a');
+  text(String(lv), cx, cy + 7, lv >= 10 ? 1.6 : 2, '#ffffff', 'center', OL);
+  if (v.prem) emoStar(cx + 14, cy - 15, 7, '#fff6a0');
+  text('PASS', b.x + 48, y + 20, 1.6, '#ffffff', 'left', OL, b.w - 52);
+  const inLv = lv >= PASS_TIERS ? PASS_XP : v.xp % PASS_XP, bx = b.x + 48, by = y + 28, bw = b.w - 56;
+  ctx.fillStyle = OL; ctx.fillRect(bx - 2, by - 2, bw + 4, 12); ctx.fillStyle = '#2a1a4a'; ctx.fillRect(bx, by, bw, 8); ctx.fillStyle = '#ffd23a'; ctx.fillRect(bx, by, Math.round(bw * inLv / PASS_XP), 8); ctx.fillStyle = '#fff6a0'; ctx.fillRect(bx, by, Math.round(bw * inLv / PASS_XP), 2);
+  if (passReady()) badge(b.x + b.w - 4, y + 2);
+}
 function drawMenuMeta() {
   // профиль: аватарка, ник и кубки
   const b = BTN.prof;
@@ -14677,17 +14789,18 @@ function drawMenuMeta() {
   trophyIcon(b.x + 44, b.y + 25, 0.5); text(String(troTotal()), b.x + 52, b.y + 30, 1, '#ffe680', 'left', OL, b.w - 56);
   button(BTN.rank, tr('РЕЙТИНГ', 'RANKING'), '#ffb02a', '#c06a00');
   button(BTN.quest, tr('ЗАДАНИЯ', 'QUESTS'), '#3ab0ff', '#1a70c0');
-  button(BTN.pass, 'PASS', '#ff3d7f', '#a01a6a');
   if (questReady()) badge(BTN.quest.x + BTN.quest.w - 4, BTN.quest.y + 2);
-  if (passReady()) badge(BTN.pass.x + BTN.pass.w - 4, BTN.pass.y + 2);
-  // плашка героя внизу слева: голова, имя и кубки; если на дорожке есть награда — восклицательный знак
+  drawPassBtn();
+  // плашка героя внизу справа: голова, имя и кубки; если на дорожке есть награда — восклицательный знак
   const hb = BTN.hero, hk = curSkin(), bob = Math.sin(time * 3) * 1.5;
   ctx.fillStyle = OL; ctx.fillRect(hb.x - 3, hb.y - 3 + bob, hb.w + 6, hb.h + 8); ctx.fillStyle = '#ffb02a'; ctx.fillRect(hb.x, hb.y + bob, hb.w, hb.h);
   ctx.fillStyle = '#ffe27a'; ctx.fillRect(hb.x, hb.y + bob, hb.w, 5); ctx.fillStyle = '#c06a00'; ctx.fillRect(hb.x, hb.y + hb.h - 4 + bob, hb.w, 4);
   ctx.fillStyle = '#3a2a6a'; ctx.fillRect(hb.x + 4, hb.y + 4 + bob, 38, 38);
   heroSprite(hk, 'idle', time, false); ctx.save(); ctx.beginPath(); ctx.rect(hb.x + 4, hb.y + 4 + bob, 38, 38); ctx.clip(); drawRaw.call(ctx, hcv, SPR_X + 4, SPR_Y + 6, 24, 24, hb.x + 4, hb.y + 4 + bob, 38, 38); ctx.restore();
   text(skinName(hk), hb.x + 48, hb.y + 18 + bob, 1, '#ffffff', 'left', OL, hb.w - 52);
-  trophyIcon(hb.x + 56, hb.y + 30 + bob, 0.55); text(String(troOf(hk.id)), hb.x + 66, hb.y + 36 + bob, 2, '#ffffff', 'left', OL, hb.w - 70);
+  trophyIcon(hb.x + 56, hb.y + 30 + bob, 0.55); text(String(troOf(hk.id)), hb.x + 66, hb.y + 36 + bob, 2, '#ffffff', 'left', OL, hb.w - 92);
+  const hrk = rankOf(troOf(hk.id)); if (hrk >= 0) rankBadge(hb.x + hb.w - 12, hb.y + 30 + bob, 0.85, hrk);
+  const gn = META.troGain; if (gn && gn.id === hk.id && Date.now() - gn.t < 6000) { const a = (Date.now() - gn.t) / 6000; ctx.globalAlpha = 1 - a * a; text('+' + gn.n, hb.x + hb.w / 2, hb.y - 8 - a * 16, 2, '#ffe680', 'center', OL); ctx.globalAlpha = 1; }
   if (roadReady(hk.id)) badge(hb.x + hb.w - 4, hb.y + 2 + bob);
 }
 function menuMetaClick(pt) {
