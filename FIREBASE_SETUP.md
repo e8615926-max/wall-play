@@ -1,107 +1,107 @@
-# Connecting Firebase (free Spark plan)
+# Подключение Firebase (бесплатный тариф Spark)
 
-The game already contains all Firebase code. You only create a project, switch on two free features, paste the security rules, and copy two values into `index.html`. No credit card or billing account is needed, and nothing in this setup uses a paid feature.
+Весь код для Firebase уже есть в игре. Тебе нужно создать проект, включить две бесплатные функции, вставить правила безопасности и вписать два значения в `index.html`. Банковская карта и платёжный аккаунт не нужны, платных функций здесь нет.
 
-What Firebase gives the game:
-- **Ranking** (gold, height, rubies, gems, trophies; top 99; player cards) that works everywhere: from a file, GitHub Pages, Firebase Hosting, or any website. Before this it only worked inside claude.ai.
-- **Online mode** finds rooms through Firebase instead of the PeerJS server. Players then connect **directly to each other** (WebRTC), so the game traffic does not count against your Firebase quota. If Firebase cannot be reached, the game falls back to PeerJS as before.
-- **Sign-in without registration**: each device gets an anonymous Firebase account automatically.
+Что Firebase даёт игре:
+- **Рейтинг** (золото, высота, рубины, кристаллы, кубки; топ-99; карточки игроков) работает везде: из файла, на GitHub Pages, на Firebase Hosting, на любом сайте. Раньше он работал только на claude.ai.
+- **Онлайн**: комнаты ищутся через Firebase, а не через сервер PeerJS. Потом игроки соединяются **напрямую друг с другом** (WebRTC), поэтому сама игра почти не тратит лимиты Firebase. Если Firebase недоступен, игра, как раньше, переходит на PeerJS.
+- **Вход без регистрации**: каждое устройство автоматически получает анонимный аккаунт Firebase.
 
-Until both values are filled in, Firebase stays off and the game works exactly as before.
+Пока два значения не вписаны, Firebase выключен и игра работает как раньше.
 
-## Steps in the Firebase Console (about 10 minutes, works from a phone browser too)
+## Шаги в консоли Firebase (около 10 минут, можно с телефона)
 
-1. **Create the project**
-   1. Open https://console.firebase.google.com and sign in with your Google account.
-   2. Click **Create a project** (or **Add project**).
-   3. Name it, for example `wall-play`, and click **Continue**.
-   4. If you are offered **Gemini in Firebase**, you can leave it off.
-   5. **Google Analytics**: switch it **off** (the game doesn't need it). Click **Create project**, wait, then **Continue**.
-   6. New projects are on the **Spark** (free) plan. In the bottom-left corner of the console you should see **Spark** / **No-cost**. **Never click "Upgrade"** or link a billing account. Without a billing account, Firebase cannot charge you; when a free limit runs out, that service simply pauses until the limit resets.
+1. **Создай проект**
+   1. Открой https://console.firebase.google.com и войди в свой Google-аккаунт.
+   2. Нажми **Create a project** (или **Add project**).
+   3. Назови проект, например `wall-play`, и нажми **Continue**.
+   4. Если предложат **Gemini in Firebase**, можно не включать.
+   5. **Google Analytics** выключи (игре он не нужен). Нажми **Create project**, подожди, потом **Continue**.
+   6. Новые проекты создаются на бесплатном тарифе **Spark**: внизу слева в консоли видно **Spark** / **No-cost**. **Никогда не нажимай «Upgrade»** и не привязывай платёжный аккаунт. Без него Firebase не может списать деньги: когда бесплатный лимит кончается, функция просто встаёт на паузу до сброса.
 
-2. **Register a web app (to get the API key)**
-   1. On the project overview page, click the **Web** icon `</>` (under "Get started by adding Firebase to your app").
-   2. App nickname: `Wall Play`. Leave **"Also set up Firebase Hosting"** unticked. Click **Register app**.
-   3. You will see a block `const firebaseConfig = { apiKey: "AIza...", ... }`. Copy the value of **apiKey** (the text inside the quotes after `apiKey:`).
-   4. Click **Continue to console**. You can find this config again at ⚙ **Project settings → General → Your apps → SDK setup and configuration → Config**.
+2. **Зарегистрируй веб-приложение (чтобы получить ключ)**
+   1. На главной странице проекта нажми значок **Web** `</>` (в блоке «Get started by adding Firebase to your app»).
+   2. Название: `Wall Play`. Галочку **«Also set up Firebase Hosting»** не ставь. Нажми **Register app**.
+   3. Появится блок `const firebaseConfig = { apiKey: "AIza...", ... }`. Скопируй значение **apiKey** (текст в кавычках после `apiKey:`).
+   4. Нажми **Continue to console**. Найти этот блок потом можно здесь: ⚙ **Project settings → General → Your apps → SDK setup and configuration → Config**.
 
-3. **Turn on anonymous sign-in**
-   1. Left menu: **Build → Authentication** → **Get started**.
-   2. Open the **Sign-in method** tab → choose **Anonymous** → switch **Enable** on → **Save**.
+3. **Включи вход без регистрации**
+   1. В меню слева: **Build → Authentication** → **Get started**.
+   2. Вкладка **Sign-in method** → выбери **Anonymous** → включи **Enable** → **Save**.
 
-4. **Create the Realtime Database**
-   1. Left menu: **Build → Realtime Database** → **Create Database**.
-   2. **Location**: pick the region closest to your players (for Europe: `europe-west1 (Belgium)`; otherwise `us-central1`). Click **Next**.
-   3. Choose **Start in locked mode** → **Enable**.
-   4. At the top of the **Data** tab you will see the database address, such as `https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app` (or `...firebaseio.com`). Copy it **without** a trailing slash.
+4. **Создай базу Realtime Database**
+   1. В меню слева: **Build → Realtime Database** → **Create Database**.
+   2. **Location** — регион поближе к игрокам (для Европы и России: `europe-west1 (Belgium)`, иначе `us-central1`). Нажми **Next**.
+   3. Выбери **Start in locked mode** → **Enable**.
+   4. Вверху вкладки **Data** будет адрес базы, например `https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app` (или `...firebaseio.com`). Скопируй его **без** косой черты в конце.
 
-5. **Paste the security rules** (they protect the ranking and the rooms)
-   1. In **Realtime Database**, open the **Rules** tab.
-   2. Delete everything in the editor and paste the whole contents of `database.rules.json` from this repository.
-   3. Click **Publish**.
+5. **Вставь правила безопасности** (они защищают рейтинг и комнаты)
+   1. В **Realtime Database** открой вкладку **Rules**.
+   2. Удали всё в редакторе и вставь целиком содержимое файла `database.rules.json`.
+   3. Нажми **Publish**.
 
-6. **Put the two values into the game**
-   1. Open `index.html` in a text editor and search for `const FIREBASE = {`.
-   2. Fill in the two lines:
+6. **Впиши два значения в игру**
+   1. Открой `index.html` в текстовом редакторе и найди `const FIREBASE = {`.
+   2. Заполни две строки:
       ```js
-      apiKey: 'AIza...your key...',
+      apiKey: 'AIza...твой ключ...',
       databaseURL: 'https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app',
       ```
-   3. Save the file.
+   3. Сохрани файл.
 
-7. **Check it**
-   - Open the game → **Ranking**: after your first run, you appear in the table.
-   - **Online**: create a room on one device and join with the code on another.
-   - In the console, **Realtime Database → Data** shows `board`, `profiles` and, while a room is open, `rooms`.
+7. **Проверь**
+   - Открой игру → **Рейтинг**: после первого забега ты появишься в таблице.
+   - **Сеть**: создай комнату на одном устройстве и войди по коду с другого.
+   - В консоли, в **Realtime Database → Data**, появятся `board`, `profiles`, а пока открыта комната — `rooms`.
 
-## Optional: free hosting on Firebase (needs a computer with Node.js)
+## По желанию: бесплатный хостинг на Firebase (нужен компьютер с Node.js)
 
-This gives you a link like `https://wall-play-1234.web.app`. It also uploads the rules from `database.rules.json` automatically, so you can skip step 5 in the console.
+Получишь ссылку вида `https://wall-play-1234.web.app`. Заодно правила из `database.rules.json` загрузятся сами, и шаг 5 в консоли можно пропустить.
 
 ```bash
 cd wall-play
-npx firebase-tools login            # opens the browser once
-npx firebase-tools use --add        # pick your project, alias: default
+npx firebase-tools login            # один раз откроется браузер
+npx firebase-tools use --add        # выбери свой проект, имя: default
 npx firebase-tools deploy --only hosting,database
 ```
 
-## Optional: limit the API key
+## По желанию: ограничить ключ
 
-The `apiKey` is not a secret. It only names your project; the protection comes from the database rules. If you want extra safety:
+`apiKey` — не секрет: он только называет проект, а защищают данные правила базы. Для дополнительной надёжности:
 
-1. Open https://console.cloud.google.com/apis/credentials and select your project.
-2. Open **Browser key (auto created by Firebase)**.
-3. Under **API restrictions**, select **Restrict key** and tick **Identity Toolkit API** and **Token Service API**. Then **Save**.
+1. Открой https://console.cloud.google.com/apis/credentials и выбери свой проект.
+2. Открой **Browser key (auto created by Firebase)**.
+3. В **API restrictions** выбери **Restrict key** и отметь **Identity Toolkit API** и **Token Service API**. Нажми **Save**.
 
-Don't add "HTTP referrer" restrictions if you play the game by opening the file directly, because files have no referrer.
+Ограничение «HTTP referrers» не добавляй, если открываешь игру как файл: у файла нет адреса сайта.
 
-## What the rules enforce (the server-side check of results)
+## Что проверяют правила (серверная проверка результатов)
 
-- Each player can write only their own row (`board/<uid>`, `profiles/<uid>`), and nobody can read the database without signing in.
-- The height record and trophies cannot grow faster than 60 m per second of server time since the last update. Negative or absurd numbers are rejected, and the time stamp must come from the server.
-- Nobody can take over someone else's open room. Room invitations can be read only by the player they are addressed to, and the sender cannot be faked.
-- Abandoned rooms can be reused after 2 hours.
+- Каждый игрок может писать только свою строку (`board/<uid>`, `profiles/<uid>`), а без входа базу нельзя даже читать.
+- Рекорд высоты и кубки не могут расти быстрее 60 м в секунду по серверным часам с прошлого обновления. Отрицательные и невозможные числа не принимаются, время ставит сервер.
+- Чужую открытую комнату занять нельзя. Приглашения в комнату читает только тот, кому они адресованы, и подделать отправителя нельзя.
+- Брошенную комнату можно занять снова через 2 часа.
 
-Limits: on Spark there are no Cloud Functions, so the game cannot run its own server code. A determined cheater can still post plausible fake numbers, but not impossible ones.
+Ограничение: на Spark нет Cloud Functions, то есть своего серверного кода. Упорный читер может прислать правдоподобные выдуманные числа, но не невозможные.
 
-## Free limits that matter (Spark)
+## Бесплатные лимиты, которые важны (Spark)
 
-| What | Free limit | What uses it in the game |
+| Что | Бесплатно | Что в игре это тратит |
 |---|---|---|
-| Realtime Database simultaneous connections | 100 | Each player who is currently in the **Online** room screen or in an online match (one live connection each). The ranking and saves use short requests, not live connections. |
-| Realtime Database storage | 1 GB | About 1–8 KB per player (row and profile). |
-| Realtime Database download | 10 GB per month | One ranking tab is about 15–25 KB. Online matches send almost nothing through Firebase, because the game data goes directly between players. |
-| Anonymous Authentication | free | One account per device or browser. |
+| Одновременные подключения к Realtime Database | 100 | Каждый игрок, который сейчас в окне «Сеть» или в онлайн-матче (одно живое подключение). Рейтинг и сохранения — короткие запросы, а не подключения. |
+| Место в базе | 1 ГБ | Примерно 1–8 КБ на игрока (строка и профиль). |
+| Скачивание из базы | 10 ГБ в месяц | Одна вкладка рейтинга — около 15–25 КБ. Онлайн-матчи через Firebase почти ничего не передают: данные игры идут напрямую между игроками. |
+| Анонимный вход | бесплатно | Один аккаунт на устройство или браузер. |
 
-If a limit is reached, that feature stops until the limit resets: the ranking shows "No connection", and online mode falls back to PeerJS. You are never billed.
+Если лимит закончится, функция встанет до сброса: рейтинг покажет «Нет связи», а онлайн перейдёт на PeerJS. Денег не спишут никогда.
 
-## For development: local emulator (no project needed)
+## Для разработки: локальный эмулятор (проект не нужен)
 
 ```bash
 npx firebase-tools emulators:start --only auth,database --project demo-wallplay
 ```
 
-Then, in `index.html`, set:
+Потом в `index.html` укажи:
 `FIREBASE.apiKey = 'demo'`, `FIREBASE.databaseURL = 'http://127.0.0.1:9000'`, `FIREBASE.emu = { auth: 'http://127.0.0.1:9099', ns: 'demo-wallplay-default-rtdb' }`.
 
-The emulator works only when the page is served without the CSP line, or when `http://127.0.0.1:*` is added to `connect-src`.
+Эмулятор работает, только если страница открыта без строки CSP или если в `connect-src` добавлен `http://127.0.0.1:*`.
