@@ -1927,7 +1927,7 @@ async function pushCloud() {
 // SDK не грузится: игра говорит с Firebase напрямую по REST (меньше файл, нет зависимости от чужих CDN).
 const FIREBASE = {
   apiKey: '',          // Project settings → General → Web API Key (пример: 'AIzaSy...')
-  databaseURL: '',     // Realtime Database → адрес сверху (пример: 'https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app')
+  databaseURL: 'https://wall-play-4abb3-default-rtdb.europe-west1.firebasedatabase.app',     // Realtime Database → адрес сверху (пример: 'https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app')
   turn: [],            // необязательно: свои TURN-серверы для мультиплеера через строгие сети [{ urls, username, credential }]
   emu: null,           // только для разработки: { auth: 'http://127.0.0.1:9099', ns: 'demo-x' } — локальный эмулятор
 };
