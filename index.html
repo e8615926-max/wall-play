@@ -2228,11 +2228,12 @@ async function acctGoogle(msg) {
     if (r.same) {   // гость стал аккаунтом Google — прогресс тот же, просто кладём его в облако
       await fbCloudPush().catch(() => {}); boardPush();
       moOpen(tr('АККАУНТ', 'ACCOUNT'), bd => acctDone(bd, tr('GOOGLE ПРИВЯЗАН! ПРОГРЕСС СОХРАНЁН В ОБЛАКЕ', 'GOOGLE LINKED! PROGRESS SAVED TO THE CLOUD')));
+      if (!obOpen()) giftCharodey();
       return;
     }
     const c = await fbCloudGet().catch(() => null);
     if (c && (r.fresh || saveFresh())) { fbBoardBlank(r.old); fbCloudApply(c); return; }
-    if (!c) { fbBoardBlank(r.old); await fbCloudPush().catch(() => {}); boardPush(); moOpen(tr('АККАУНТ', 'ACCOUNT'), bd => acctDone(bd, tr('ВЫ ВОШЛИ ЧЕРЕЗ GOOGLE. ПРОГРЕСС СОХРАНЁН В ОБЛАКЕ', 'SIGNED IN WITH GOOGLE. PROGRESS SAVED TO THE CLOUD'))); return; }
+    if (!c) { fbBoardBlank(r.old); await fbCloudPush().catch(() => {}); boardPush(); moOpen(tr('АККАУНТ', 'ACCOUNT'), bd => acctDone(bd, tr('ВЫ ВОШЛИ ЧЕРЕЗ GOOGLE. ПРОГРЕСС СОХРАНЁН В ОБЛАКЕ', 'SIGNED IN WITH GOOGLE. PROGRESS SAVED TO THE CLOUD'))); if (!obOpen()) giftCharodey(); return; }
     // пока игрок не выбрал, ничего не сохраняем в облако; «назад» — остаёмся гостем, как было
     fbSave.ready = false;
     acctPick(c, () => fbBoardBlank(r.old), () => {
@@ -2265,7 +2266,7 @@ function acctPick(c, onPick, onCancel) {
       k.append(g, b); bd.appendChild(k);
     };
     card(tr('ИЗ АККАУНТА GOOGLE', 'FROM THE GOOGLE ACCOUNT'), cl, 'blue', () => fbCloudApply(c));
-    card(tr('С ЭТОГО УСТРОЙСТВА', 'FROM THIS DEVICE'), me, 'gold', async () => { await fbCloudPush().catch(() => {}); boardPush(); moOpen(tr('АККАУНТ', 'ACCOUNT'), bd2 => acctDone(bd2, tr('ПРОГРЕСС С УСТРОЙСТВА СОХРАНЁН В АККАУНТЕ GOOGLE', 'DEVICE PROGRESS SAVED TO THE GOOGLE ACCOUNT'))); });
+    card(tr('С ЭТОГО УСТРОЙСТВА', 'FROM THIS DEVICE'), me, 'gold', async () => { await fbCloudPush().catch(() => {}); boardPush(); moOpen(tr('АККАУНТ', 'ACCOUNT'), bd2 => acctDone(bd2, tr('ПРОГРЕСС С УСТРОЙСТВА СОХРАНЁН В АККАУНТЕ GOOGLE', 'DEVICE PROGRESS SAVED TO THE GOOGLE ACCOUNT'))); if (!obOpen()) giftCharodey(); });
   });
 }
 // выход: сначала сохраняем в облако, потом очищаем устройство — следующий игрок начинает с чистого листа
@@ -2307,7 +2308,10 @@ function acctCard() {
   } else {
     c.append(moTxt('div', 'ol', tr('ГОСТЬ', 'GUEST')), moTxt('div', 'sm', tr('ПРОГРЕСС ХРАНИТСЯ ТОЛЬКО НА ЭТОМ УСТРОЙСТВЕ. ПРИВЯЖИ GOOGLE — ОН СОХРАНИТСЯ В ОБЛАКЕ И НИЧЕГО НЕ ПОТЕРЯЕТСЯ', 'PROGRESS IS ONLY ON THIS DEVICE. LINK GOOGLE TO SAVE IT IN THE CLOUD WITHOUT LOSING ANYTHING')));
     const msg = moTxt('div', 'sm', ''), b = googleBtn(tr('ПРИВЯЗАТЬ GOOGLE', 'LINK GOOGLE'), () => { sfx.click(); acctGoogle(msg); }); b.style.marginTop = '8px';
-    c.append(b, msg); fbSdkMods().catch(() => {}); fbAuth().catch(() => {});   // заранее, чтобы окно Google открылось сразу по нажатию
+    const gift = moEl('div', 'row'); gift.style.cssText = 'gap:8px;margin-top:8px;background:#1a5a2a88;border:2px solid #3ce06a;border-radius:10px;padding:6px';
+    gift.append(heroCnv(skinById('charodey'), 44, { anim: true, pose: 'idle' }), moTxt('div', 'ol', tr('ПОДАРОК ЗА ПРИВЯЗКУ: ЛЕГЕНДАРНЫЙ ГЕРОЙ «ЧАРОДЕЙ»', 'GIFT FOR LINKING: LEGENDARY HERO "ENCHANTER"')));
+    gift.lastChild.style.cssText = 'color:#9aff9a;font-size:12px';
+    c.append(gift, b, msg); fbSdkMods().catch(() => {}); fbAuth().catch(() => {});   // заранее, чтобы окно Google открылось сразу по нажатию
   }
   return c;
 }
@@ -2315,21 +2319,24 @@ if (fbOn()) {
   store.onSet = markDirty;
   fbCloudSync();
   document.addEventListener('visibilitychange', () => { if (document.hidden && acctG()) { clearTimeout(fbSave.timer); fbSave.first = 0; fbCloudPush().catch(() => {}); } });
-  // подарок за привязку Google: герой «Чародей» (выдаётся в меню, когда ничего не открыто)
-  const gift = setInterval(() => {
-    if (!acctG() || owned.includes('charodey')) return;
-    if (state !== 'menu' || moStack.length || quiet || obOpen() || TUT.on || TOUR.on) return;
-    owned.push('charodey'); store.set('ownedIds', owned); boardPush();
-    const k = skinById('charodey');
-    moOpen(tr('ПОДАРОК', 'GIFT'), bd => {
-      const c = moEl('div', 'card'); c.style.textAlign = 'center';
-      const hv = heroCnv(k, 160, { anim: true, pose: 'idle' }); hv.style.margin = '0 auto'; c.appendChild(hv);
-      c.append(moTxt('div', 'ol big', skinName(k)), moTxt('div', 'sm', tr('СПАСИБО, ЧТО ПРИВЯЗАЛ GOOGLE! ЭТОТ ГЕРОЙ НЕ ПРОДАЁТСЯ', 'THANKS FOR LINKING GOOGLE! THIS HERO IS NOT FOR SALE')));
-      const b = moTxt('button', 'btn gold', tr('НАДЕТЬ', 'EQUIP')); b.style.cssText += ';width:100%;margin-top:10px'; b.onclick = () => { selectSkin(k); sfx.click(); moClose(); };
-      c.appendChild(b); bd.appendChild(c);
-    });
-    moReward(tr('ПОДАРОК ЗА GOOGLE!', 'GIFT FOR GOOGLE!'), heroCnv(k, 150, { anim: true, pose: 'idle' }), tr('ЛЕГЕНДАРНЫЙ ГЕРОЙ «ЧАРОДЕЙ» — ТОЛЬКО ДЛЯ ТЕХ, КТО ПРИВЯЗАЛ АККАУНТ', 'LEGENDARY HERO "ENCHANTER" — ONLY FOR LINKED ACCOUNTS'));
-  }, 1000);
+  // подарок за привязку Google (если привязали, пока игра была закрыта или после загрузки облака) — в меню
+  setInterval(() => { if (acctG() && !owned.includes('charodey') && state === 'menu' && !moStack.length && !quiet && !obOpen() && !TUT.on && !TOUR.on) giftCharodey(); }, 1000);
+}
+// подарок за привязку Google: легендарный «Чародей» — сразу, с праздничным окном (в знакомстве его вручает сам Пиклс)
+function giftCharodey(silent) {
+  if (owned.includes('charodey')) return false;
+  owned.push('charodey'); store.set('ownedIds', owned); boardPush();
+  if (silent) return true;
+  const k = skinById('charodey');
+  moOpen(tr('ПОДАРОК', 'GIFT'), bd => {
+    const c = moEl('div', 'card'); c.style.textAlign = 'center';
+    const hv = heroCnv(k, 160, { anim: true, pose: 'idle' }); hv.style.margin = '0 auto'; c.appendChild(hv);
+    c.append(moTxt('div', 'ol big', skinName(k)), moTxt('div', 'sm', tr('СПАСИБО, ЧТО ПРИВЯЗАЛ GOOGLE! ЭТОТ ГЕРОЙ НЕ ПРОДАЁТСЯ', 'THANKS FOR LINKING GOOGLE! THIS HERO IS NOT FOR SALE')));
+    const b = moTxt('button', 'btn gold', tr('НАДЕТЬ', 'EQUIP')); b.style.cssText += ';width:100%;margin-top:10px'; b.onclick = () => { selectSkin(k); sfx.click(); moBack(); };
+    c.appendChild(b); bd.appendChild(c);
+  }, true);
+  moReward(tr('ПОДАРОК ЗА GOOGLE!', 'GIFT FOR GOOGLE!'), heroCnv(k, 150, { anim: true, pose: 'idle' }), tr('ЛЕГЕНДАРНЫЙ ГЕРОЙ «ЧАРОДЕЙ» — ТОЛЬКО ДЛЯ ТЕХ, КТО ПРИВЯЗАЛ АККАУНТ', 'LEGENDARY HERO "ENCHANTER" — ONLY FOR LINKED ACCOUNTS'));
+  return true;
 }
 // всё, что читается из сохранения, проверяется: повреждённые или подделанные данные не ломают игру
 const nat = v => Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), 1e9) : 0;
@@ -6563,6 +6570,7 @@ function svOpen(k, pr) { sv = { k, pr, confirm: false, t0: time, no: -9 }; sfx.c
 function svClick(pt) {
   if (inRect(pt, SV_X) || !inRect(pt, SV_WIN)) { sv = null; sfx.click(); return; }
   const k = sv.k;
+  if (k.gift && !owned.includes(k.id)) { if (inRect(pt, SV_BUY)) { sv = null; sfx.click(); if (acctG()) giftCharodey(); else openProfile(); } return; }
   if (owned.includes(k.id)) { if (inRect(pt, SV_ROAD)) { sv = null; sfx.click(); openHero(k.id); return; } if (inRect(pt, SV_BUY) && k.id !== skinId) { selectSkin(k); sfx.click(); sv = null; } return; }
   if (sv.confirm) { if (inRect(pt, SV_NO)) { sv.confirm = false; sfx.click(); } else if (inRect(pt, SV_BUY)) { const pr = sv.pr; sv = null; buySkin(k, pr); } return; }
   if (inRect(pt, SV_BUY)) { if (canPay(sv.pr)) { sv.confirm = true; sfx.click(); } else { sv.no = time; sfx.no(); } }
@@ -6830,6 +6838,12 @@ function svDraw() {
   feats.forEach((s, i) => { const bw = (Wn.w - 24 - (feats.length - 1) * 4) / feats.length, x = Wn.x + 12 + i * (bw + 4), y = Wn.y + 412; ctx.fillStyle = OL; ctx.fillRect(x, y, bw, 18); ctx.fillStyle = myth ? (i % 2 ? k.myth[1] : k.myth[0]) : R.col; ctx.fillRect(x + 2, y + 2, bw - 4, 14); text(s, x + bw / 2, y + 13, 1, OL, 'center', null, bw - 6); });
   const cx = Wn.x + Wn.w - 25, cy = Wn.y + 25; ctx.globalAlpha = 0.4 + Math.sin(time * 5) * 0.15; pell(ctx, cx, cy, 24, 24, '#ff6a5a'); ctx.globalAlpha = 1; pell(ctx, cx, cy, 20, 20, OL); pell(ctx, cx, cy, 17, 17, '#e8261a'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 7, cy - 7); ctx.lineTo(cx + 7, cy + 7); ctx.moveTo(cx + 7, cy - 7); ctx.lineTo(cx - 7, cy + 7); ctx.stroke();
   const py = SV_BUY.y - 22, pr = sv.pr, bad = time - sv.no < 0.5;
+  if (!own && k.gift) {   // не продаётся: дарим за привязку аккаунта Google
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(Wn.x + 8, py - 18, Wn.w - 16, 30);
+    text(tr('ПОДАРОК ЗА ПРИВЯЗКУ GOOGLE', 'GIFT FOR LINKING GOOGLE'), Wn.x + Wn.w / 2, py + 4, 1, '#7aff8a', 'center', OL, Wn.w - 24);
+    button(SV_BUY, tr('ПОЛУЧИТЬ', 'GET IT'), '#3ce06a', '#1a7a3a');
+    ctx.restore(); return;
+  }
   if (!own) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(Wn.x + 8, py - 18, Wn.w - 16, 30); if (pr.ruby) rubyIcon(SV_BUY.x + 40, py, 1.2); else if (pr.gems) gemIcon(SV_BUY.x + 40, py, 1.2); else coinIcon(SV_BUY.x + 40, py, 9); text(String(pr.ruby || pr.gems || pr.coins), SV_BUY.x + 58, py + 7, 2, bad || !canPay(pr) ? '#ff9a9a' : '#ffffff', 'left', OL); }
   if (own) {   // свой герой: кубки, ранг и дорожка
@@ -8247,8 +8261,8 @@ const WHEEL_NAMES = {
 const wheelName = i => WHEELS[i].theme === 'golden' ? tr('ЗОЛОТОЕ КОЛЕСО', 'GOLDEN WHEEL') : WHEELS[i].theme === 'ruby' ? tr('РУБИНОВОЕ КОЛЕСО', 'RUBY WHEEL') : i === 3 ? tr('ОГРОМНОЕ КОЛЕСО', 'MEGA WHEEL') : i === 1 ? T('wheel') : (WHEEL_NAMES[lang] || WHEEL_NAMES.en)[i ? 1 : 0];
 const WHL_PREV = { x: 2, y: 276, w: 34, h: 48 }, WHL_NEXT = { x: W - 36, y: 276, w: 34, h: 48 };
 const tabSkins = () => {   // ord — своё место в витрине (вертолётик в верхнем ряду, чтобы была видна шапка)
-  const l = SKINS.filter(k => k.r === shopTab && k.ord === undefined && !k.gift);
-  for (const k of SKINS) if (k.r === shopTab && k.ord !== undefined && !k.gift) l.splice(k.ord, 0, k);
+  const l = SKINS.filter(k => k.r === shopTab && k.ord === undefined);
+  for (const k of SKINS) if (k.r === shopTab && k.ord !== undefined) l.splice(k.ord, 0, k);
   return l;
 };
 const pageCount = () => Math.max(1, Math.ceil(tabSkins().length / PER_PAGE));
@@ -10973,6 +10987,7 @@ function drawSkinCard(r, k) {
   text(l1, cx, r.y + 64, 1, OL, 'center', null, r.w - 4);
   if (l2) text(l2, cx, r.y + 73, 1, R.dk, 'center', null, r.w - 4);
   if (own) text(sel ? T('selected') : T('take'), cx, r.y + 84, 1, sel ? '#c01f5a' : '#1a70c0', 'center', null, r.w - 4);
+  else if (k.gift) text('GOOGLE', cx, r.y + 84, 1, '#1a9a3a', 'center', null, r.w - 4);   // подарок за привязку Google
   else priceDraw(cx, r.y + 84, priceOf(k), 1, canPay(priceOf(k)) ? OL : '#6a5a7a');
 }
 // ---------- Рамка легендарного героя: у каждого своя анимация ----------
@@ -14446,6 +14461,8 @@ function draw() {
 }
 
 // ---------- Цикл ----------
+// непрозрачное окно поверх игры (знакомство, профиль, Pass, рейтинг…) — рисовать мир под ним незачем
+function screenCovered() { return obOpen() || (!!moUi && moUi.style.display !== 'none' && moStack.length > 0); }
 let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0, perfSlow = 0, perfDownAt = -1e9;
 function frame(now) {
   if (now - last < 10) { requestAnimationFrame(frame); return; }   // экраны 120–144 Гц: лишние вызовы пропускаем — работы вдвое меньше, плавность та же
@@ -14456,7 +14473,7 @@ function frame(now) {
   const ts = state === 'play' && p && p.slow > 0 && !pmenu ? 0.45 : 1;   // замедление времени
   if (mp.active) { const now = Date.now(); if (now < mp.startAt) mp.cd = Math.ceil((mp.startAt - now) / 1000); else { mp.cd = 0; if (!mp.go) { mp.go = true; } const target = Math.floor((now - mp.startAt) * 0.12); for (let n = 0; mp.step < target && n < 40; n++) { update(1 / 120); mp.step++; } } }
   else for (let i = 0; i < steps; i++) update(dt / steps * ts);
-  draw();
+  if (!screenCovered()) draw();
   // телефон не успевает (кадры приходят реже 45 в секунду или кадр считается долго) — разрешение холста на ступень ниже;
   // долго всё легко — обратно выше, но не раньше чем через 20 с после понижения, чтобы не качаться туда-сюда
   perfAcc += performance.now() - t0; perfN++; if (gap > 23 && gap < 100) perfSlow++;
@@ -14573,13 +14590,29 @@ function avatarArt(id, t) {
   }
 }
 // аватарка на холсте игры: квадрат с фоном и рисунком (герой — голова героя)
+const AV_PIX = new Map();
+function avatarPix(a, fr) {
+  const key = a.id + fr; let c = AV_PIX.get(key); if (c) return c;
+  const art = document.createElement('canvas'); art.width = art.height = 32;
+  withCtx(art, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); avatarArt(a.id, fr * 0.4); });
+  const ag = art.getContext('2d'), d = ag.getImageData(0, 0, 32, 32), px = d.data, cnt = new Map();
+  for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 250) { const q = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]; cnt.set(q, (cnt.get(q) || 0) + 1); }
+  const pal = [...cnt.entries()].filter(e => e[1] >= 2).sort((u, v) => v[1] - u[1]).slice(0, 12).map(e => [e[0] >> 16, (e[0] >> 8) & 255, e[0] & 255]);
+  for (let i = 0; i < px.length; i += 4) {   // каждый пиксель — либо пусто, либо один из основных цветов рисунка
+    if (px[i + 3] < 110) { px[i + 3] = 0; continue; }
+    let best = null, bd = 1e9; for (const q of pal) { const dd = (q[0] - px[i]) ** 2 + (q[1] - px[i + 1]) ** 2 + (q[2] - px[i + 2]) ** 2; if (dd < bd) { bd = dd; best = q; } }
+    if (best) { px[i] = best[0]; px[i + 1] = best[1]; px[i + 2] = best[2]; } px[i + 3] = 255;
+  }
+  ag.putImageData(d, 0, 0);
+  c = document.createElement('canvas'); c.width = c.height = 32; const cg = c.getContext('2d');
+  for (let b = 0; b < 4; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 3); cg.fillRect(0, b * 8, 32, 8); }   // фон ступеньками, как в пиксель-арте
+  cg.fillStyle = 'rgba(255,255,255,0.18)'; cg.fillRect(2, 2, 6, 2); cg.fillRect(2, 4, 2, 4);
+  cg.drawImage(art, 0, 0);
+  AV_PIX.set(key, c); return c;
+}
 function avatarDraw(av, cx, cy, size, t = time) {
   const a = avatarDef(av), x = cx - size / 2, y = cy - size / 2;
-  if (a) {
-    const g = ctx.createLinearGradient(0, y, 0, y + size); g.addColorStop(0, a.bg[0]); g.addColorStop(1, a.bg[1]); ctx.fillStyle = g; ctx.fillRect(x, y, size, size);
-    ctx.save(); ctx.beginPath(); ctx.rect(x, y, size, size); ctx.clip(); ctx.translate(x, y); ctx.scale(size / 32, size / 32); avatarArt(a.id, t); ctx.restore();
-    return;
-  }
+  if (a) { const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; drawRaw.call(ctx, avatarPix(a, Math.floor(t * 4) % 4), 0, 0, 32, 32, x, y, size, size); ctx.imageSmoothingEnabled = sm; return; }
   const gold = String(av).startsWith('g:'), k = skinById(gold ? av.slice(2) : av) || SKINS[0];
   ctx.fillStyle = gold ? '#ffd23a' : '#1a1030'; ctx.fillRect(x, y, size, size);
   heroSprite(k, 'idle', t, false); ctx.save(); ctx.beginPath(); ctx.rect(x, y, size, size); ctx.clip(); drawRaw.call(ctx, hcv, SPR_X + 4, SPR_Y + 6, 24, 24, x, y, size, size); ctx.restore();
@@ -14872,8 +14905,8 @@ function heroCnv(k, size, opt = {}) {
 // аватарка: 'id' — герой, 'g:id' — золотая иконка героя с дорожки кубков
 function avatarCnv(av, size, anim) {
   if (avatarDef(av)) {   // аватарка-картинка
-    const c = document.createElement('canvas'); c.width = c.height = 64; c.style.width = c.style.height = size + 'px'; c.style.imageRendering = 'pixelated';
-    const paint = t => withCtx(c, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, 64, 64); avatarDraw(av, 32, 32, 64, t); });
+    const c = document.createElement('canvas'); c.width = c.height = 32; c.style.width = c.style.height = size + 'px'; c.style.imageRendering = 'pixelated';
+    const paint = t => withCtx(c, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, 32, 32); avatarDraw(av, 16, 16, 32, t); });
     paint(0.3); if (anim) moAnim.push({ c, paint });
     return c;
   }
@@ -15428,6 +15461,7 @@ const PK_PIX = {
   fist: ['.....####.####....', '....#lwwg#lwwg#...', '...##lwwg#lwwg###.', '..#lw#lwg#lwg#lwg#', '..#lw#lwg#lwg#lwg#', '..#lw##########lg#', '..#lwwwwwwwwwwwwg#', '.##lwwwwwwwwwwwwg#', '#lw#lwwwwwwwwwwwg#', '#lwwwwwwwwwwwwwgg#', '#lwwwwwwwwwwwwwgg#', '.#gwwwwwwwwwwwwgg#', '..#ggwwwwwwwwwggg#', '...#ggwwwwwwwggg#.', '....############..', '....#llllllllll#..', '....#wwwwwwwwwg#..', '....############..'],
   peace: ['...##.....##......', '..#lw#...#lw#.....', '..#lw#...#lw#.....', '..#lwg#.#lwg#.....', '...#lw#.#lw#......', '...#lwg#lwg#......', '...#lwg#lwg###....', '....#lw#lw#lw###..', '.##.#lw#lw#lw#lw#.', '#lw##lwwwwwwwwwg#.', '#lwwwwwwwwwwwwwg#.', '.#lwwwwwwwwwwwwg#.', '..#wwwwwwwwwwwgg#.', '..#gwwwwwwwwwggg#.', '...#ggwwwwwwggg#..', '....###########...', '....#lllllllll#...', '....#wwwwwwwwg#...', '....###########...']
 };
+PK_PIX.gun = ['......##.............', '.....#lw#............', '.....#lw#............', '.....#lwg#...........', '.#####lwg###########.', '#lw#lwwwwwwwwwwwwwwg#', '#lw#lwwwwwwwwwwwwwwg#', '#lw#lwwwwwwww#######.', '#lw#lwwwwwwg#lwwwg#..', '#lw#lwwwwwwg#######..', '#lw#lwwwwwwg#lwwg#...', '#lw#gwwwwwgg######...', '.###.#ggggg#.........', '.....#######.........'];   // пальцы-пистолет: манжета слева, большой палец вверх, указательный вперёд
 const PK_COL = { '#': '#140e14', w: '#ffffff', l: '#ffffff', g: '#bebecd' }, PK_IMG = {};
 function pkImg(pose) {
   if (PK_IMG[pose]) return PK_IMG[pose];
@@ -15440,43 +15474,58 @@ function pkImg(pose) {
 function drawPickles(x, y, s, pose, t, o = {}) {
   const img = pkImg(pose === 'wave' ? 'open' : pose), k = 2 * s * (1 + (o.talk || 0) * 0.05), w = img.width * k, h = img.height * k;
   ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot || 0); ctx.imageSmoothingEnabled = false;
+  if (pose === 'gun' && Math.cos(o.rot || 0) < 0) ctx.scale(1, -1);   // целится влево — большой палец всё равно вверх
   drawRaw.call(ctx, img, 0, 0, img.width, img.height, -w / 2, -h / 2, w, h);
   ctx.restore();
 }
 // облачко речи: белое, с контуром и хвостиком к Пиклсу; текст печатается по буквам
-const PK_CW = 7;   // ширина буквы пиксельного шрифта (масштаб 1)
-function pkWrap(str, maxW) { const words = String(str).split(' '), L = []; let cur = ''; for (const w of words) { const t2 = cur ? cur + ' ' + w : w; if (t2.length * PK_CW > maxW && cur) { L.push(cur); cur = w; } else cur = t2; } if (cur) L.push(cur); return L; }
+const PK_CW = 6;   // ширина буквы пиксельного шрифта (масштаб 1)
+const pkPlain = str => String(str).replace(/[\[\]]/g, '');   // текст без разметки [важное]
+function pkWrap(str, maxW) { const words = String(str).split(' '), L = []; let cur = [], n = 0; for (const w of words) { const l = pkPlain(w).length; if ((n + (n ? 1 : 0) + l) * PK_CW > maxW && cur.length) { L.push(cur); cur = [w]; n = l; } else { cur.push(w); n += (n ? 1 : 0) + l; } } if (cur.length) L.push(cur); return L; }
 function drawBubble(cx, y, w, str, shown, tail) {   // tail: {x, y} — куда указывает хвостик
   const lines = pkWrap(str, w - 20), h = 18 + lines.length * 14, x = clamp(cx - w / 2, 6, W - w - 6);
   ctx.save();
   if (tail) { ctx.fillStyle = OL; ctx.beginPath(); const bx = clamp(tail.x, x + 18, x + w - 18), by = tail.y < y ? y : y + h; ctx.moveTo(bx - 9, by); ctx.lineTo(tail.x, tail.y); ctx.lineTo(bx + 9, by); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(bx - 6, by + (tail.y < y ? 2 : -2)); ctx.lineTo(tail.x + (tail.x > bx ? -2 : 2), tail.y + (tail.y < y ? 3 : -3)); ctx.lineTo(bx + 6, by + (tail.y < y ? 2 : -2)); ctx.fill(); }
   ctx.fillStyle = OL; rrPath(x - 3, y - 3, w + 6, h + 6, 12); ctx.fill(); ctx.fillStyle = '#ffffff'; rrPath(x, y, w, h, 10); ctx.fill();
   ctx.fillStyle = '#e8f4ff'; rrPath(x + 3, y + h - 7, w - 6, 4, 2); ctx.fill();
-  let left = Math.floor(shown);
-  lines.forEach((ln, i) => { if (left <= 0) return; const part = ln.slice(0, left); left -= ln.length + 1; text(part, x + 10, y + 21 + i * 14, 1, OL, 'left', null, w - 16); });
+  let left = Math.floor(shown), green = false;
+  lines.forEach((ln, i) => {
+    let cx = x + 10;
+    for (const raw of ln) {
+      if (raw.startsWith('[')) green = true;
+      const wd = pkPlain(raw), part = wd.slice(0, Math.max(0, left)); left -= wd.length + 1;
+      if (part) { const col = green ? '#139a2a' : OL; text(part, cx, y + 21 + i * 14, 1, col, 'left', null); text(part, cx + 0.8, y + 21 + i * 14, 1, col, 'left', null); }   // дважды со сдвигом — жирнее
+      cx += (wd.length + 1) * 6;
+      if (/\][!.,?]*$/.test(raw)) green = false;
+    }
+  });
   ctx.restore();
   return { x, y, w, h };
 }
 const PKS = { str: '', shown: 0, t: 0 };   // что Пиклс сейчас говорит
 function pkSay(str) { if (PKS.str === str) return; PKS.str = str; PKS.shown = 0; PKS.t = 0; tone(660, 880, 0.05, 'triangle', 0.03); }
-function pkTalkStep(dt) { PKS.t += dt; if (PKS.shown < PKS.str.length) { PKS.shown = Math.min(PKS.str.length, PKS.shown + dt * 38); if (Math.floor(PKS.shown) % 6 === 0 && Math.random() < 0.3) tone(500 + Math.random() * 300, 420, 0.03, 'square', 0.012); } }
-const pkTalking = () => PKS.shown < PKS.str.length;
+function pkTalkStep(dt) { PKS.t += dt; const L = pkPlain(PKS.str).length; if (PKS.shown < L) { PKS.shown = Math.min(L, PKS.shown + dt * 38); if (Math.floor(PKS.shown) % 6 === 0 && Math.random() < 0.3) tone(500 + Math.random() * 300, 420, 0.03, 'square', 0.012); } }
+const pkTalking = () => PKS.shown < pkPlain(PKS.str).length;
 
 // ---------- обучающий раунд ----------
-const TUT = { on: false, step: 0, st: 0, jumps: 0, hist: [], histT: 0, rw: null, guard: false, endT: 0, pops: [], seenEnemy: false, seenThorn: false };
-const PK = { x: W / 2, y: H / 2, pose: 'wave', target: null, punch: 0, mood: 'happy' };
+const TUT = { on: false, step: 0, st: 0, jumps: 0, hist: [], histT: 0, rw: null, guard: false, endT: 0, pops: [], shots: [], seenEnemy: false, seenThorn: false };
+const PK = { x: W / 2, y: H / 2, pose: 'wave', target: null, punch: 0, aim: 0, gunT: 0, recoil: 0, flash: 0 };
 const SAFE_ENTS = new Set(['coin', 'gem', 'ruby', 'magnet', 'shield']);
 const TUT_STEPS = [
-  { say: () => tr('Я — МИСТЕР ПИКЛС! ГЕРОЙ СТОИТ НА СТЕНЕ. КОСНИСЬ ЭКРАНА — ОН ПРЫГНЕТ НА ДРУГУЮ!', "I'M MR. PICKLES! YOUR HERO IS ON A WALL. TAP — HE JUMPS TO THE OTHER ONE!"), done: () => TUT.jumps >= 1 },
-  { say: () => tr('ТАК И ЛЕЗЬ ВВЕРХ: СО СТЕНЫ НА СТЕНУ! ДЕРЖИ ПАЛЕЦ ПОДОЛЬШЕ — ПРЫЖОК ДАЛЬШЕ.', 'CLIMB LIKE THAT: WALL TO WALL! HOLD LONGER FOR A LONGER JUMP.'), done: () => TUT.jumps >= 5 },
-  { say: () => tr('А ТЕПЕРЬ — САЛЬТО! В ПОЛЁТЕ КОСНИСЬ ЭКРАНА ЕЩЁ РАЗ!', 'NOW A FLIP! TAP AGAIN WHILE IN THE AIR!'), done: () => flips >= 1 },
-  { say: () => tr('ВОТ ЭТО ДА! ЗА САЛЬТО — БОНУС. СОБЕРИ 3 МОНЕТЫ!', 'WOW! FLIPS GIVE A BONUS. GRAB 3 COINS!'), done: () => coinsRun >= 3 || TUT.st > 12 },
-  { say: () => TUT.seenEnemy ? tr('МОНСТРЫ! НЕ БОЙСЯ — Я ИХ ОТЛУПЛЮ! А САМ ОБХОДИ ИХ.', "MONSTERS! DON'T WORRY — I'LL BEAT THEM UP! YOU DODGE THEM.") : tr('ВЫШЕ ВСТРЕТЯТСЯ МОНСТРЫ. НЕ БОЙСЯ — Я ИХ ОТЛУПЛЮ!', "MONSTERS LIVE HIGHER UP. DON'T WORRY — I'LL BEAT THEM UP!"), done: () => TUT.st > 4.5 },
-  { say: () => tr('ШИПЫ НА СТОЛБАХ КОЛЮТСЯ — НЕ ПРЫГАЙ НА НИХ!', "SPIKES ON POLES HURT — DON'T JUMP ON THEM!"), done: () => TUT.st > 4 },
-  { say: () => tr('ПОСЛЕДНЕЕ: ДОЙДИ ДО 50 МЕТРОВ! СЕЙЧАС: ', 'LAST ONE: REACH 50 METERS! NOW: ') + heightM() + tr(' М', ' M'), done: () => heightM() >= 50, live: true },
+  { say: () => tr('Я — МИСТЕР ПИКЛС! КОСНИСЬ [ЭКРАНА] — ГЕРОЙ [ПРЫГНЕТ] НА ДРУГУЮ СТЕНУ!', "I'M MR. PICKLES! TAP [THE SCREEN] — YOUR HERO [JUMPS] TO THE OTHER WALL!"), done: () => TUT.jumps >= 1 },
+  { say: () => tr('ТАК И ЛЕЗЬ [ВВЕРХ]: СО СТЕНЫ НА СТЕНУ! [ДЕРЖИ ПАЛЕЦ] ПОДОЛЬШЕ — ПРЫЖОК ДАЛЬШЕ.', 'CLIMB [UP] LIKE THAT: WALL TO WALL! [HOLD] LONGER FOR A LONGER JUMP.'), done: () => TUT.jumps >= 5 },
+  { say: () => tr('А ТЕПЕРЬ [САЛЬТО]! В ПОЛЁТЕ [КОСНИСЬ ЕЩЁ РАЗ]!', 'NOW A [FLIP]! TAP [AGAIN] WHILE IN THE AIR!'), done: () => flips >= 1 },
+  { say: () => tr('ВОТ ЭТО ДА! ЗА САЛЬТО — БОНУС. СОБЕРИ [3 МОНЕТЫ]!', 'WOW! FLIPS GIVE A BONUS. GRAB [3 COINS]!'), done: () => coinsRun >= 3 || TUT.st > 12 },
+  { say: () => tr('МОНСТРЫ? НЕ БОЙСЯ — Я ИХ [ПОДСТРЕЛЮ]! А ТЫ [ОБХОДИ] ИХ.', "MONSTERS? DON'T WORRY — I'LL [SHOOT] THEM! YOU [DODGE] THEM."), done: () => TUT.st > 4.5 },
+  { say: () => tr('[ШИПЫ] НА СТОЛБАХ КОЛЮТСЯ — [НЕ ПРЫГАЙ] НА НИХ!', "[SPIKES] ON POLES HURT — [DON'T JUMP] ON THEM!"), done: () => TUT.st > 4 },
+  { say: () => tr('ЛЕЗЕМ ДАЛЬШЕ! ДОЙДИ ДО [100 М]. СЕЙЧАС: ', 'KEEP GOING! REACH [100 M]. NOW: ') + heightM() + tr(' М', ' M'), done: () => heightM() >= 100, live: true },
+  { say: () => tr('КНОПКА [+] СПРАВА — ЭТО [СУПЕРСИЛЫ]: ЩИТ, РАКЕТА, МАГНИТ И ДРУГИЕ!', 'THE [+] BUTTON ON THE RIGHT — [SUPERPOWERS]: SHIELD, ROCKET, MAGNET AND MORE!'), done: () => TUT.st > 5, point: () => PW_BTN },
+  { say: () => tr('ВЫШЕ — [НОВЫЕ КАРТЫ] И МОНСТРЫ. ДОЙДИ ДО [200 М]! СЕЙЧАС: ', 'HIGHER UP — [NEW MAPS] AND MONSTERS. REACH [200 M]! NOW: ') + heightM() + tr(' М', ' M'), done: () => heightM() >= 200, live: true },
+  { say: () => tr('ДЕЛАЙ [САЛЬТО] ПОДРЯД — БУДЕТ [КОМБО] И БОЛЬШЕ МОНЕТ!', 'DO [FLIPS] IN A ROW FOR A [COMBO] AND MORE COINS!'), done: () => TUT.st > 4.5 },
+  { say: () => tr('ФИНАЛ! ДОЙДИ ДО [300 М]! СЕЙЧАС: ', 'FINAL! REACH [300 M]! NOW: ') + heightM() + tr(' М', ' M'), done: () => heightM() >= 300, live: true },
 ];
 function tutStart() {
-  TUT.on = true; TUT.step = 0; TUT.st = 0; TUT.jumps = 0; TUT.hist = []; TUT.histT = 0; TUT.rw = null; TUT.guard = false; TUT.endT = 0; TUT.pops = []; TUT.seenEnemy = false;
+  TUT.on = true; TUT.step = 0; TUT.st = 0; TUT.jumps = 0; TUT.hist = []; TUT.histT = 0; TUT.rw = null; TUT.guard = false; TUT.endT = 0; TUT.pops = []; TUT.shots = []; TUT.seenEnemy = false;
   reset(); state = 'play'; tutStep = 2; paused = false; menuAt = time;
   PK.x = W / 2; PK.y = H + 60; PK.target = null; PK.pose = 'wave';
   pkSay(TUT_STEPS[0].say());
@@ -15496,28 +15545,43 @@ function tutTick(dt) {   // каждый шаг игры в обучающем �
     if (!pkTalking() && PKS.t > 1.2 && S.done()) { TUT.step++; TUT.st = 0; const N = TUT_STEPS[TUT.step]; if (N) { pkSay(N.say()); sfx.ready && sfx.ready(); } }
   }
   if (!TUT_STEPS[TUT.step] && !TUT.endT) {   // всё прошёл
-    TUT.endT = time; pkSay(tr('СУПЕР! 50 МЕТРОВ! ТЫ ГОТОВ К НАСТОЯЩИМ ПРИКЛЮЧЕНИЯМ!', '50 METERS! YOU ARE READY FOR REAL ADVENTURES!'));
+    TUT.endT = time; pkSay(tr('СУПЕР! [300 МЕТРОВ]! ТЫ ГОТОВ К НАСТОЯЩИМ ПРИКЛЮЧЕНИЯМ!', '[300 METERS]! YOU ARE READY FOR REAL ADVENTURES!'));
     burst(p.x, p.y - 20, 40, '#ffd23a', 300, 1.2, 5, 0, 'star'); try { sfx.achieve(); } catch (e) {}
   }
-  // Пиклс: летит к монстру и бьёт; иначе висит рядом с героем
+  // Пиклс: монстра далеко — подстреливает из «пистолетика», рядом с героем — подлетает и бьёт
   if (PK.target && (!ents.includes(PK.target) || PK.target.y < camY - 60 || PK.target.y > camY + H + 40)) PK.target = null;
-  if (!PK.target && vis.length && (TUT.step >= 3 || TUT.guard)) { let best = null, bd = 1e9; for (const e of vis) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; best = e; } } if (best && bd < 360) PK.target = best; }
-  let tx, ty;
-  if (PK.target) { tx = PK.target.x; ty = PK.target.y - camR; PK.pose = 'fist'; PK.mood = 'angry'; }
-  else { tx = clamp(p.x + (p.x < W / 2 ? 70 : -70), 40, W - 40); ty = clamp(p.y - camR - 80, 150, H - 120) + Math.sin(time * 3) * 6; PK.pose = TUT.endT ? 'thumb' : pkTalking() ? 'point' : 'wave'; PK.mood = 'happy'; }
-  const k = PK.target ? 16 : 4;
+  if (!PK.target && vis.length && (TUT.step >= 3 || TUT.guard)) { let best = null, bd = 1e9; for (const e of vis) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; best = e; } } if (best && bd < 380) PK.target = best; }
+  const T2 = PK.target, near = T2 && Math.hypot(T2.x - p.x, T2.y - p.y) < 70;
+  let tx = clamp(p.x + (p.x < W / 2 ? 70 : -70), 40, W - 40), ty = clamp(p.y - camR - 80, 150, H - 120) + Math.sin(time * 3) * 6;
+  if (near) { tx = T2.x; ty = T2.y - camR; PK.pose = 'fist'; }
+  else if (T2) { PK.pose = 'gun'; const a = Math.atan2(T2.y - camR - PK.y, T2.x - PK.x); PK.aim += Math.atan2(Math.sin(a - PK.aim), Math.cos(a - PK.aim)) * Math.min(1, dt * 14); }
+  else { const S2 = TUT_STEPS[TUT.step], pt = S2 && S2.point && S2.point(); if (pt) { tx = pt.x - 30; ty = pt.y + pt.h / 2 - 50; } PK.pose = TUT.endT ? 'thumb' : pt ? 'point' : pkTalking() ? 'point' : 'wave'; }
+  const k = near ? 16 : 4;
   PK.x += (tx - PK.x) * Math.min(1, dt * k); PK.y += (ty - PK.y) * Math.min(1, dt * k);
-  if (PK.target && (Math.hypot(PK.x - tx, PK.y - ty) < 26 || Math.hypot(PK.target.x - p.x, PK.target.y - p.y) < 70)) {   // БАМ! (рядом с героем — сразу)
-    const e = PK.target, i = ents.indexOf(e);
-    if (i >= 0) ents.splice(i, 1);
-    burst(e.x, e.y, 22, '#ffd23a', 260, 0.6, 4, 0, 'star'); burst(e.x, e.y, 12, '#ffffff', 200, 0.4, 3, 0);
-    TUT.pops.push({ x: e.x, y: e.y, t: 0, txt: [tr('БАМ!', 'BAM!'), tr('БУМ!', 'BOOM!'), tr('ХЛОП!', 'POW!'), tr('ТЫДЫЩ!', 'WHAM!')][Math.floor(Math.random() * 4)] });
-    if (SET.shake) shake = 0.25; try { sfx.bonk(); } catch (x) {} noise(0.12, 0.12, 300, 2000);
-    PK.target = null; PK.punch = 0.3;
+  if (near && Math.hypot(PK.x - tx, PK.y - ty) < 30) { pkKill(T2); PK.target = null; PK.punch = 0.3; }
+  PK.gunT -= dt; PK.recoil = Math.max(0, PK.recoil - dt * 7); PK.flash = Math.max(0, PK.flash - dt);
+  if (T2 && !near && PK.gunT <= 0) {   // выстрел: пуля, вспышка, отдача
+    const a = PK.aim, c = Math.cos(a), sn = Math.sin(a);
+    TUT.shots.push({ x: PK.x + c * 26, y: PK.y + camR + sn * 26 - 2, vx: c * 760, vy: sn * 760, tg: T2, life: 0.9, tr: [] });
+    PK.gunT = 0.32; PK.recoil = 1; PK.flash = 0.07;
+    tone(1400, 300, 0.07, 'square', 0.035); noise(0.05, 0.05, 1500, 0);
   }
+  for (const b of TUT.shots) {   // пули сами доводятся на цель
+    b.life -= dt; b.tr.unshift({ x: b.x, y: b.y }); if (b.tr.length > 4) b.tr.pop();
+    if (b.tg && ents.includes(b.tg)) { const dx = b.tg.x - b.x, dy = b.tg.y - b.y, d = Math.hypot(dx, dy) || 1; b.vx = dx / d * 760; b.vy = dy / d * 760; if (d < 16) { pkKill(b.tg); b.life = 0; } }
+    b.x += b.vx * dt; b.y += b.vy * dt;
+  }
+  TUT.shots = TUT.shots.filter(b => b.life > 0);
   PK.punch = Math.max(0, PK.punch - dt);
   for (const q of TUT.pops) q.t += dt; TUT.pops = TUT.pops.filter(q => q.t < 0.9);
   if (TUT.endT && time - TUT.endT > 3.4) tutFinish();
+}
+function pkKill(e) {   // монстр побеждён: вспышка, «БАМ!», звук
+  const i = ents.indexOf(e); if (i < 0) return; ents.splice(i, 1);
+  burst(e.x, e.y, 22, '#ffd23a', 260, 0.6, 4, 0, 'star'); burst(e.x, e.y, 12, '#ffffff', 200, 0.4, 3, 0);
+  TUT.pops.push({ x: e.x, y: e.y, t: 0, txt: [tr('БАМ!', 'BAM!'), tr('БУМ!', 'BOOM!'), tr('ХЛОП!', 'POW!'), tr('ТЫДЫЩ!', 'WHAM!')][Math.floor(Math.random() * 4)] });
+  if (SET.shake) shake = 0.2; try { sfx.bonk(); } catch (x) {} noise(0.12, 0.12, 300, 2000);
+  if (PK.target === e) PK.target = null;
 }
 function tutFinish() {
   TUT.on = false; store.set('tutDone2', 1); tutDone = true; store.set('tut', true);
@@ -15529,7 +15593,7 @@ function tutRewindStart(reason) {
   const n = TUT.hist.length;
   TUT.rw = { t: 0, from: Math.max(0, n - 1), back: Math.min(n - 1, 75), reason, idx: n - 1, dur: Math.max(1, n / 30) };
   PK.target = null; PK.pose = 'fist';
-  pkSay(tr('ОЙ-ОЙ! СЕЙЧАС ПЕРЕМОТАЮ...', 'UH-OH! LET ME REWIND...'));
+  pkSay(tr('ОЙ-ОЙ! СЕЙЧАС [ПЕРЕМОТАЮ]...', 'UH-OH! LET ME [REWIND]...'));
   tone(300, 120, 0.4, 'sawtooth', 0.04); if (SET.shake) shake = 0.3;
 }
 function tutRewindStep(dt) {
@@ -15544,7 +15608,7 @@ function tutRewindStep(dt) {
     PK.x += (sx - PK.x) * Math.min(1, dt * 10); PK.y = BAR_Y + 4; PK.pose = 'fist';
     if (Math.random() < dt * 20) tone(900 + Math.random() * 600, 700, 0.03, 'square', 0.01);
   } else {
-    if (R.t > 2.8 && !R.said) { R.said = 1; pkSay(tr('ВОТ! ТЕПЕРЬ Я БУДУ ТЕБЯ ЗАЩИЩАТЬ!', "THERE! NOW I'LL PROTECT YOU!")); }
+    if (R.t > 2.8 && !R.said) { R.said = 1; pkSay(tr('ВОТ! ТЕПЕРЬ Я БУДУ [ТЕБЯ ЗАЩИЩАТЬ]!', "THERE! NOW I'LL [PROTECT YOU]!")); }
     PK.pose = 'thumb'; PK.x += (p.x + 60 - PK.x) * Math.min(1, dt * 4); PK.y += (p.y - camR - 70 - PK.y) * Math.min(1, dt * 4);
   }
   if (R.t > 4.6) {   // снова в игру: на ближайший безопасный столб, рядом монстров нет
@@ -15584,8 +15648,16 @@ function tutDraw() {
   for (const q of TUT.pops) { const a = 1 - q.t / 0.9, sc = 1 + Math.sin(Math.min(1, q.t * 6) * Math.PI) * 0.4; ctx.globalAlpha = a; ctx.save(); ctx.translate(q.x, q.y - camR - q.t * 30); ctx.scale(sc, sc); drawComicWord(q.txt); ctx.restore(); ctx.globalAlpha = 1; }
   if (TUT.rw) drawRewindUi();
   if (TUT.guard && p.inv > 0 && state === 'play') { ctx.globalAlpha = 0.3 + Math.sin(time * 10) * 0.1; pell(ctx, p.x, p.y - camR - 4, 26, 30, '#bff4ff'); ctx.globalAlpha = 1; }
+  for (const b of TUT.shots) {   // пиксельные пули со следом
+    b.tr.forEach((q, i) => { ctx.globalAlpha = 0.5 - i * 0.12; prect(ctx, q.x - 2, q.y - camR - 2, 4, 4, '#ffd23a'); }); ctx.globalAlpha = 1;
+    ctx.save(); ctx.translate(b.x, b.y - camR); ctx.rotate(Math.atan2(b.vy, b.vx)); ctx.fillStyle = OL; ctx.fillRect(-6, -3, 12, 6); ctx.fillStyle = '#ffd23a'; ctx.fillRect(-4, -1.5, 8, 3); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, -1.5, 3, 3); ctx.restore();
+  }
   const pk = PK.punch > 0 ? 1.25 : 1;
-  drawPickles(PK.x, PK.y, 1.5 * pk, PK.pose, time, { talk: pkTalking() ? Math.abs(Math.sin(time * 18)) : 0, look: clamp((p.x - PK.x) / 80, -1, 1), mood: PK.mood, rot: PK.target ? Math.atan2(PK.target.y - camR - PK.y, PK.target.x - PK.x) + Math.PI / 2 : Math.sin(time * 2) * 0.12 });
+  if (PK.pose === 'gun') {   // целится; отдача — назад и стволом вверх
+    const a = PK.aim, up = Math.cos(a) < 0 ? 1 : -1, bx = PK.x - Math.cos(a) * PK.recoil * 7, by = PK.y - Math.sin(a) * PK.recoil * 7;
+    drawPickles(bx, by, 1.5, 'gun', time, { rot: a + up * PK.recoil * 0.4 });
+    if (PK.flash > 0) { const fx = bx + Math.cos(a) * 30, fy = by + Math.sin(a) * 30; prect(ctx, fx - 6, fy - 2, 12, 4, '#ffffff'); prect(ctx, fx - 2, fy - 6, 4, 12, '#ffffff'); prect(ctx, fx - 4, fy - 4, 8, 8, '#ffd23a'); }
+  } else drawPickles(PK.x, PK.y, 1.5 * pk, PK.pose, time, { talk: pkTalking() ? Math.abs(Math.sin(time * 18)) : 0, rot: PK.pose === 'fist' && PK.target ? Math.atan2(PK.target.y - camR - PK.y, PK.target.x - PK.x) + Math.PI / 2 : PK.pose === 'point' && TUT_STEPS[TUT.step] && TUT_STEPS[TUT.step].point ? Math.PI / 2 : Math.sin(time * 2) * 0.12 });
   if (PKS.str) { const bb = drawBubble(W / 2 + 20, 64, W - 70, PKS.str, PKS.shown, null); drawPickles(bb.x - 10, bb.y + bb.h / 2, 0.8, 'wave', time, { talk: pkTalking() ? Math.abs(Math.sin(time * 18)) : 0, rot: -0.3 }); }
   if (!TUT.rw && !TUT.endT) {   // полоска шагов обучения
     const n = TUT_STEPS.length; for (let i = 0; i < n; i++) { const x = W / 2 - n * 9 + i * 18; pell(ctx, x + 6, 54, 6, 6, OL); pell(ctx, x + 6, 54, 4, 4, i < TUT.step ? '#3ce06a' : i === TUT.step ? '#ffd23a' : '#5a4a7a'); }
@@ -15600,27 +15672,27 @@ function drawComicWord(txt) {   // «БАМ!» во взрыве-звезде
 // ---------- «загрузка» между обучением и меню ----------
 let loadThen = null;
 function fakeLoad(then) { state = 'load'; loadT = 0; loadReady = false; loadThen = then || null; menuAt = time; }
-{ const f0 = finishLoad; finishLoad = function () { f0.apply(this, arguments); const t2 = loadThen; loadThen = null; if (t2) setTimeout(t2, 350); }; }
+{ const f0 = finishLoad; finishLoad = function () { f0.apply(this, arguments); const t2 = loadThen; loadThen = null; if (t2) setTimeout(t2, 350); else if (!store.get('ob', 0) && typeof obStart === 'function') obStart(store.get('obStep', '') || 'lang'); }; }   // знакомство — сразу, меню не мелькает
 
 // ---------- экскурсия по меню ----------
 const TOUR = { on: false, i: 0, t: 0 };
 const TOUR_STEPS = [
-  { r: () => BTN.prof, say: () => tr('ЭТО ТВОЙ ПРОФИЛЬ: ИМЯ, АВАТАРКА, ТИТУЛ И РАМКА. ЖМИ — И НАСТРАИВАЙ!', 'YOUR PROFILE: NAME, AVATAR, TITLE AND FRAME. TAP TO CUSTOMIZE!') },
-  { r: () => BTN.gear, say: () => tr('НАСТРОЙКИ: ЗВУК, МУЗЫКА, ВИБРАЦИЯ И ЯЗЫК.', 'SETTINGS: SOUND, MUSIC, VIBRATION AND LANGUAGE.') },
-  { r: () => BTN.mp, say: () => tr('СЕТЬ — ИГРАЙ С ДРУЗЬЯМИ ОНЛАЙН! КТО ЗАЛЕЗЕТ ВЫШЕ?', 'ONLINE — PLAY WITH FRIENDS! WHO CLIMBS HIGHER?') },
-  { r: () => BTN.rank, say: () => tr('РЕЙТИНГ — ЛУЧШИЕ ИГРОКИ МИРА ПО КУБКАМ.', 'RANKING — THE BEST PLAYERS IN THE WORLD BY TROPHIES.') },
-  { r: () => BTN.shop, say: () => tr('ГЕРОИ — СОТНИ СКИНОВ! У КАЖДОГО ГЕРОЯ СВОЯ ДОРОЖКА КУБКОВ.', 'HEROES — HUNDREDS OF SKINS! EACH HERO HAS A TROPHY ROAD.') },
-  { r: () => BTN.store, say: () => tr('МАГАЗИН: СКИНЫ ДНЯ, НАГРАДА ДНЯ, РАМКИ И АВАТАРКИ.', 'SHOP: DAILY SKINS, DAILY REWARD, FRAMES AND AVATARS.') },
-  { r: () => BTN.wheel, say: () => tr('КОЛЕСО УДАЧИ — КРУТИ БЕСПЛАТНО КАЖДЫЙ ДЕНЬ!', 'LUCKY WHEEL — A FREE SPIN EVERY DAY!') },
-  { r: () => BTN.quest, say: () => tr('ЗАДАНИЯ ДНЯ — МОНЕТЫ И ОПЫТ ДЛЯ PASS.', 'DAILY QUESTS — COINS AND PASS XP.') },
-  { r: () => ({ x: BTN.ach.x, y: BTN.more.y, w: BTN.tent.x + BTN.tent.w - BTN.ach.x, h: BTN.emo.y + BTN.emo.h - BTN.more.y }), open: true, say: () => tr('СТРЕЛКА ЕЩЁ ПРЯЧЕТ: ', 'THE MORE ARROW HIDES: ') + [T('awards'), T('tent'), T('allies'), tr('ЭМОЦИИ', 'EMOTES')].join(', ') + '.' },
-  { r: () => BTN.pass, say: () => tr('WALL PLAY PASS — 30 УРОВНЕЙ НАГРАД ЗА ИГРУ!', 'WALL PLAY PASS — 30 LEVELS OF REWARDS!') },
-  { r: () => ({ x: 60, y: 520, w: W - 120, h: 60 }), say: () => tr('А ЧТОБЫ ИГРАТЬ — ПРОСТО КОСНИСЬ ЭКРАНА. УДАЧИ, ' + (mp.nick || 'ДРУГ') + '!', 'TO PLAY — JUST TAP THE SCREEN. GOOD LUCK, ' + (mp.nick || 'FRIEND') + '!') },
+  { r: () => BTN.prof, say: () => tr('ЭТО ТВОЙ [ПРОФИЛЬ]: ИМЯ, АВАТАРКА, ТИТУЛ И РАМКА. ЖМИ — И НАСТРАИВАЙ!', 'YOUR PROFILE: NAME, AVATAR, TITLE AND FRAME. TAP TO CUSTOMIZE!') },
+  { r: () => BTN.gear, say: () => tr('[НАСТРОЙКИ]: ЗВУК, МУЗЫКА, ВИБРАЦИЯ И ЯЗЫК.', 'SETTINGS: SOUND, MUSIC, VIBRATION AND LANGUAGE.') },
+  { r: () => BTN.mp, say: () => tr('[СЕТЬ] — ИГРАЙ С ДРУЗЬЯМИ ОНЛАЙН! КТО ЗАЛЕЗЕТ ВЫШЕ?', 'ONLINE — PLAY WITH FRIENDS! WHO CLIMBS HIGHER?') },
+  { r: () => BTN.rank, say: () => tr('[РЕЙТИНГ] — ЛУЧШИЕ ИГРОКИ МИРА ПО КУБКАМ.', 'RANKING — THE BEST PLAYERS IN THE WORLD BY TROPHIES.') },
+  { r: () => BTN.shop, say: () => tr('[ГЕРОИ] — СОТНИ СКИНОВ! У КАЖДОГО ГЕРОЯ СВОЯ [ДОРОЖКА КУБКОВ].', 'HEROES — HUNDREDS OF SKINS! EACH HERO HAS A TROPHY ROAD.') },
+  { r: () => BTN.store, say: () => tr('[МАГАЗИН]: СКИНЫ ДНЯ, НАГРАДА ДНЯ, РАМКИ И АВАТАРКИ.', 'SHOP: DAILY SKINS, DAILY REWARD, FRAMES AND AVATARS.') },
+  { r: () => BTN.wheel, say: () => tr('[КОЛЕСО УДАЧИ] — КРУТИ [БЕСПЛАТНО] КАЖДЫЙ ДЕНЬ!', 'LUCKY WHEEL — A FREE SPIN EVERY DAY!') },
+  { r: () => BTN.quest, say: () => tr('[ЗАДАНИЯ ДНЯ] — МОНЕТЫ И ОПЫТ ДЛЯ PASS.', 'DAILY QUESTS — COINS AND PASS XP.') },
+  { r: () => ({ x: BTN.ach.x, y: BTN.more.y, w: BTN.tent.x + BTN.tent.w - BTN.ach.x, h: BTN.emo.y + BTN.emo.h - BTN.more.y }), open: true, say: () => tr('СТРЕЛКА [ЕЩЁ] ПРЯЧЕТ: ', 'THE [MORE] ARROW HIDES: ') + [T('awards'), T('tent'), T('allies'), tr('ЭМОЦИИ', 'EMOTES')].join(', ') + '.' },
+  { r: () => BTN.pass, say: () => tr('[WALL PLAY PASS] — 30 УРОВНЕЙ НАГРАД ЗА ИГРУ!', 'WALL PLAY PASS — 30 LEVELS OF REWARDS!') },
+  { r: () => ({ x: 60, y: 520, w: W - 120, h: 60 }), say: () => tr('А ЧТОБЫ ИГРАТЬ — ПРОСТО [КОСНИСЬ ЭКРАНА]. УДАЧИ, ' + (mp.nick || 'ДРУГ') + '!', 'TO PLAY — JUST TAP THE SCREEN. GOOD LUCK, ' + (mp.nick || 'FRIEND') + '!') },
 ];
 function tourStart() { if (state !== 'menu') return; TOUR.on = true; TOUR.i = 0; TOUR.t = 0; PK.x = W / 2; PK.y = H + 60; pkSay(TOUR_STEPS[0].say()); }
 function tourTap() {
   if (TOUR.t < 0.35) return;
-  if (pkTalking()) { PKS.shown = PKS.str.length; return; }   // сначала — дочитать
+  if (pkTalking()) { PKS.shown = pkPlain(PKS.str).length; return; }   // сначала — дочитать
   TOUR.i++; TOUR.t = 0; sfx.click();
   if (TOUR.i >= TOUR_STEPS.length) { TOUR.on = false; store.set('tourDone', 1); menuMore = false; store.set('menuMore', false); menuAt = time; PKS.str = ''; return; }
   const S = TOUR_STEPS[TOUR.i]; if (S.open) { menuMore = true; } else if (TOUR.i > 0 && TOUR_STEPS[TOUR.i - 1].open) menuMore = false;
@@ -15658,7 +15730,8 @@ background:linear-gradient(180deg,#3aa8ff 0%,#8ad8ff 45%,#ffd8f0 100%)}
 #ob *{box-sizing:border-box}
 #ob .col{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;padding:0 14px max(16px,env(safe-area-inset-bottom))}
 #ob .pk{width:170px;height:170px;margin-bottom:-6px;image-rendering:auto}
-#ob .say{position:relative;background:#fff;color:#2a1408;border:4px solid #2a1408;border-radius:16px;padding:12px 14px;font-size:16px;line-height:1.3;width:100%;min-height:64px;box-shadow:0 5px 0 #2a140855;margin-bottom:14px}
+#ob .say b{color:#139a2a}
+#ob .say{position:relative;background:#fff;color:#2a1408;border:4px solid #2a1408;border-radius:16px;padding:12px 14px;font-size:17px;font-weight:900;-webkit-text-stroke:.6px #2a1408;line-height:1.3;width:100%;min-height:64px;box-shadow:0 5px 0 #2a140855;margin-bottom:14px}
 #ob .say::before{content:'';position:absolute;left:50%;top:-16px;margin-left:-12px;border:12px solid transparent;border-bottom:14px solid #2a1408;border-top:0}
 #ob .say::after{content:'';position:absolute;left:50%;top:-10px;margin-left:-8px;border:8px solid transparent;border-bottom:10px solid #fff;border-top:0}
 #ob .panel{width:100%;background:linear-gradient(180deg,#5a2aa0,#2a1060);border:4px solid #2a1408;border-radius:18px;padding:14px;box-shadow:0 6px 0 #120a24;display:flex;flex-direction:column;gap:10px;animation:obIn .35s cubic-bezier(.2,1.6,.4,1)}
@@ -15689,37 +15762,50 @@ function obStart(step) {
   const OB = { pose: 'wave', typing: null };
   const loop = () => {
     if (!obOpen()) return;
+    if (OB.hero) OB.hero.paint(performance.now() / 1000);
     withCtx(cv2, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 340, 340); const t = performance.now() / 1000; drawPickles(170, 180 + Math.sin(t * 2.4) * 8, 5.2, OB.pose, t, { talk: OB.typing ? Math.abs(Math.sin(t * 18)) : 0, look: Math.sin(t * 0.7) * 0.6, rot: OB.pose === 'wave' ? Math.sin(t * 5) * 0.25 : Math.sin(t * 2) * 0.06 }); });
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
   const talk = (str, pose = 'wave') => {
     OB.pose = pose; clearInterval(OB.typing); say.textContent = ''; let i = 0;
-    OB.typing = setInterval(() => { i++; say.textContent = str.slice(0, i); if (i % 3 === 0) tone(520 + Math.random() * 260, 420, 0.03, 'square', 0.01); if (i >= str.length) { clearInterval(OB.typing); OB.typing = null; } }, 26);
+    const esc = t2 => t2.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), plain = pkPlain(str);
+    const html = n => { let out = '', g = false, k = 0; for (const ch of str) { if (ch === '[') { g = true; out += '<b>'; continue; } if (ch === ']') { g = false; out += '</b>'; continue; } if (k >= n) break; out += esc(ch); k++; } return out + (g ? '</b>' : ''); };
+    OB.typing = setInterval(() => { i++; say.innerHTML = html(i); if (i % 3 === 0) tone(520 + Math.random() * 260, 420, 0.03, 'square', 0.01); if (i >= plain.length) { clearInterval(OB.typing); OB.typing = null; } }, 26);
   };
   const btn = (label, cls, fn) => { const b = document.createElement('button'); if (cls) b.className = cls; b.textContent = label; b.onclick = () => { try { audio(); sfx.click(); } catch (e) {} fn(b); }; return b; };
   const show = (...els) => { panel.innerHTML = ''; panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = ''; panel.append(...els); };
-  const go = st => { store.set('obStep', st); ({ lang: stLang, login: stLogin, name: stName, tut: stTut })[st](); };
+  const go = st => { store.set('obStep', st); (({ lang: stLang, login: stLogin, gift: stGift, name: stName, tut: stTut })[st] || stLang)(); };
   function stLang() {
-    talk(tr('ПРИВЕТ! Я — МИСТЕР ПИКЛС! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ ЯЗЫК.', "HI! I'M MR. PICKLES! 👋 FIRST, PICK A LANGUAGE."));
+    talk(tr('ПРИВЕТ! Я — [МИСТЕР ПИКЛС]! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ [ЯЗЫК].', "HI! I'M MR. PICKLES! 👋 FIRST, PICK A LANGUAGE."));
     const g = document.createElement('div'); g.className = 'grid2';
     for (const code of LANGS) g.appendChild(btn(LANG_NAMES[code] || code.toUpperCase(), code === lang ? 'on' : '', () => { lang = code; store.set('lang', lang); go(fbOn() ? 'login' : 'name'); }));
     show(g);
   }
+  const afterLogin = () => !owned.includes('charodey') ? 'gift' : store.get('nickSet', 0) && mp.nick ? 'tut' : 'name';
   function stLogin() {
-    talk(tr('КАК БУДЕМ ИГРАТЬ? С GOOGLE ТВОЙ ПРОГРЕСС НЕ ПОТЕРЯЕТСЯ — И ЕЩЁ Я ДАМ ПОДАРОК!', "HOW DO WE PLAY? WITH GOOGLE YOUR PROGRESS IS SAFE — AND YOU GET A GIFT!"), 'point');
+    if (acctG()) { go(afterLogin()); return; }   // уже вошли (например, после загрузки прогресса из облака)
+    talk(tr('КАК БУДЕМ ИГРАТЬ? С [GOOGLE] ТВОЙ ПРОГРЕСС НЕ ПОТЕРЯЕТСЯ — И ЕЩЁ Я ДАМ [ПОДАРОК]!', "HOW DO WE PLAY? WITH GOOGLE YOUR PROGRESS IS SAFE — AND YOU GET A GIFT!"), 'point');
     const msg = document.createElement('div'); msg.className = 'sm';
     const g = btn(tr('ВОЙТИ ЧЕРЕЗ GOOGLE', 'SIGN IN WITH GOOGLE'), 'white', () => {
       acctGoogle(msg);
-      clearInterval(OB.wait); OB.wait = setInterval(() => { if (!obOpen()) return clearInterval(OB.wait); if (acctG() && !moStack.length) { clearInterval(OB.wait); store.set('authAsk', 1); go(store.get('nickSet', 0) && mp.nick ? 'tut' : 'name'); } }, 300);
+      clearInterval(OB.wait); OB.wait = setInterval(() => { if (!obOpen()) return clearInterval(OB.wait); if (acctG() && !moStack.length) { clearInterval(OB.wait); store.set('authAsk', 1); go(afterLogin()); } }, 300);
     });
     g.insertAdjacentHTML('afterbegin', '<svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>');
     const gs = btn(tr('ИГРАТЬ КАК ГОСТЬ', 'PLAY AS GUEST'), '', () => { store.set('authAsk', 1); go('name'); });
     show(g, gs, msg, Object.assign(document.createElement('div'), { className: 'sm', textContent: tr('ЗА ПРИВЯЗКУ GOOGLE — ЛЕГЕНДАРНЫЙ ГЕРОЙ «ЧАРОДЕЙ». ГОСТЯ МОЖНО ПРИВЯЗАТЬ ПОТОМ В ПРОФИЛЕ', 'LINK GOOGLE TO GET THE LEGENDARY HERO "ENCHANTER". A GUEST CAN LINK LATER IN THE PROFILE') }));
     fbSdkMods().catch(() => {}); fbAuth().catch(() => {});
   }
+  function stGift() {   // Пиклс вручает «Чародея»
+    talk(tr('ДЕРЖИ [ПОДАРОК] ЗА GOOGLE — ЛЕГЕНДАРНЫЙ ГЕРОЙ [ЧАРОДЕЙ]! 🎁', 'HERE IS YOUR [GIFT] FOR GOOGLE — THE LEGENDARY HERO [ENCHANTER]! 🎁'), 'thumb');
+    const k = skinById('charodey'), hv = heroCnv(k, 150, { anim: true, pose: 'idle' }); OB.hero = moAnim.pop();
+    hv.style.cssText += ';display:block;margin:0 auto;filter:drop-shadow(0 0 14px #ffd23a)';
+    const nm = document.createElement('div'); nm.textContent = skinName(k); nm.style.cssText = 'text-align:center;font-size:22px;color:#ffd23a;text-shadow:0 2px 0 #2a1408';
+    const b = btn(tr('ЗАБРАТЬ!', 'CLAIM!'), 'green', () => { giftCharodey(true); selectSkin(k); OB.hero = null; try { sfx.achieve(); } catch (e) {} go(store.get('nickSet', 0) && mp.nick ? 'tut' : 'name'); });
+    show(hv, nm, b);
+  }
   function stName() {
-    talk(tr('ОТЛИЧНО! А КАК ТЕБЯ ЗОВУТ? ИМЯ ПОТОМ МОЖНО СМЕНИТЬ, НО УЖЕ ЗА 10 КРИСТАЛЛОВ 💎', 'GREAT! WHAT IS YOUR NAME? YOU CAN CHANGE IT LATER FOR 10 GEMS 💎'), 'point');
+    talk(tr('ОТЛИЧНО! А [КАК ТЕБЯ ЗОВУТ]? ИМЯ ПОТОМ МОЖНО СМЕНИТЬ, НО УЖЕ ЗА [10 КРИСТАЛЛОВ] 💎', 'GREAT! WHAT IS YOUR NAME? YOU CAN CHANGE IT LATER FOR 10 GEMS 💎'), 'point');
     const inp = document.createElement('input'); inp.maxLength = 10; inp.placeholder = tr('ТВОЁ ИМЯ', 'YOUR NAME'); inp.value = mp.nick || '';
     const msg = document.createElement('div'); msg.className = 'sm';
     const ok = btn(tr('ГОТОВО', 'DONE'), 'green', () => {
@@ -15730,7 +15816,7 @@ function obStart(step) {
     show(inp, ok, msg); setTimeout(() => { try { inp.focus(); } catch (e) {} }, 300);
   }
   function stTut() {
-    talk(tr('ПРИЯТНО ПОЗНАКОМИТЬСЯ, ' + mp.nick + '! ПРОЙДЁМ ОБУЧЕНИЕ? Я ПОКАЖУ ВСЕ ФИШКИ!', 'NICE TO MEET YOU, ' + mp.nick + '! SHALL WE DO THE TUTORIAL? I WILL SHOW YOU EVERYTHING!'), 'thumb');
+    talk(tr('ПРИЯТНО ПОЗНАКОМИТЬСЯ, [' + mp.nick + ']! ПРОЙДЁМ [ОБУЧЕНИЕ]? Я ПОКАЖУ ВСЕ ФИШКИ!', 'NICE TO MEET YOU, ' + mp.nick + '! SHALL WE DO THE TUTORIAL? I WILL SHOW YOU EVERYTHING!'), 'thumb');
     const g = document.createElement('div'); g.className = 'grid2';
     g.append(btn(tr('ДА!', 'YES!'), 'green', () => { obEnd(); tutStart(); }), btn(tr('НЕТ', 'NO'), 'red', () => { obEnd(); fakeLoad(null); }));
     show(g);
@@ -15742,7 +15828,7 @@ function obStart(step) {
 if (!store.get('ob', 0) && (store.get('authAsk', 0) || best > 0 || owned.length > 1)) store.set('ob', 1);
 setInterval(() => {
   if (store.get('ob', 0) || obOpen() || quiet) return;
-  if (state === 'menu' && time - menuAt > 1 && !moStack.length && !(mpUi && mpUi.style.display !== 'none')) obStart(store.get('obStep', '') || 'lang');
+  if (state === 'menu' && !moStack.length && !(mpUi && mpUi.style.display !== 'none')) obStart(store.get('obStep', '') || 'lang');
 }, 300);
 
 // ---------- связки с игрой ----------
