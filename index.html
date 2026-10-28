@@ -2072,7 +2072,8 @@ async function fbBoardPush(e) {
   catch (x) {
     // правила базы не пускают слишком большой рост за раз (защита от накрутки): пишем столько, сколько уже можно, и догоняем позже
     if (!x || (x.status !== 401 && x.status !== 403) || (fbBoardPush.n = (fbBoardPush.n || 0) + 1) > 40) throw x;
-    const cur = await fbReq('GET', 'board/' + FB.uid).catch(() => null), dt = cur ? Math.max(0, Date.now() - (+cur.t || 0) - 3000) : 0;
+    let cur; try { cur = await fbReq('GET', 'board/' + FB.uid); } catch (y) { throw x; }   // свою строку не прочитать (старые правила) — ничего не урезаем
+    const dt = cur ? Math.max(0, Date.now() - (+cur.t || 0) - 3000) : 0;
     const lim = (k, rate, base, first) => Math.max(0, Math.min(row[k], cur ? (+cur[k] || 0) + Math.floor((dt * rate + base) * 0.9) : first));
     const part = { ...row, b: lim('b', 0.06, 30, 1000), tr: lim('tr', 0.1, 100, 3000), c: lim('c', 1, 1e5, 2e5), g: lim('g', 0.05, 5000, 2e4), r: lim('r', 0.005, 500, 2000) };
     part.tr = Math.min(part.tr, part.b * Math.max(1, row.sk || 1));
