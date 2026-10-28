@@ -3,17 +3,14 @@
     ".read": false,
     ".write": false,
     "board": {
-      ".read": "auth != null",
+      ".read": "auth != null && query.orderByChild == 'tr' && query.limitToLast <= 100",
       ".indexOn": [
-        "c",
-        "b",
-        "r",
-        "g",
         "tr"
       ],
       "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid && newData.exists()",
-        ".validate": "newData.hasChildren(['n', 'av', 'c', 'g', 'r', 'b', 'tr', 't']) && (!data.exists() || (newData.child('b').val() - data.child('b').val() <= (now - data.child('t').val()) * 0.06 + 30 && newData.child('tr').val() - data.child('tr').val() <= (now - data.child('t').val()) * 0.06 + 100))",
+        ".validate": "newData.hasChildren(['n', 'av', 'c', 'g', 'r', 'b', 'tr', 't']) && newData.child('tr').val() <= newData.child('b').val() * (newData.child('sk').isNumber() ? newData.child('sk').val() : 1) && (!data.exists() ? (newData.child('b').val() <= 1000 && newData.child('tr').val() <= 3000 && newData.child('c').val() <= 200000 && newData.child('g').val() <= 20000 && newData.child('r').val() <= 2000) : (now - data.child('t').val() >= 1000 && newData.child('b').val() - data.child('b').val() <= (now - data.child('t').val()) * 0.06 + 30 && newData.child('tr').val() - data.child('tr').val() <= (now - data.child('t').val()) * 0.1 + 100 && newData.child('c').val() - data.child('c').val() <= (now - data.child('t').val()) * 1 + 100000 && newData.child('g').val() - data.child('g').val() <= (now - data.child('t').val()) * 0.05 + 5000 && newData.child('r').val() - data.child('r').val() <= (now - data.child('t').val()) * 0.005 + 500))",
         "n": {
           ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
         },
@@ -59,7 +56,7 @@
       "$uid": {
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['p', 't'])",
+        ".validate": "newData.hasChildren(['p', 't']) && (!data.exists() || now - data.child('t').val() >= 1000)",
         "p": {
           ".validate": "newData.isString() && newData.val().length <= 30000"
         },
