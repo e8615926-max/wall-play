@@ -108,6 +108,137 @@
           ".validate": false
         }
       }
+    },
+    "fcode": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && !data.exists() && newData.child('u').val() === auth.uid",
+        ".validate": "$code.matches(/^[A-Z0-9]{6}$/) && newData.hasChildren(['u', 't'])",
+        "u": {
+          ".validate": "newData.isString()"
+        },
+        "t": {
+          ".validate": "newData.val() === now"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "freq": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && $from !== $to && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
+          ".validate": "newData.hasChildren(['n', 'c', 't']) && (!data.exists() || now - data.child('t').val() >= 2000)",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
+          },
+          "av": {
+            ".validate": "newData.isString() && newData.val().length <= 44"
+          },
+          "c": {
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{6}$/)"
+          },
+          "ok": {
+            ".validate": "newData.isBoolean()"
+          },
+          "t": {
+            ".validate": "newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "pres": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['n', 'st', 't']) && (!data.exists() || now - data.child('t').val() >= 1000)",
+        "n": {
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
+        },
+        "av": {
+          ".validate": "newData.isString() && newData.val().length <= 44"
+        },
+        "st": {
+          ".validate": "newData.isString() && newData.val().matches(/^(menu|party|battle)$/)"
+        },
+        "t": {
+          ".validate": "newData.val() === now"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "inv": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && $from !== $to && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
+          ".validate": "newData.hasChildren(['n', 'r', 't']) && (!data.exists() || now - data.child('t').val() >= 3000)",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
+          },
+          "av": {
+            ".validate": "newData.isString() && newData.val().length <= 44"
+          },
+          "r": {
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4,6}$/)"
+          },
+          "t": {
+            ".validate": "newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "mm3": {
+      ".read": "auth != null && query.orderByChild == 't' && query.limitToLast <= 30",
+      ".indexOn": [
+        "t"
+      ],
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['n', 'r', 't'])",
+        "n": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3"
+        },
+        "r": {
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4,6}$/)"
+        },
+        "t": {
+          ".validate": "newData.val() === now"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "mm3c": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && ((!data.exists() && newData.exists()) || (data.exists() && newData.exists() && now - data.child('t').val() > 60000) || (auth.uid === $uid && !newData.exists()))",
+        ".validate": "newData.hasChildren(['r', 'tm', 't'])",
+        "r": {
+          ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4,6}$/)"
+        },
+        "tm": {
+          ".validate": "newData.val() === 0 || newData.val() === 1"
+        },
+        "t": {
+          ".validate": "newData.val() === now"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
     }
   }
 }

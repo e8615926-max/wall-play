@@ -1471,7 +1471,7 @@ const MORE_SKINS9 = [
   { id: 'mustachetitan', r: 3, gems: 150, body: '#f4f4f8', head: '#ffd8b8', dark: '#c8c8d8', light: '#ffffff', ear: '#ffd8b8', ol: '#1a1a24', ears: 'none', cape: true, scarf: '#e8261a', scarfD: '#a01008', parts: ['omniSuit', 'darkHair', 'mustache'], trail: { kind: 'dot', cols: ['#e8261a', '#ffffff'] }, sfx: 'king', fx: 'stone' },
   { id: 'sorcerer', r: 3, gems: 150, body: '#2a3a8a', head: '#ffd8b8', dark: '#1a2050', light: '#5a6ad0', ear: '#ffd8b8', ol: '#0a0a20', ears: 'none', cape: true, scarf: '#c01a1a', scarfD: '#800a0a', hair: '#3a3a3a', parts: ['strangeRobe', 'goatee', 'magicCircle'], trail: { kind: 'spark', cols: ['#ff8a1e', '#ffd23a'] }, sfx: 'astro', fx: 'gold' },
   // подарок за привязку аккаунта Google: в магазине не продаётся
-  { id: 'charodey', r: 3, gift: true, alias: 'sorcerer', nm: ['ЧАРОДЕЙ', 'ENCHANTER'], body: '#5a1a8a', head: '#ffd8b8', dark: '#2a0a4a', light: '#a05ae0', ear: '#ffd8b8', ol: '#120624', ears: 'none', cape: true, hat: '#3a0a6a', beard: '#e8e8ff', scarf: '#3af0c8', scarfD: '#0a8a7a', hair: '#e8e8ff', parts: ['wizardHat', 'strangeRobe', 'beard', 'magicCircle'], trail: { kind: 'spark', cols: ['#3af0c8', '#c890ff', '#ffffff'] }, sfx: 'astro', fx: 'gold' },
+  { id: 'charodey', r: 3, gift: true, alias: 'sorcerer', nm: ['ЧАРОДЕЙ', 'ENCHANTER'], body: '#5a1a8a', head: '#ffd8b8', dark: '#2a0a4a', light: '#a05ae0', ear: '#ffd8b8', ol: '#120624', ears: 'none', cape: true, hat: '#3a0a6a', beard: '#e8e8ff', scarf: '#3af0c8', scarfD: '#0a8a7a', hair: '#e8e8ff', parts: ['wizardHat', 'robeStars', 'beard', 'glowEyes', 'staff', 'soulOrbs', 'magicCircle'], trail: { kind: 'spark', cols: ['#3af0c8', '#c890ff', '#ffffff'] }, sfx: 'astro', fx: 'gold' },   // звёздная мантия, светящиеся глаза, посох с кристаллом, души-орбы и магический круг
   { id: 'yellowninja', r: 3, gems: 140, body: '#ffd23a', dark: '#c89a10', light: '#fff6a0', ear: '#ffd23a', ol: '#1a1404', ears: 'none', noMuzzle: true, noEyes: true, special: 'ninja', scarf: '#1a1a24', scarfD: '#3a3a4a', parts: ['chainSpear'], trail: { kind: 'ember', cols: ['#ff5a1a', '#ffd23a'] }, sfx: 'fire', fx: 'fire' },
   { id: 'iceninja', r: 3, gems: 140, body: '#2a6ad8', dark: '#1a3a8a', light: '#8ab0ff', ear: '#2a6ad8', ol: '#04102a', ears: 'none', noMuzzle: true, noEyes: true, special: 'ninja', scarf: '#bff4ff', scarfD: '#7ad8ff', parts: ['iceHands', 'frostAura'], trail: { kind: 'snow', cols: ['#ffffff', '#bff4ff'] }, sfx: 'ice', fx: 'ice' },
   { id: 'hellmarine', r: 3, gems: 150, body: '#4a6a2a', dark: '#2a3a14', light: '#7a9a4a', ear: '#4a6a2a', ol: '#0a1404', ears: 'none', noEyes: true, noMuzzle: true, noScarf: true, parts: ['doomArmor', 'doomHelmet', 'shotgun'], trail: { kind: 'ember', cols: ['#ff5a1a', '#ffd23a'] }, sfx: 'fire', fx: 'lava' },
@@ -2843,6 +2843,7 @@ function tentStep(s, t) {
 }
 function scheduleStep(s, t) {
   if (state === 'tent') { tentStep(s, t); return; }
+  if (state === 'battle') { battleStep(s, t); return; }
   const tr = ZONES[zoneIdx || 0].tr;
   const n = MEL[s];
   if (n) { note(midi(n + tr), midi(n + tr), t, STEP * 0.95, 'square', 0.045, musicGain); note(midi(n + tr + 12), midi(n + tr + 12), t, STEP * 0.5, 'triangle', 0.015, musicGain); }
@@ -2857,7 +2858,7 @@ function scheduleStep(s, t) {
 setInterval(() => {
   if (!ac || !musicOn || ac.state !== 'running' || window.__introOn) return;
   if (mTime < ac.currentTime) mTime = ac.currentTime + 0.05;
-  while (mTime < ac.currentTime + 0.25) { scheduleStep(mStep, mTime); mTime += STEP; mStep = (mStep + 1) % 64; }
+  while (mTime < ac.currentTime + 0.25) { scheduleStep(mStep, mTime); mTime += state === 'battle' ? 0.115 : STEP; mStep = (mStep + 1) % 64; }   // в бою темп быстрее
 }, 40);
 function startMusic() { musicOn = true; audio(); }
 function toggleMute() { muted = !muted; store.set('muted', muted); applyVolumes(); }
@@ -5679,7 +5680,7 @@ function mpBuild() {
   mpUi.innerHTML = '<div class=g0></div><div style="width:100%;max-width:380px;display:flex;align-items:center;gap:10px;position:relative"><button id=mpx style="background:#e8261a">✕</button><div style="flex:1;text-align:center;font-size:24px;letter-spacing:5px;text-shadow:0 0 14px #7ad8ff,0 3px #0a1a3a">' + tr('ОНЛАЙН', 'ONLINE') + '</div><div style="width:48px"></div></div>' +
       '<div id=mpt style="display:none;background:#ffd23a;color:#2a1408;border-radius:12px;padding:8px 12px;width:100%;max-width:380px;box-sizing:border-box;text-align:center;position:relative;box-shadow:0 0 18px #ffd23a88"></div>' +
       '<div class=g style="width:100%;max-width:380px;box-sizing:border-box;position:relative;display:flex;flex-direction:column;gap:12px"><div><div style="margin-bottom:4px;opacity:.85">' + tr('Твой ник', 'Your nickname') + '</div><input id=mpn maxlength=10></div>' +
-      '<div id=mpa style="display:flex;flex-direction:column;gap:10px"><button id=mph style="background:linear-gradient(#5ac8ff,#1a70c0)">' + tr('Создать комнату (до 6 игроков)', 'Create room (up to 6 players)') + '</button><div style="display:flex;gap:8px"><input id=mpj maxlength=5 placeholder="' + tr('КОД', 'CODE') + '"><button id=mpg style="background:linear-gradient(#5ae07a,#1a9a3a)">' + tr('Войти', 'Join') + '</button></div></div>' +
+      '<div id=mpa style="display:flex;flex-direction:column;gap:10px"><button id=mp3 style="background:linear-gradient(#ff8a3a,#c03a00);font-size:18px;box-shadow:0 0 18px #ff8a3a88">⚔ ' + tr('БОЙ 3 НА 3', '3 VS 3 BATTLE') + '</button><button id=mph style="background:linear-gradient(#5ac8ff,#1a70c0)">' + tr('Создать комнату (до 6 игроков)', 'Create room (up to 6 players)') + '</button><div style="display:flex;gap:8px"><input id=mpj maxlength=5 placeholder="' + tr('КОД', 'CODE') + '"><button id=mpg style="background:linear-gradient(#5ae07a,#1a9a3a)">' + tr('Войти', 'Join') + '</button></div></div>' +
       '<div id=mps style="text-align:center;line-height:1.5;white-space:pre-line"></div><button id=mpq style="display:none;background:linear-gradient(#ff6a5a,#c01a0a)">' + tr('Выйти из комнаты', 'Leave room') + '</button></div>';
   for (let i = 0; i < 24; i++) { const d = document.createElement('span'); d.className = 'd'; d.style.cssText = 'left:' + Math.random() * 100 + '%;top:' + (30 + Math.random() * 70) + '%;animation-duration:' + (4 + Math.random() * 6) + 's;animation-delay:-' + Math.random() * 8 + 's;width:' + (3 + Math.random() * 5) + 'px;height:' + (3 + Math.random() * 5) + 'px;background:' + ['#7ad8ff', '#ff7ad8', '#ffd23a', '#9aff9a'][i % 4]; mpUi.appendChild(d); }
   
@@ -5689,6 +5690,7 @@ function mpBuild() {
   $m('mpx').onclick = () => mpShow(false);
   $m('mpq').onclick = () => { mpLeave(); mpShow(false); };
   $m('mph').onclick = () => mpStart('host');
+  $m('mp3').onclick = () => { mpShow(false); sfx.click(); bt3Play(); };
   $m('mpg').onclick = () => { const c = mpClean($m('mpj').value).replace(/ /g, ''); if (c.length < 4) { mpStatus(tr('Введи код хоста', 'Enter the host code')); return; } mpStart('join', c); };
 }
 function mpShow(v) { mpBuild(); mp.open = v; mpUi.style.display = v ? 'flex' : 'none'; if (v) mpRender(); }
@@ -8132,6 +8134,7 @@ const BTN = {
   tent:  { x: 24, y: 386, w: 150, h: 40 },
   allies: { x: 186, y: 386, w: 150, h: 40 },
   mp: { x: 12, y: 196, w: 100, h: 32 },
+  friends: { x: 130, y: 196, w: 100, h: 32 },
   emo: { x: 105, y: 438, w: 150, h: 34 },
 };
 const inRect = (pt, r) => pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
@@ -8172,6 +8175,7 @@ function uiClick(pt) {
     if (moreOpen() && inRect(pt, BTN.ach)) { audio(); startMusic(); state = 'ach'; acScroll = 0; sfx.click(); return true; }
     if (moreOpen() && inRect(pt, BTN.emo)) { audio(); startMusic(); state = 'emotes'; emScroll = 0; sfx.click(); return true; }
     if (inRect(pt, BTN.mp)) { audio(); startMusic(); sfx.click(); mpOpen(); return true; }
+    if (inRect(pt, BTN.friends)) { audio(); startMusic(); sfx.click(); openFriends(); return true; }
     if (moreOpen() && inRect(pt, BTN.tent)) { audio(); startMusic(); state = 'tent'; tc = null; sfx.click(); return true; }
     if (moreOpen() && inRect(pt, BTN.allies)) { audio(); startMusic(); state = 'allies'; allyScene.last = -1; sfx.click(); return true; }
     if (inRect(pt, BTN.gear)) { audio(); startMusic(); state = 'set'; setFrom = 'menu'; resetArm = -10; sfx.click(); return true; }
@@ -10911,6 +10915,8 @@ function drawMenu() {
   if (canClaim()) badge(BTN.store.x + BTN.store.w - 4, BTN.store.y + 2);
   if (freeSpin()) { badge(BTN.wheel.x + BTN.wheel.w - 4, BTN.wheel.y + 2); freeTag(BTN.wheel.x + BTN.wheel.w / 2, BTN.wheel.y - 2); }
   button(BTN.mp, tr('СЕТЬ', 'ONLINE'), '#14b8b8', '#0a7a7a');
+  button(BTN.friends, tr('ДРУЗЬЯ', 'FRIENDS'), '#ff7a2a', '#c04a00');
+  if (FR.inbox.length || FR.inv.length || PT.on) badge(BTN.friends.x + BTN.friends.w - 4, BTN.friends.y + 2);
   // спрятанные кнопки выезжают вниз из-под стрелки
   menuMoreT = clamp(menuMoreT + (menuMore ? 1 : -1) * dtMenu() * 6, 0, 1);
   if (menuMoreT > 0) {
@@ -14682,28 +14688,31 @@ function openCosmetics() {
 
 // ---- имя: первое — бесплатно, потом смена за 10 кристаллов ----
 const NICK_PRICE = 10;
-function openNick(free, after) {
+const NICK_FREE = 2;   // после первого имени — ещё 2 смены бесплатно
+const nickFreeLeft = () => Math.max(0, NICK_FREE - (store.get('nickChg', 0) | 0));
+function openNick() {
+  const first = !mp.nick || !store.get('nickSet', 0), freeNow = first || nickFreeLeft() > 0;
   moOpen(tr('ИМЯ', 'NAME'), bd => {
     const c = moEl('div', 'card'); c.style.textAlign = 'center';
-    c.appendChild(moTxt('div', 'ol', free ? tr('КАК ТЕБЯ ЗОВУТ?', 'WHAT IS YOUR NAME?') : tr('НОВОЕ ИМЯ', 'NEW NAME')));
+    c.appendChild(moTxt('div', 'ol', first ? tr('КАК ТЕБЯ ЗОВУТ?', 'WHAT IS YOUR NAME?') : tr('НОВОЕ ИМЯ', 'NEW NAME')));
     const inp = moEl('input'); inp.maxLength = 10; inp.value = mp.nick || ''; inp.placeholder = tr('ТВОЁ ИМЯ', 'YOUR NAME'); inp.style.cssText += ';margin-top:10px;width:100%;text-align:center;font-size:18px';
-    const msg = moTxt('div', 'sm', free ? tr('ПОТОМ ИМЯ МОЖНО СМЕНИТЬ ЗА ' + NICK_PRICE + ' КРИСТАЛЛОВ', 'YOU CAN CHANGE IT LATER FOR ' + NICK_PRICE + ' GEMS') : tr('СМЕНА ИМЕНИ СТОИТ ' + NICK_PRICE + ' КРИСТАЛЛОВ', 'A NAME CHANGE COSTS ' + NICK_PRICE + ' GEMS'));
+    const msg = moTxt('div', 'sm', first ? tr('ПОТОМ ИМЯ МОЖНО СМЕНИТЬ ЕЩЁ 2 РАЗА БЕСПЛАТНО', 'YOU CAN CHANGE IT 2 MORE TIMES FOR FREE')
+      : freeNow ? tr('БЕСПЛАТНО. ОСТАЛОСЬ БЕСПЛАТНЫХ СМЕН: ', 'FREE. FREE CHANGES LEFT: ') + nickFreeLeft() : tr('БЕСПЛАТНЫЕ СМЕНЫ КОНЧИЛИСЬ — ', 'NO FREE CHANGES LEFT — ') + NICK_PRICE + tr(' КРИСТАЛЛОВ', ' GEMS'));
     msg.style.marginTop = '8px';
     const ok = moEl('button', 'btn gold'); ok.style.cssText += ';margin-top:12px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;font-size:16px';
-    ok.append(moTxt('span', '', free ? tr('ГОТОВО', 'DONE') : tr('СМЕНИТЬ', 'CHANGE'))); if (!free) ok.append(iconCnv('gems', 0, 20), moTxt('span', '', String(NICK_PRICE)));
+    ok.append(moTxt('span', '', first ? tr('ГОТОВО', 'DONE') : tr('СМЕНИТЬ', 'CHANGE'))); if (!freeNow) ok.append(iconCnv('gems', 0, 20), moTxt('span', '', String(NICK_PRICE)));
     ok.onclick = () => {
       const v = mpClean(inp.value);
       if (!v) { msg.textContent = tr('ВВЕДИ ИМЯ (БУКВЫ И ЦИФРЫ)', 'TYPE A NAME (LETTERS AND DIGITS)'); msg.style.color = '#ff8a7a'; return; }
-      if (!free && v === mp.nick) { moBack(); return; }
-      if (!free && gems < NICK_PRICE) { sfx.no(); msg.textContent = tr('НУЖНО ' + NICK_PRICE + ' КРИСТАЛЛОВ', 'NEED ' + NICK_PRICE + ' GEMS'); msg.style.color = '#ff8a7a'; return; }
-      if (!free) { gems -= NICK_PRICE; saveMoney(); }
-      mp.nick = v; store.set('mpnick', v); store.set('nickSet', 1); boardPush(); sfx.click();
-      if (after) after(); else moBack();
+      if (!first && v === mp.nick) { moBack(); return; }
+      if (!freeNow && gems < NICK_PRICE) { sfx.no(); msg.textContent = tr('НУЖНО ' + NICK_PRICE + ' КРИСТАЛЛОВ', 'NEED ' + NICK_PRICE + ' GEMS'); msg.style.color = '#ff8a7a'; return; }
+      if (!freeNow) { gems -= NICK_PRICE; saveMoney(); } else if (!first) store.set('nickChg', (store.get('nickChg', 0) | 0) + 1);
+      mp.nick = v; store.set('mpnick', v); store.set('nickSet', 1); boardPush(); sfx.click(); moBack();
     };
     inp.onkeydown = e => { if (e.key === 'Enter') ok.onclick(); };
     c.append(inp, msg, ok); bd.appendChild(c);
     setTimeout(() => { try { inp.focus(); } catch (e) {} }, 50);
-  }, !free);
+  }, true);
 }
 
 // ---- задания дня ----
@@ -15084,9 +15093,9 @@ function profHead(e, me) {
   col.appendChild(nr);
   if (me) {
     const ch = moEl('button', 'btn blue'); ch.style.cssText += ';padding:4px 8px;font-size:11px;align-self:flex-start;display:flex;align-items:center;gap:4px';
-    const free = !mp.nick || !store.get('nickSet', 0);
-    ch.append(moTxt('span', '', '✎ ' + tr('СМЕНИТЬ ИМЯ', 'CHANGE NAME'))); if (!free) ch.append(iconCnv('gems', 0, 14), moTxt('span', '', String(NICK_PRICE)));
-    ch.onclick = () => { sfx.click(); openNick(free); };
+    const free = !mp.nick || !store.get('nickSet', 0) || nickFreeLeft() > 0;
+    ch.append(moTxt('span', '', '✎ ' + tr('СМЕНИТЬ ИМЯ', 'CHANGE NAME'))); if (!free) ch.append(iconCnv('gems', 0, 14), moTxt('span', '', String(NICK_PRICE))); else if (store.get('nickSet', 0) && mp.nick) ch.append(moTxt('span', '', '(' + tr('БЕСПЛАТНО: ', 'FREE: ') + nickFreeLeft() + ')'));
+    ch.onclick = () => { sfx.click(); openNick(); };
     col.appendChild(ch);
   }
   const trw = moEl('div', 'row'); trw.append(iconCnv('trophy', 0, 24), moTxt('span', 'ol', String(e.tr))); col.appendChild(trw);
@@ -15779,8 +15788,11 @@ function obStart(step) {
   function stLang() {
     talk(tr('ПРИВЕТ! Я — [МИСТЕР ПИКЛС]! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ [ЯЗЫК].', "HI! I'M MR. PICKLES! 👋 FIRST, PICK A LANGUAGE."));
     const g = document.createElement('div'); g.className = 'grid2';
-    for (const code of LANGS) g.appendChild(btn(LANG_NAMES[code] || code.toUpperCase(), code === lang ? 'on' : '', () => { lang = code; store.set('lang', lang); go(fbOn() ? 'login' : 'name'); }));
-    show(g);
+    const ok = btn(tr('ПОДТВЕРДИТЬ', 'CONFIRM') + ' ✓', 'green', () => { store.set('lang', lang); go(fbOn() ? 'login' : 'name'); });
+    for (const code of LANGS) g.appendChild(btn(LANG_NAMES[code] || code.toUpperCase(), code === lang ? 'on' : '', b => {   // выбор — подсветкой, переход — по «Подтвердить»
+      lang = code; for (const x of g.children) x.classList.toggle('on', x === b); ok.textContent = tr('ПОДТВЕРДИТЬ', 'CONFIRM') + ' ✓';
+    }));
+    show(g, ok);
   }
   const afterLogin = () => !owned.includes('charodey') ? 'gift' : store.get('nickSet', 0) && mp.nick ? 'tut' : 'name';
   function stLogin() {
@@ -15805,7 +15817,7 @@ function obStart(step) {
     show(hv, nm, b);
   }
   function stName() {
-    talk(tr('ОТЛИЧНО! А [КАК ТЕБЯ ЗОВУТ]? ИМЯ ПОТОМ МОЖНО СМЕНИТЬ, НО УЖЕ ЗА [10 КРИСТАЛЛОВ] 💎', 'GREAT! WHAT IS YOUR NAME? YOU CAN CHANGE IT LATER FOR 10 GEMS 💎'), 'point');
+    talk(tr('ОТЛИЧНО! А [КАК ТЕБЯ ЗОВУТ]? ПОТОМ ИМЯ МОЖНО СМЕНИТЬ ЕЩЁ [2 РАЗА БЕСПЛАТНО], А ДАЛЬШЕ — ЗА [10 КРИСТАЛЛОВ] 💎', 'GREAT! WHAT IS YOUR NAME? YOU CAN CHANGE IT [2 MORE TIMES FREE], THEN FOR [10 GEMS] 💎'), 'point');
     const inp = document.createElement('input'); inp.maxLength = 10; inp.placeholder = tr('ТВОЁ ИМЯ', 'YOUR NAME'); inp.value = mp.nick || '';
     const msg = document.createElement('div'); msg.className = 'sm';
     const ok = btn(tr('ГОТОВО', 'DONE'), 'green', () => {
@@ -15838,8 +15850,852 @@ setInterval(() => {
 { const c1 = uiClick; uiClick = function (pt) { if (TOUR.on && state === 'menu') { tourTap(pt); return true; } if (TUT.on && (TUT.rw || TUT.endT)) return true; return c1(pt); }; }
 { const dr = draw; let last = 0; draw = function () { dr(); const n = performance.now(), dt = last ? Math.min(0.05, (n - last) / 1000) : 0; last = n; if (TUT.on && state !== 'load') tutDraw(); if (TOUR.on) { if (state === 'menu' && !moStack.length) tourDraw(dt); else if (state !== 'menu') TOUR.on = false; } }; }
 
+// =====================================================================================
+// ---------- БОЙ 3 НА 3: арена во всю ширину, оружие из ящиков, союзники, боты ----------
+// Хост считает весь бой (и ботов), остальным шлёт снимки 15 раз в секунду; игроки шлют хосту только касания.
+// Каждый видит свою команду синей и слева (арена для второй команды отражается).
+// =====================================================================================
+const AW = 1080, GY = 566, BG = 1500, B_TIME = 120, B_HP = 5;
+const B_MAPS = [
+  { nm: ['ЛЕСНАЯ АРЕНА', 'FOREST ARENA'], sky: ['#5ab0ff', '#c8ecff'], far: '#3a8a5a', ground: '#4ac83a', dirt: '#8a5a2a',
+    plat: [[150, 430, 120], [470, 350, 140], [810, 430, 120], [300, 230, 100], [680, 230, 100], [490, 150, 100]], poles: [[90, 300, 566], [990, 300, 566], [420, 420, 566], [660, 420, 566]] },
+  { nm: ['НОЧНОЙ ГОРОД', 'NIGHT CITY'], sky: ['#14104a', '#5a2a8a'], far: '#2a1a5a', ground: '#5a5a7a', dirt: '#2a2a3a',
+    plat: [[120, 400, 140], [470, 440, 140], [820, 400, 140], [260, 260, 110], [710, 260, 110], [480, 170, 120]], poles: [[60, 260, 566], [1020, 260, 566], [540, 250, 440]] },
+  { nm: ['ЛАВОВЫЙ КРАТЕР', 'LAVA CRATER'], sky: ['#3a0a0a', '#e8501a'], far: '#5a1a0a', ground: '#7a3a1a', dirt: '#3a1404',
+    plat: [[180, 450, 110], [460, 380, 160], [790, 450, 110], [320, 260, 90], [670, 260, 90], [480, 160, 120]], poles: [[120, 330, 566], [960, 330, 566], [400, 470, 566], [680, 470, 566]] },
+];
+const WEAPONS = {
+  katana: { nm: ['КАТАНА', 'KATANA'], ammo: 12, cd: 0.42, col: '#e8eef8' },
+  pie: { nm: ['ПИРОГ', 'PIE'], ammo: 6, cd: 0.32, col: '#ffb02a' },
+  bomb: { nm: ['БОМБА', 'BOMB'], ammo: 3, cd: 0.6, col: '#3a3a4a' },
+  blaster: { nm: ['БЛАСТЕР', 'BLASTER'], ammo: 14, cd: 0.17, col: '#3af0ff' },
+};
+const W_KEYS = Object.keys(WEAPONS);
+const BT = { on: false, host: true, ph: 'off', t: 0, timer: B_TIME, F: [], C: [], X: [], fx: [], feed: [], score: [0, 0], camX: 0, map: 0, myId: '', myTeam: 0, mirror: false, crateT: 3, sendT: 0, ev: [], over: null, reward: null, net: null, loadT: 0, want: 0 };
+const btMe = () => BT.F.find(f => f.id === BT.myId);
+const btVX = x => (BT.mirror ? AW - x : x) - BT.camX;   // мир → экран (по x)
+const BOT_NAMES = ['РЕКС', 'ЗОРГ', 'ПИКСЕЛЬ', 'БАХ', 'ТАЙФУН', 'ШУСТРИК', 'КОМЕТА', 'ГРОМ', 'ЁЖИК', 'ВИНТИК', 'ТУРБО', 'ЛАКИ'];
+function btFighter(o) {
+  return { id: o.id, n: o.n || 'BOT', sk: o.sk || 'hamster', team: o.team, bot: !!o.bot, x: 0, y: GY, vx: 0, vy: 0, face: o.team ? -1 : 1, ground: true, wall: 0, hp: B_HP, w: null, ammo: 0, cd: 0,
+    flipT: 0, flipped: false, flipHit: {}, dead: false, respT: 0, inv: 0, hitT: 0, kills: 0, deaths: 0, ally: o.ally ? { id: o.ally, x: 0, y: GY - 60, cd: 1.5 } : null, aiT: 0, slow: 0, pie: 0, slashT: 0, last: null };
+}
+function btSpawnPos(f, i) { const base = f.team ? AW - 90 - i * 50 : 90 + i * 50; f.x = base; f.y = GY; f.vx = 0; f.vy = 0; f.ground = true; f.wall = 0; f.face = f.team ? -1 : 1; }
+// roster: [{ id, n, sk, ally, team, bot }]
+function btStart(roster, opt = {}) {
+  BT.on = true; BT.host = opt.host !== false; BT.myId = opt.myId; BT.map = opt.map != null ? opt.map : Math.floor(Math.random() * B_MAPS.length);
+  BT.F = roster.map(btFighter); BT.C = []; BT.X = []; BT.fx = []; BT.feed = []; BT.score = [0, 0]; BT.timer = B_TIME; BT.t = 0; BT.crateT = 2; BT.ev = []; BT.over = null; BT.reward = null;
+  [0, 1].forEach(tm => BT.F.filter(f => f.team === tm).forEach((f, i) => btSpawnPos(f, i)));
+  const me = btMe(); BT.myTeam = me ? me.team : 0; BT.mirror = BT.myTeam === 1;
+  BT.ph = 'load'; BT.loadT = 0; BT.camX = AW - W; BT.sendT = 0;
+  if (moUi && moStack.length) moClose(); if (mp.open) mpShow(false);
+  state = 'battle'; paused = false; startMusic();
+}
+// ---------- физика ----------
+function btPlats() { return B_MAPS[BT.map].plat; }
+function btPoles() { return B_MAPS[BT.map].poles; }
+function btJump(f, d) {   // касание: прыжок в сторону d; со стены — от стены; в воздухе — сальто
+  if (f.dead || BT.ph !== 'fight') return;
+  if (f.ground) { f.vy = -640; f.vx = d * 270; f.face = d; f.ground = false; f.flipped = false; btEv(['j', f.id]); }
+  else if (f.wall) { f.vy = -620; f.vx = -f.wall * 300; f.face = -f.wall; f.wall = 0; f.flipped = false; btEv(['j', f.id]); }
+  else if (!f.flipped) { f.flipped = true; f.vy = -540; f.vx = d * 260; f.face = d; f.flipT = 0.5; f.flipHit = {}; btEv(['f', f.id]); }
+}
+function btPhys(f, dt) {
+  if (f.dead) { f.vy += BG * dt; f.x += f.vx * dt; f.y += f.vy * dt; return; }
+  const sl = f.slow > 0 ? 0.6 : 1;
+  if (f.wall) { f.vy = Math.min(f.vy + BG * 0.4 * dt, 80); }
+  else if (!f.ground) f.vy = Math.min(f.vy + BG * dt, 760);
+  const ox = f.x, oy = f.y;
+  f.x += f.vx * dt * sl; f.y += f.vy * dt * sl;
+  // стены арены и столбы: цепляемся
+  if (f.y < 90) { f.y = 90; if (f.vy < 0) f.vy = 0; }   // потолок арены
+  if (f.x < 14) { f.x = 14; if (!f.ground) { f.wall = -1; f.vx = 0; } }
+  if (f.x > AW - 14) { f.x = AW - 14; if (!f.ground) { f.wall = 1; f.vx = 0; } }
+  for (const [px, y0, y1] of btPoles()) {
+    if (f.y - 30 > y1 || f.y < y0) continue;
+    if (ox <= px - 12 && f.x > px - 12) { f.x = px - 12; if (!f.ground) { f.wall = 1; f.vx = 0; } }
+    else if (ox >= px + 12 && f.x < px + 12) { f.x = px + 12; if (!f.ground) { f.wall = -1; f.vx = 0; } }
+  }
+  if (f.wall) { const atPole = f.x <= 15 || f.x >= AW - 15 || btPoles().some(([px, y0, y1]) => Math.abs(f.x - px) <= 13 && f.y >= y0 && f.y - 30 <= y1); if (!atPole) f.wall = 0; }
+  // приземление: земля и платформы (сквозь них можно пролетать снизу)
+  f.ground = false;
+  if (f.y >= GY) { f.y = GY; f.vy = 0; f.ground = true; }
+  else if (f.vy >= 0) for (const [x, y, w] of btPlats()) if (f.x > x - 6 && f.x < x + w + 6 && oy <= y && f.y >= y) { f.y = y; f.vy = 0; f.ground = true; break; }
+  if (f.ground) { f.vx = 0; f.wall = 0; f.flipped = false; f.flipT = 0; }
+  f.flipT = Math.max(0, f.flipT - dt);
+}
+// ---------- бой ----------
+function btEv(e) { if (BT.host) BT.ev.push(e); btFx(e); }
+const btEnemies = f => BT.F.filter(g => g.team !== f.team && !g.dead);
+function btNearest(f, max = 1e9) { let b = null, bd = max; for (const g of btEnemies(f)) { const d = Math.hypot(g.x - f.x, g.y - f.y); if (d < bd) { bd = d; b = g; } } return b; }
+function btHit(src, f, dmg, kx, ky) {
+  if (f.dead || f.inv > 0 || BT.ph !== 'fight') return;
+  f.hp -= dmg; f.hitT = 0.25; f.vx = kx; f.vy = ky; f.ground = false; f.wall = 0;
+  btEv(['h', f.id, dmg]);
+  if (f.hp <= 0) {
+    f.dead = true; f.respT = 3; f.deaths++; f.vy = -520; f.w = null; f.ammo = 0;
+    if (src && src.team !== f.team) { src.kills++; BT.score[src.team]++; }
+    btEv(['k', src ? src.id : '', f.id]);
+  }
+}
+function btAttack(f) {
+  if (f.dead || BT.ph !== 'fight' || f.cd > 0) return;
+  const tg = btNearest(f, 520), aim = tg ? Math.atan2(tg.y - 18 - (f.y - 18), tg.x - f.x) : (f.face > 0 ? 0 : Math.PI);
+  if (tg) f.face = tg.x >= f.x ? 1 : -1;
+  const k = f.w;
+  if (!k) {   // кулак
+    f.cd = 0.4; f.slashT = 0.15; btEv(['p', f.id]);
+    for (const g of btEnemies(f)) if (Math.abs(g.x - (f.x + f.face * 20)) < 30 && Math.abs(g.y - f.y) < 40) btHit(f, g, 1, f.face * 260, -260);
+    return;
+  }
+  f.cd = WEAPONS[k].cd; f.ammo--;
+  if (k === 'katana') { f.slashT = 0.2; btEv(['s', f.id]); for (const g of btEnemies(f)) if (Math.abs(g.x - (f.x + f.face * 26)) < 46 && Math.abs(g.y - f.y) < 54) btHit(f, g, 2, f.face * 420, -360); }
+  else if (k === 'pie') { BT.X.push({ k: 'pie', o: f.id, team: f.team, x: f.x + f.face * 14, y: f.y - 24, vx: Math.cos(aim) * 560, vy: Math.sin(aim) * 560 - 120, t: 0 }); btEv(['t', f.id]); }
+  else if (k === 'bomb') { BT.X.push({ k: 'bomb', o: f.id, team: f.team, x: f.x, y: f.y - 30, vx: clamp((tg ? tg.x - f.x : f.face * 200) * 1.3, -420, 420), vy: -480, t: 0 }); btEv(['t', f.id]); }
+  else if (k === 'blaster') { BT.X.push({ k: 'shot', o: f.id, team: f.team, x: f.x + f.face * 16, y: f.y - 22, vx: Math.cos(aim) * 820, vy: Math.sin(aim) * 820, t: 0 }); btEv(['b', f.id]); }
+  if (f.ammo <= 0) f.w = null;
+}
+function btBoom(x, y, team, owner) {
+  btEv(['x', x | 0, y | 0]);
+  const o = BT.F.find(g => g.id === owner);
+  for (const g of BT.F) if (g.team !== team && !g.dead) { const d = Math.hypot(g.x - x, g.y - 18 - y); if (d < 70) btHit(o, g, 3, Math.sign(g.x - x || 1) * 380, -480); }
+}
+function btUpdateHost(dt) {
+  if (BT.ph === 'fight') { BT.timer -= dt; if (BT.timer <= 0) { BT.timer = 0; btEnd(); } }
+  // ящики с оружием падают с неба на парашютах
+  BT.crateT -= dt;
+  if (BT.ph === 'fight' && BT.crateT <= 0 && BT.C.length < 3) { BT.crateT = rand(3.5, 6); BT.C.push({ id: Math.random().toString(36).slice(2, 7), x: rand(60, AW - 60), y: -30, vy: 70, land: false, w: W_KEYS[Math.floor(Math.random() * W_KEYS.length)] }); }
+  for (const c of BT.C) if (!c.land) { c.y += c.vy * dt; let gy = GY; for (const [x, y, w] of btPlats()) if (c.x > x && c.x < x + w && c.y <= y && y < gy) gy = y; if (c.y >= gy) { c.y = gy; c.land = true; } }
+  for (const f of BT.F) {
+    if (f.dead) { f.respT -= dt; btPhys(f, dt); if (f.respT <= 0) { f.dead = false; f.hp = B_HP; f.inv = 1.6; btSpawnPos(f, Math.floor(Math.random() * 3)); btEv(['r', f.id]); } continue; }
+    f.cd = Math.max(0, f.cd - dt); f.inv = Math.max(0, f.inv - dt); f.hitT = Math.max(0, f.hitT - dt); f.slow = Math.max(0, f.slow - dt); f.pie = Math.max(0, f.pie - dt); f.slashT = Math.max(0, f.slashT - dt);
+    if (f.bot && BT.ph === 'fight') btBot(f, dt);
+    btPhys(f, dt);
+    // сальто — удар: кто попал под крутящегося героя, получает
+    if (f.flipT > 0) for (const g of btEnemies(f)) if (!f.flipHit[g.id] && Math.abs(g.x - f.x) < 26 && Math.abs(g.y - f.y) < 34) { f.flipHit[g.id] = 1; btHit(f, g, 1, Math.sign(g.x - f.x || 1) * 300, -300); }
+    // подбираем ящик
+    for (let i = BT.C.length - 1; i >= 0; i--) { const c = BT.C[i]; if (Math.abs(c.x - f.x) < 24 && Math.abs(c.y - f.y) < 30) { f.w = c.w; f.ammo = WEAPONS[c.w].ammo; BT.C.splice(i, 1); btEv(['w', f.id, c.w]); } }
+    // союзник: летит за хозяином и стреляет во врагов
+    const a = f.ally;
+    if (a) {
+      a.x += (f.x - f.face * 34 - a.x) * Math.min(1, dt * 5); a.y += (f.y - 64 + Math.sin(BT.t * 3 + f.x) * 6 - a.y) * Math.min(1, dt * 5);
+      a.cd -= dt; const tg = btNearest({ x: a.x, y: a.y, team: f.team }, 260);
+      if (tg && a.cd <= 0 && BT.ph === 'fight') { a.cd = 1.7; const an = Math.atan2(tg.y - 18 - a.y, tg.x - a.x); BT.X.push({ k: 'ally', o: f.id, team: f.team, x: a.x, y: a.y, vx: Math.cos(an) * 560, vy: Math.sin(an) * 560, t: 0 }); btEv(['a', f.id]); }
+    }
+  }
+  // снаряды
+  for (let i = BT.X.length - 1; i >= 0; i--) {
+    const s = BT.X[i]; s.t += dt;
+    if (s.k === 'pie' || s.k === 'bomb') s.vy += (s.k === 'bomb' ? 900 : 380) * dt;
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    let dead = s.t > 2.4 || s.x < -20 || s.x > AW + 20 || s.y > GY + 4;
+    if (s.k === 'bomb') { if (s.y >= GY || s.t > 1.4) { btBoom(s.x, Math.min(s.y, GY), s.team, s.o); dead = true; } }
+    else for (const g of BT.F) if (g.team !== s.team && !g.dead && Math.abs(g.x - s.x) < 15 && s.y > g.y - 36 && s.y < g.y + 2) {
+      const o = BT.F.find(q => q.id === s.o);
+      btHit(o, g, 1, Math.sign(s.vx) * 220, -220); if (s.k === 'pie') { g.pie = 1.4; g.slow = 1.4; btEv(['pie', g.id]); }
+      dead = true; break;
+    }
+    if (dead) { if (s.k === 'pie' && s.y >= GY) btEv(['sp', s.x | 0]); BT.X.splice(i, 1); }
+  }
+}
+// бот: к ближайшему врагу (без оружия — сначала к ящику), прыгает, крутит сальто, бьёт, когда близко
+function btBot(f, dt) {
+  f.aiT -= dt; if (f.aiT > 0) return; f.aiT = rand(0.18, 0.32);
+  const tg = btNearest(f);
+  let goal = tg;
+  if (!f.w && BT.C.length) { let bc = null, bd = 1e9; for (const c of BT.C) { const d = Math.abs(c.x - f.x) + Math.abs(c.y - f.y); if (d < bd) { bd = d; bc = c; } } if (bc && (!tg || bd < Math.hypot(tg.x - f.x, tg.y - f.y) * 1.2)) goal = bc; }
+  if (!goal) return;
+  const dx = goal.x - f.x, dy = goal.y - f.y, d = dx > 0 ? 1 : -1, dist = Math.hypot(dx, dy);
+  if (tg && goal === tg) {
+    const range = !f.w ? 34 : f.w === 'katana' ? 56 : 340;
+    if (dist < range && Math.abs(dy) < (f.w && f.w !== 'katana' ? 140 : 46) && f.cd <= 0 && Math.random() < 0.8) { btAttack(f); return; }
+  }
+  if (f.ground) { if (Math.abs(dx) > 26 || dy < -40) btJump(f, Math.abs(dx) < 26 ? (Math.random() < 0.5 ? -1 : 1) : d); }
+  else if (f.wall) { if (Math.random() < 0.7) btJump(f, -f.wall); }
+  else if (!f.flipped && f.vy > 0 && (Math.abs(dx) > 60 || dy < -50) && Math.random() < 0.6) btJump(f, d);
+}
+function btEnd() {
+  if (BT.ph === 'end') return;
+  BT.ph = 'end'; BT.t = 0;
+  const me = btMe(), my = BT.score[BT.myTeam], th = BT.score[1 - BT.myTeam];
+  BT.over = my > th ? 'win' : my < th ? 'lose' : 'draw';
+  // награда: монеты и опыт Pass (бой с ботами тоже засчитывается)
+  const coins = BT.over === 'win' ? 150 : BT.over === 'draw' ? 90 : 50, xp = BT.over === 'win' ? 80 : 40;
+  BT.reward = { coins, xp, kills: me ? me.kills : 0 };
+  bank += coins; saveMoney(); passXp(xp); try { questAdd('runs', 1); } catch (e) {}
+  if (BT.over === 'win') { try { sfx.achieve(); } catch (e) {} } else sfx.die();
+  if (BT.host) btSend(true);
+}
+// ---------- шаг кадра ----------
+function btUpdate(dt) {
+  BT.t += dt;
+  if (BT.ph === 'search') return;
+  if (BT.ph === 'load') { BT.loadT += dt; if (BT.loadT > 2.2 && BT.host) { BT.ph = 'intro'; BT.t = 0; } }
+  else if (BT.ph === 'intro') {
+    const T = BT.t;
+    if (T < 2.6) { const q = T / 2.6, e = q < 0.5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2; BT.camX = (AW - W) * (1 - e); } else BT.camX = 0;   // камера едет от их базы к нашей
+    for (const n of [4.4, 5.4, 6.4]) if (T - dt < n && T >= n) tone(n < 6 ? 880 : 1320, n < 6 ? 880 : 1760, 0.14, 'square', 0.06);
+    if (T > 7.4 && BT.host) { BT.ph = 'fight'; BT.t = 0; tone(523, 1047, 0.3, 'square', 0.06); noise(0.3, 0.08, 800); }
+  } else if (BT.ph === 'fight') {
+    const me = btMe(); if (me) { const mx = BT.mirror ? AW - me.x : me.x; BT.camX += (clamp(mx - W / 2, 0, AW - W) - BT.camX) * Math.min(1, dt * 6); }
+  }
+  if (BT.host && BT.ph !== 'load') btUpdateHost(dt);
+  else if (!BT.host) btInterp(dt);
+  for (const q of BT.fx) { q.t += dt; if (q.vx != null) { q.vy += (q.g || 0) * dt; q.x += q.vx * dt; q.y += q.vy * dt; } }
+  BT.fx = BT.fx.filter(q => q.t < q.life);
+  BT.feed = BT.feed.filter(q => BT.t - q.t < 4 || BT.ph !== 'fight');
+  if (BT.host) { BT.sendT -= dt; if (BT.sendT <= 0) { BT.sendT = 1 / 15; btSend(false); } }
+}
+// ---------- эффекты (у всех по событиям хоста) ----------
+function btFx(e) {
+  const f = BT.F.find(g => g.id === e[1]), P = (x, y, n, c, sp = 220, life = 0.5, s = 4, g = 500) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = Math.random() * sp; BT.fx.push({ k: 'p', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, g, t: 0, life: life * rand(0.6, 1), c, s }); } };
+  switch (e[0]) {
+    case 'j': if (f && f.id === BT.myId) sfx.jump(); break;
+    case 'f': if (f) { P(f.x, f.y - 16, 8, '#ffffff', 140, 0.35, 3, 0); if (f.id === BT.myId) sfx.flip(); } break;
+    case 'h': if (f) { P(f.x, f.y - 20, 10, '#ff3a3a', 200, 0.4, 4); BT.fx.push({ k: 'n', x: f.x, y: f.y - 46, vx: 0, vy: -60, t: 0, life: 0.7, txt: '-' + e[2] }); sfx.bonk(); } break;
+    case 'k': {
+      const v = BT.F.find(g => g.id === e[2]), a = BT.F.find(g => g.id === e[1]);
+      if (v) { P(v.x, v.y - 20, 26, v.team === BT.myTeam ? '#3ab0ff' : '#ff3a3a', 320, 0.7, 5); BT.fx.push({ k: 'n', x: v.x, y: v.y - 60, vx: 0, vy: -40, t: 0, life: 1, txt: tr('ВЫБИТ!', 'K.O.!'), big: 1 }); }
+      BT.feed.push({ a: a ? a.n : '', at: a ? a.team : -1, v: v ? v.n : '', vt: v ? v.team : -1, t: BT.t }); if (BT.feed.length > 4) BT.feed.shift();
+      sfx.die(); if (SET.shake && (v && v.id === BT.myId || a && a.id === BT.myId)) shake = 0.4;
+      break;
+    }
+    case 'w': if (f) { P(f.x, f.y - 20, 12, '#ffd23a', 180, 0.5, 4, 0); BT.fx.push({ k: 'n', x: f.x, y: f.y - 50, vx: 0, vy: -50, t: 0, life: 0.9, txt: tr(WEAPONS[e[2]].nm[0], WEAPONS[e[2]].nm[1]) }); if (f.id === BT.myId) sfx.power(); } break;
+    case 's': if (f) { BT.fx.push({ k: 'slash', id: f.id, t: 0, life: 0.22 }); noise(0.08, 0.06, 4000); } break;
+    case 'p': if (f) tone(220, 120, 0.06, 'square', 0.04); break;
+    case 't': tone(500, 300, 0.08, 'triangle', 0.04); break;
+    case 'b': tone(1600, 600, 0.06, 'square', 0.025); break;
+    case 'a': tone(1200, 1800, 0.05, 'sine', 0.025); break;
+    case 'x': { P(e[1], e[2], 34, '#ff8a1e', 360, 0.7, 6, 200); P(e[1], e[2], 16, '#ffd23a', 220, 0.5, 5, 0); BT.fx.push({ k: 'ring', x: e[1], y: e[2], t: 0, life: 0.35 }); noise(0.5, 0.2, 0, 900); if (SET.shake) shake = 0.35; break; }
+    case 'pie': if (f) { P(f.x, f.y - 24, 12, '#fff4dc', 160, 0.5, 4); tone(160, 80, 0.12, 'triangle', 0.08); } break;
+    case 'sp': P(e[1], GY - 4, 10, '#fff4dc', 140, 0.4, 4); break;
+    case 'r': if (f) P(f.x, f.y - 20, 18, '#bff4ff', 200, 0.6, 4, 0); break;
+  }
+}
+// ---------- рисование ----------
+function btDrawHero(f, x, y) {
+  const k = skinById(f.sk) || SKINS[0], face = BT.mirror ? -f.face : f.face;
+  const pose = f.dead ? 'fall' : f.flipT > 0 ? 'tuck' : f.wall ? 'cling' : !f.ground ? (f.vy < 0 ? 'jump' : 'fall') : 'idle';
+  const blink = f.inv > 0 && Math.floor(BT.t * 12) % 2;
+  if (blink) return;
+  // кольцо команды под ногами
+  ctx.globalAlpha = 0.85; pell(ctx, x, y + 2, 16, 4, f.team === BT.myTeam ? '#3ab0ff' : '#ff3a3a'); ctx.globalAlpha = 1;
+  heroSprite(k, pose, BT.t + (f.x % 7), false);
+  ctx.save(); ctx.translate(x, y - 30);
+  if (f.flipT > 0) ctx.rotate((0.5 - f.flipT) * Math.PI * 4 * face);
+  if (f.dead) ctx.rotate(BT.t * 8);
+  ctx.scale(face * 0.8, 0.8); if (f.hitT > 0) ctx.filter = 'brightness(2.2)';
+  ctx.drawImage(hcv, -32, -42, 64, 80); ctx.filter = 'none';
+  ctx.restore();
+  if (f.pie > 0) { pieSprite(x + face * 4, y - 34, 0.9); }   // пирог в лицо
+  // оружие в руке
+  if (!f.dead && f.w) {
+    ctx.save(); ctx.translate(x + face * 12, y - 22); ctx.scale(face, 1);
+    if (f.w === 'katana') { const sw = f.slashT > 0 ? -1.4 + (0.2 - f.slashT) * 12 : -0.6; ctx.rotate(sw); prect(ctx, -2, -30, 4, 26, OL); prect(ctx, -1, -28, 2, 22, '#e8eef8'); prect(ctx, -4, -4, 8, 3, '#ffd23a'); prect(ctx, -2, -2, 4, 8, '#5a2a1a'); }
+    else if (f.w === 'pie') pieSprite(4, -2, 0.6);
+    else if (f.w === 'bomb') { pell(ctx, 4, -2, 7, 7, OL); pell(ctx, 4, -2, 5, 5, '#3a3a4a'); prect(ctx, 6, -12, 2, 6, '#c8a060'); if (Math.floor(BT.t * 10) % 2) prect(ctx, 6, -14, 3, 3, '#ffd23a'); }
+    else { prect(ctx, -2, -6, 18, 8, OL); prect(ctx, 0, -4, 14, 4, '#3af0ff'); prect(ctx, 0, -2, 4, 6, '#2a2a3a'); }
+    ctx.restore();
+  }
+}
+function btDrawBg() {
+  const M = B_MAPS[BT.map], g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, M.sky[0]); g.addColorStop(1, M.sky[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // дальние горы/дома — параллакс
+  ctx.fillStyle = M.far; const off = BT.camX * 0.3;
+  for (let i = -1; i < 9; i++) { const x = i * 120 - (off % 120), h2 = 120 + hash(i + Math.floor(off / 120)) * 120; ctx.beginPath(); ctx.moveTo(x, GY); ctx.lineTo(x + 60, GY - h2); ctx.lineTo(x + 120, GY); ctx.fill(); }
+  ctx.globalAlpha = 0.85; for (let k = 0; k < 4; k++) { const x = ((hash(k * 5) * (W + 200) + BT.t * (8 + k * 4) - BT.camX * 0.15) % (W + 200) + W + 200) % (W + 200) - 100, y = 60 + hash(k * 9) * 160; pell(ctx, x, y, 40, 10, '#ffffff'); pell(ctx, x - 14, y - 6, 18, 11, '#ffffff'); pell(ctx, x + 12, y - 8, 20, 12, '#ffffff'); } ctx.globalAlpha = 1;
+}
+function btDrawWorld() {
+  const M = B_MAPS[BT.map];
+  // земля
+  ctx.fillStyle = OL; ctx.fillRect(0, GY, W, H - GY); ctx.fillStyle = M.ground; ctx.fillRect(0, GY + 2, W, 10); ctx.fillStyle = M.dirt; ctx.fillRect(0, GY + 12, W, H - GY);
+  for (let i = 0; i < 40; i++) { const wx = i * 30, sx = btVX(wx); if (sx < -30 || sx > W + 30) continue; prect(ctx, sx, GY + 22 + (i % 3) * 14, 10, 4, 'rgba(0,0,0,0.18)'); }
+  // столбы-стены
+  for (const [px, y0, y1] of btPoles()) { const sx = btVX(px); if (sx < -20 || sx > W + 20) continue; prect(ctx, sx - 12, y0, 24, y1 - y0, OL); prect(ctx, sx - 10, y0 + 2, 20, y1 - y0 - 2, '#a8602a'); prect(ctx, sx - 10, y0 + 2, 4, y1 - y0 - 2, '#c8803a'); for (let y = y0 + 20; y < y1; y += 40) prect(ctx, sx - 10, y, 20, 2, '#7a4018'); }
+  // платформы
+  for (const [x, y, w] of btPlats()) { const a = btVX(x), b = btVX(x + w), l = Math.min(a, b); if (l > W + 10 || l + w < -10) continue; prect(ctx, l - 2, y - 2, w + 4, 14, OL); prect(ctx, l, y, w, 10, '#c8803a'); prect(ctx, l, y, w, 3, '#ffd08a'); for (let i = 10; i < w; i += 22) prect(ctx, l + i, y + 3, 2, 7, '#7a4018'); }
+  // ящики с оружием (с парашютом, пока падают)
+  for (const c of BT.C) {
+    const x = btVX(c.x), y = c.y; if (x < -30 || x > W + 30) continue;
+    if (!c.land) { ctx.strokeStyle = OL; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - 10, y - 18); ctx.lineTo(x - 20, y - 46); ctx.moveTo(x + 10, y - 18); ctx.lineTo(x + 20, y - 46); ctx.stroke(); pell(ctx, x, y - 52, 26, 12, OL); pell(ctx, x, y - 53, 24, 10, '#ff3d7f'); prect(ctx, x - 24, y - 52, 48, 2, '#ffffff'); }
+    prect(ctx, x - 13, y - 26, 26, 26, OL); prect(ctx, x - 11, y - 24, 22, 22, '#c8803a'); prect(ctx, x - 11, y - 24, 22, 4, '#ffd08a'); prect(ctx, x - 1, y - 24, 2, 22, '#7a4018');
+    text('?', x, y - 6, 2, '#ffd23a', 'center', OL);
+    if (c.land) { ctx.globalAlpha = 0.3 + Math.sin(BT.t * 6) * 0.2; pell(ctx, x, y - 12, 22, 22, '#fff6a0'); ctx.globalAlpha = 1; }
+  }
+  // снаряды
+  for (const s of BT.X) {
+    const x = btVX(s.x), y = s.y;
+    if (s.k === 'pie') pieSprite(x, y, 0.8);
+    else if (s.k === 'bomb') { pell(ctx, x, y, 7, 7, OL); pell(ctx, x, y, 5, 5, '#3a3a4a'); if (Math.floor(BT.t * 14) % 2) prect(ctx, x + 2, y - 10, 3, 3, '#ffd23a'); }
+    else { const a = Math.atan2(s.vy, BT.mirror ? -s.vx : s.vx); ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = OL; ctx.fillRect(-6, -3, 12, 6); ctx.fillStyle = s.k === 'ally' ? '#c890ff' : '#3af0ff'; ctx.fillRect(-4, -1.5, 8, 3); ctx.fillStyle = '#ffffff'; ctx.fillRect(1, -1.5, 3, 3); ctx.restore(); }
+  }
+  // бойцы и союзники
+  for (const f of BT.F) {
+    const x = btVX(f.x); if (x < -60 || x > W + 60) continue;
+    if (f.ally && !f.dead) { const A = ALLIES.find(a => a.id === f.ally.id); if (A) { ctx.save(); try { allyArt(A, btVX(f.ally.x), f.ally.y, 0.5, 'idle', { face: BT.mirror ? -f.face : f.face }); } catch (e) {} ctx.restore(); } }
+    btDrawHero(f, x, f.y);
+    if (!f.dead) {   // имя и полоска здоровья
+      const col = f.team === BT.myTeam ? '#3ab0ff' : '#ff3a3a', bw = 34;
+      prect(ctx, x - bw / 2 - 2, f.y - 66, bw + 4, 8, OL); prect(ctx, x - bw / 2, f.y - 64, bw, 4, '#3a2a4a'); prect(ctx, x - bw / 2, f.y - 64, bw * f.hp / B_HP, 4, col);
+      text(f.id === BT.myId ? tr('ТЫ', 'YOU') : f.n, x, f.y - 70, 1, f.id === BT.myId ? '#ffd23a' : '#ffffff', 'center', OL, 80);
+    }
+  }
+  // эффекты
+  for (const q of BT.fx) {
+    const a = 1 - q.t / q.life;
+    if (q.k === 'p') { ctx.globalAlpha = a; prect(ctx, btVX(q.x) - q.s / 2, q.y - q.s / 2, q.s, q.s, q.c); }
+    else if (q.k === 'n') { ctx.globalAlpha = Math.min(1, a * 2); text(q.txt, btVX(q.x), q.y, q.big ? 3 : 2, q.big ? '#ffd23a' : '#ffffff', 'center', OL); }
+    else if (q.k === 'ring') { ctx.globalAlpha = a; ctx.strokeStyle = '#fff6a0'; ctx.lineWidth = 6 * a; ctx.beginPath(); ctx.arc(btVX(q.x), q.y, 70 * (1 - a * 0.6), 0, Math.PI * 2); ctx.stroke(); }
+    else if (q.k === 'slash') { const f = BT.F.find(g => g.id === q.id); if (f) { const fc = BT.mirror ? -f.face : f.face; ctx.globalAlpha = a; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(btVX(f.x) + fc * 14, f.y - 24, 34, fc > 0 ? -1.3 : Math.PI - 0.2, fc > 0 ? 0.2 : Math.PI + 1.3); ctx.stroke(); } }
+    ctx.globalAlpha = 1;
+  }
+}
+function btPlate(f, x, y, mine) {   // табличка игрока на интро
+  const w = 250, h = 50, col = mine ? ['#3ab0ff', '#1a4ab0'] : ['#ff5a5a', '#a01a1a'];
+  ctx.fillStyle = OL; ctx.fillRect(x - 3, y - 3, w + 6, h + 6);
+  const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]); ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x, y, w, 5);
+  ctx.fillStyle = '#1a1030'; ctx.fillRect(x + 5, y + 5, 40, 40);
+  const k = skinById(f.sk) || SKINS[0]; heroSprite(k, 'idle', BT.t, false); ctx.save(); ctx.beginPath(); ctx.rect(x + 5, y + 5, 40, 40); ctx.clip(); drawRaw.call(ctx, hcv, SPR_X + 4, SPR_Y + 4, 24, 24, x + 5, y + 5, 40, 40); ctx.restore();
+  text(f.id === BT.myId ? f.n + ' (' + tr('ТЫ', 'YOU') + ')' : f.n, x + 54, y + 22, 2, '#ffffff', 'left', OL, w - 60);
+  text(f.bot ? tr('БОТ', 'BOT') : skinName(k), x + 54, y + 40, 1, '#fff6a0', 'left', OL, w - 60);
+}
+function btDrawHud() {
+  const my = BT.myTeam, me = btMe();
+  // счёт и таймер
+  const cx = W / 2, tm = Math.ceil(BT.timer), ts = Math.floor(tm / 60) + ':' + String(tm % 60).padStart(2, '0');
+  prect(ctx, cx - 92, 8, 184, 40, OL); prect(ctx, cx - 90, 10, 66, 36, '#1a70c0'); prect(ctx, cx + 24, 10, 66, 36, '#c01a1a'); prect(ctx, cx - 24, 10, 48, 36, '#2a1a4a');
+  text(String(BT.score[my]), cx - 57, 38, 3, '#ffffff', 'center', OL); text(String(BT.score[1 - my]), cx + 57, 38, 3, '#ffffff', 'center', OL);
+  text(ts, cx, 34, 1, tm <= 10 && Math.floor(BT.t * 4) % 2 ? '#ff5a5a' : '#ffffff', 'center', null);
+  // лента убийств
+  BT.feed.forEach((q, i) => { const y = 66 + i * 18; ctx.globalAlpha = 0.85; prect(ctx, W - 200, y - 12, 192, 16, 'rgba(10,4,24,0.6)'); ctx.globalAlpha = 1;
+    text(q.a, W - 108, y, 1, q.at === my ? '#7ac8ff' : '#ff8a8a', 'right', OL, 80); text('X', W - 100, y, 1, '#ffd23a', 'center', OL); text(q.v, W - 92, y, 1, q.vt === my ? '#7ac8ff' : '#ff8a8a', 'left', OL, 80); });
+  // кнопка атаки с оружием и патронами
+  const A = BT_ATK; pell(ctx, A.x, A.y + 3, A.r + 3, A.r + 3, OL); pell(ctx, A.x, A.y, A.r, A.r, me && me.w ? '#ff5a3a' : '#a85ac8'); pell(ctx, A.x, A.y - 6, A.r - 6, A.r - 12, me && me.w ? '#ff8a6a' : '#c88ae8');
+  if (me && me.w) { text(tr(WEAPONS[me.w].nm[0], WEAPONS[me.w].nm[1]), A.x, A.y + 4, 1, '#ffffff', 'center', OL, A.r * 2 - 6); text('x' + me.ammo, A.x, A.y + 20, 1, '#ffd23a', 'center', OL); }
+  else text(tr('УДАР', 'PUNCH'), A.x, A.y + 6, 2, '#ffffff', 'center', OL, A.r * 2 - 6);
+  text(tr('ЛЕВО', 'LEFT'), 40, H - 16, 1, 'rgba(255,255,255,0.6)', 'center', null); text(tr('ПРАВО', 'RIGHT'), W / 2 + 30, H - 16, 1, 'rgba(255,255,255,0.6)', 'center', null);
+  if (me && me.dead) { ctx.fillStyle = 'rgba(10,4,24,0.5)'; ctx.fillRect(0, H / 2 - 40, W, 70); text(tr('ВОЗРОЖДЕНИЕ ', 'RESPAWN ') + Math.ceil(me.respT), W / 2, H / 2 + 6, 3, '#ffffff', 'center', OL); }
+}
+const BT_ATK = { x: W - 54, y: H - 92, r: 40 };
+function btDraw() {
+  ctx.save(); if (shake > 0) { ctx.translate(rand(-1, 1) * shake * 12, rand(-1, 1) * shake * 12); shake = Math.max(0, shake - 0.02); }
+  btDrawBg(); btDrawWorld(); ctx.restore();
+  if (BT.ph === 'search') { mmDraw(); return; }
+  if (BT.ph === 'load') {
+    ctx.fillStyle = 'rgba(10,4,24,0.85)'; ctx.fillRect(0, 0, W, H);
+    text(tr('БОЙ 3 НА 3', '3 VS 3 BATTLE'), W / 2, 230, 4, '#ffd23a', 'center', OL);
+    text(tr(B_MAPS[BT.map].nm[0], B_MAPS[BT.map].nm[1]), W / 2, 270, 2, '#ffffff', 'center', OL);
+    const q = clamp(BT.loadT / 2.2, 0, 1); prect(ctx, 60, 320, W - 120, 22, OL); prect(ctx, 63, 323, (W - 126) * q, 16, '#ffd23a');
+    text(tr('ЗАГРУЗКА АРЕНЫ...', 'LOADING ARENA...'), W / 2, 372, 1, '#ffffff', 'center', OL);
+    return;
+  }
+  if (BT.ph === 'intro') {
+    const T = BT.t, dark = clamp((T - 2.5) / 0.5, 0, 1) * (T > 7 ? clamp((7.4 - T) / 0.4, 0, 1) : 1);
+    ctx.fillStyle = `rgba(6,2,16,${0.78 * dark})`; ctx.fillRect(0, 0, W, H);
+    if (T > 2.9) {
+      const mine = BT.F.filter(f => f.team === BT.myTeam), their = BT.F.filter(f => f.team !== BT.myTeam), out = T > 6.9 ? (T - 6.9) / 0.5 : 0;
+      mine.forEach((f, i) => { const q = clamp((T - 2.9 - i * 0.18) / 0.4, 0, 1), e = 1 - Math.pow(1 - q, 3); btPlate(f, -270 + e * 284 - out * 300, 70 + i * 62, true); });
+      their.forEach((f, i) => { const q = clamp((T - 3.3 - i * 0.18) / 0.4, 0, 1), e = 1 - Math.pow(1 - q, 3); btPlate(f, W + 20 - e * 284 + out * 300, H - 230 + i * 62, false); });
+      if (T < 6.9) { const pv = 1 + Math.sin(T * 8) * 0.06; ctx.save(); ctx.translate(W / 2, H / 2 - 30); ctx.scale(pv, pv); text('VS', 0, 0, 5, '#ffd23a', 'center', OL); ctx.restore(); }
+    }
+    if (T >= 4.4 && T < 7.4) {   // 3 — 2 — 1
+      const n = 3 - Math.floor(T - 4.4), fr = (T - 4.4) % 1, sc = 1.8 - Math.min(1, fr * 4) * 0.8;
+      ctx.save(); ctx.translate(W / 2, H / 2 + 50); ctx.scale(sc, sc); ctx.globalAlpha = 1 - Math.max(0, fr - 0.7) / 0.3; text(String(n), 0, 0, 8, '#ffffff', 'center', OL); ctx.restore(); ctx.globalAlpha = 1;
+    }
+    return;
+  }
+  if (BT.ph === 'fight' && BT.t < 1) { ctx.globalAlpha = 1 - BT.t; text(tr('БОЙ!', 'FIGHT!'), W / 2, H / 2, 7, '#ffd23a', 'center', OL); ctx.globalAlpha = 1; }
+  btDrawHud();
+  if (BT.ph === 'end') {
+    const a = clamp(BT.t * 2, 0, 1); ctx.fillStyle = `rgba(6,2,16,${0.8 * a})`; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = a;
+    const tt = BT.over === 'win' ? tr('ПОБЕДА!', 'VICTORY!') : BT.over === 'lose' ? tr('ПОРАЖЕНИЕ', 'DEFEAT') : tr('НИЧЬЯ', 'DRAW');
+    text(tt, W / 2, 110, 5, BT.over === 'win' ? '#ffd23a' : BT.over === 'lose' ? '#ff5a5a' : '#ffffff', 'center', OL);
+    text(BT.score[BT.myTeam] + ' : ' + BT.score[1 - BT.myTeam], W / 2, 160, 4, '#ffffff', 'center', OL);
+    const list = [...BT.F].sort((p1, p2) => (p1.team === BT.myTeam ? 0 : 1) - (p2.team === BT.myTeam ? 0 : 1) || p2.kills - p1.kills);
+    list.forEach((f, i) => { const y = 200 + i * 40, mine = f.team === BT.myTeam; prect(ctx, 24, y, W - 48, 34, mine ? 'rgba(58,176,255,0.35)' : 'rgba(255,58,58,0.35)'); text((f.id === BT.myId ? '> ' : '') + f.n, 36, y + 22, 2, f.id === BT.myId ? '#ffd23a' : '#ffffff', 'left', OL, 170); text(f.kills + ' / ' + f.deaths, W - 40, y + 22, 2, '#ffffff', 'right', OL); });
+    if (BT.reward) { coinIcon(W / 2 - 60, 456); text('+' + BT.reward.coins, W / 2 - 44, 464, 2, '#ffffff', 'left', OL); text('+' + BT.reward.xp + ' XP', W / 2 + 30, 464, 2, '#bfeaff', 'left', OL); }
+    if (BT.t > 1.2) button(BT_DONE, tr('ДАЛЬШЕ', 'CONTINUE'), '#3ce06a', '#1a9a3a');
+    ctx.globalAlpha = 1;
+  }
+}
+const BT_DONE = { x: W / 2 - 90, y: 520, w: 180, h: 46 };
+// касания: левая половина — прыжок влево, правая — вправо; кнопка — атака
+function btTap(pt) {
+  if (BT.ph === 'search') { if (inRect(pt, MM_X)) { sfx.click(); mmCancel(); } return; }
+  if (BT.ph === 'end') { if (BT.t > 1.2 && inRect(pt, BT_DONE)) { sfx.click(); btQuit(); } return; }
+  if (BT.ph !== 'fight') return;
+  if (Math.hypot(pt.x - BT_ATK.x, pt.y - BT_ATK.y) < BT_ATK.r + 6) { btInput('A'); return; }
+  let d = pt.x < W / 2 ? -1 : 1; if (BT.mirror) d = -d;
+  btInput(d < 0 ? 'L' : 'R');
+}
+function btInput(a) {
+  if (BT.host) { const me = btMe(); if (me) btApply(me, a); }
+  else if (BT.net) BT.net.send({ t: 'bi', a });
+}
+function btApply(f, a) { if (a === 'A') btAttack(f); else btJump(f, a === 'L' ? -1 : 1); }
+function btQuit() {
+  BT.on = false; BT.ph = 'off'; if (BT.net && BT.net.close) BT.net.close(); BT.net = null; BT.hostC = null; state = 'menu'; menuAt = time; reset();
+  PT.st = 'idle'; for (const m of PT.mem) m.r = false; if (PT.lostLead || (PT.lead && PT.mem.length < 2)) partyLeave(true); else if (PT.on) { ptSync(); openFriends(); } frPresence('menu');
+}
+// ---------- сеть: снимки от хоста ----------
+function btSend(full) {
+  if (!BT.net) { BT.ev = []; return; }
+  const F = BT.F.map(f => [f.id, Math.round(f.x), Math.round(f.y), Math.round(f.vx), Math.round(f.vy), f.hp, f.face, f.w || '', f.ammo, +(f.flipT > 0), +f.dead, +(f.inv > 0), f.kills, f.deaths, f.ground ? 1 : f.wall ? 2 + (f.wall > 0) : 0, +(f.pie > 0), +(f.slashT > 0), Math.round(f.respT * 10), f.ally ? Math.round(f.ally.x) : 0, f.ally ? Math.round(f.ally.y) : 0]);
+  BT.net.send({ t: 'bs', ph: BT.ph, T: +BT.timer.toFixed(1), tt: +BT.t.toFixed(2), S: BT.score, F, C: BT.C.map(c => [c.id, Math.round(c.x), Math.round(c.y), +c.land, c.w]), X: BT.X.map(s => [s.k, Math.round(s.x), Math.round(s.y), Math.round(s.vx), Math.round(s.vy)]), E: BT.ev, full: !!full });
+  BT.ev = [];
+}
+function btSnap(m) {   // игрок: применяем снимок хоста
+  if (!BT.on) return;
+  if (m.ph !== BT.ph) { BT.ph = m.ph; BT.t = m.tt; if (m.ph === 'end') { BT.ph = 'fight'; BT.score = m.S; btEnd(); } }
+  else if (Math.abs(BT.t - m.tt) > 0.3) BT.t = m.tt;
+  BT.timer = m.T; BT.score = m.S;
+  for (const a of m.F) {
+    const f = BT.F.find(g => g.id === a[0]); if (!f) continue;
+    f.tx = a[1]; f.ty = a[2]; f.vx = a[3]; f.vy = a[4]; f.hp = a[5]; f.face = a[6]; f.w = a[7] || null; f.ammo = a[8]; f.flipT = a[9] ? 0.3 : 0; f.dead = !!a[10]; f.inv = a[11] ? 0.5 : 0;
+    f.kills = a[12]; f.deaths = a[13]; f.ground = a[14] === 1; f.wall = a[14] >= 2 ? (a[14] === 3 ? 1 : -1) : 0; f.pie = a[15] ? 0.3 : 0; f.slashT = a[16] ? 0.15 : 0; f.respT = a[17] / 10;
+    if (f.ally) { f.ally.x = a[18]; f.ally.y = a[19]; }
+    if (f.x == null || Math.abs(f.x - f.tx) > 120) { f.x = f.tx; f.y = f.ty; }
+  }
+  BT.C = m.C.map(c => ({ id: c[0], x: c[1], y: c[2], land: !!c[3], w: c[4] }));
+  BT.X = m.X.map(s => ({ k: s[0], x: s[1], y: s[2], vx: s[3], vy: s[4] }));
+  for (const e of m.E) btFx(e);
+}
+function btInterp(dt) { for (const f of BT.F) { if (f.tx == null) continue; f.tx += f.vx * dt; f.ty += f.vy * dt; f.x += (f.tx - f.x) * Math.min(1, dt * 14); f.y += (f.ty - f.y) * Math.min(1, dt * 14); } for (const s of BT.X) { s.x += s.vx * dt; s.y += s.vy * dt; } }
+// ---------- связки с игрой ----------
+{ const u2 = update; update = function (dt) { if (state === 'battle') { time += dt; btUpdate(dt); return; } u2(dt); }; }
+{ const d2 = draw; draw = function () { if (state === 'battle') { btDraw(); return; } d2(); }; }
+{ const c2 = uiClick; uiClick = function (pt) { if (state === 'battle') { btTap(pt); return true; } return c2(pt); }; }
+// энергичная музыка боя: быстрый бас шестнадцатыми, бочка на каждую долю, рабочий барабан, пилообразная мелодия
+const BAT_MEL = [69, 0, 72, 69, 76, 0, 74, 72, 69, 0, 72, 74, 76, 79, 76, 74, 67, 0, 71, 67, 74, 0, 72, 71, 67, 0, 71, 72, 74, 76, 74, 72];
+const BAT_BASS = [45, 45, 43, 43, 41, 41, 43, 44];
+function battleStep(s, t) {
+  const bar = Math.floor(s / 8) % 8, bn = BAT_BASS[bar];
+  note(midi(bn - 12 + (s % 2 ? 12 : 0)), midi(bn - 12 + (s % 2 ? 12 : 0)), t, 0.1, 'sawtooth', 0.05, musicGain);
+  if (s % 4 === 0) note(150, 40, t, 0.14, 'sine', 0.3, musicGain);
+  if (s % 8 === 4) noiseAt(t, 0.12, 0.09, musicGain, 1200);
+  if (s % 2 === 1) noiseAt(t, 0.03, 0.03, musicGain, 7000);
+  const n = BAT_MEL[s % 32]; if (n && BT.ph !== 'load') { note(midi(n), midi(n), t, 0.1, 'square', 0.035, musicGain); note(midi(n + 12), midi(n + 12), t, 0.06, 'sawtooth', 0.012, musicGain); }
+  if (BT.ph === 'intro' && s % 16 === 0) note(midi(57), midi(81), t, 0.5, 'sawtooth', 0.02, musicGain);   // нарастание на интро
+}
+
+// =====================================================================================
+// ---------- ДРУЗЬЯ, КОМАНДА И ПОДБОР ИГРОКОВ ДЛЯ БОЯ 3 НА 3 ----------
+// В базе: fcode/<КОД> — чей код друга; freq/<кому>/<от кого> — заявки в друзья; pres/<uid> — кто в сети;
+// inv/<кому>/<от кого> — приглашения в команду; mm3/<uid> — очередь подбора (лидеры команд).
+// Базу не слушаем потоками (бесплатный тариф — до 100 соединений), а коротко спрашиваем раз в несколько секунд.
+// Команда и бой идут напрямую между игроками (FirePeer, как в обычной сети).
+// =====================================================================================
+const FR = { code: '', list: (v => Array.isArray(v) ? v.filter(f => f && typeof f.u === 'string') : [])(store.get('friends', [])), pres: {}, inbox: [], inv: [], skew: 0, pollT: 0, presT: 0, err: '' };
+const frSave = () => store.set('friends', FR.list.slice(0, 50));
+const frNick = () => mp.nick || 'P' + (10 + Math.floor(Math.random() * 90));
+const frAv = () => String((META.prof && META.prof.av) || skinId).slice(0, 44);
+const frNow = () => Date.now() + FR.skew;
+const frLive = () => fbOn() && !!store.get('fbAuth', null);   // уже входили (гость или Google) — можно в сеть без лишних окон
+async function frCode() {   // свой код друга: 6 знаков, занимаем в базе один раз
+  await fbAuth();
+  const c = store.get('fcode', null);
+  if (c && c.u === FB.uid && typeof c.c === 'string') return FR.code = c.c;
+  for (let i = 0; i < 6; i++) {
+    const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let k = ''; for (let j = 0; j < 6; j++) k += a[Math.floor(Math.random() * a.length)];
+    try { await fbReq('PUT', 'fcode/' + k, { u: FB.uid, t: FB_NOW }); store.set('fcode', { c: k, u: FB.uid }); return FR.code = k; } catch (e) { if (e && e.net) throw e; }
+  }
+  throw { step: 'db' };
+}
+async function frPresence(st) {
+  if (!frLive()) return;
+  try {
+    const r = await fbReq('PUT', 'pres/' + (await fbAuth(), FB.uid), { n: frNick(), av: frAv(), st: st || (state === 'battle' ? 'battle' : PT.on ? 'party' : 'menu'), t: FB_NOW });
+    if (r && typeof r.t === 'number') FR.skew = r.t - Date.now();
+  } catch (e) {}
+}
+async function frAdd(code) {
+  code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 6) return tr('КОД ДРУГА — 6 ЗНАКОВ', 'A FRIEND CODE HAS 6 CHARACTERS');
+  try {
+    const my = await frCode();
+    if (code === my) return tr('ЭТО ТВОЙ КОД', 'THAT IS YOUR CODE');
+    const d = await fbReq('GET', 'fcode/' + code);
+    if (!d || typeof d.u !== 'string') return tr('ТАКОГО КОДА НЕТ', 'NO SUCH CODE');
+    if (FR.list.some(f => f.u === d.u && f.st === 'ok')) return tr('УЖЕ В ДРУЗЬЯХ', 'ALREADY FRIENDS');
+    await fbReq('PUT', 'freq/' + d.u + '/' + FB.uid, { n: frNick(), av: frAv(), c: my, t: FB_NOW });
+    if (!FR.list.some(f => f.u === d.u)) FR.list.push({ u: d.u, n: '?', av: '', c: code, st: 'out' });
+    frSave(); return '';
+  } catch (e) { return fbErrText(e); }
+}
+async function frAccept(q) {
+  try {
+    const my = await frCode();
+    await fbReq('PUT', 'freq/' + q.u + '/' + FB.uid, { n: frNick(), av: frAv(), c: my, ok: true, t: FB_NOW });
+    await fbReq('DELETE', 'freq/' + FB.uid + '/' + q.u);
+    const f = FR.list.find(x => x.u === q.u); if (f) Object.assign(f, { n: q.n, av: q.av, c: q.c, st: 'ok' }); else FR.list.push({ u: q.u, n: q.n, av: q.av, c: q.c, st: 'ok' });
+    FR.inbox = FR.inbox.filter(x => x.u !== q.u); frSave(); sfx.achieve && sfx.achieve();
+  } catch (e) { FR.err = fbErrText(e); }
+}
+function frDecline(q) { FR.inbox = FR.inbox.filter(x => x.u !== q.u); fbReq('DELETE', 'freq/' + FB.uid + '/' + q.u).catch(() => {}); }
+const frClean = (s, n) => String(s || '').slice(0, n);
+async function frPoll() {   // входящие заявки и приглашения
+  if (!frLive()) return;
+  try {
+    await fbAuth();
+    const [rq, iv] = await Promise.all([fbReq('GET', 'freq/' + FB.uid), fbReq('GET', 'inv/' + FB.uid)]);
+    FR.inbox = [];
+    for (const [u, q] of Object.entries(rq || {})) {
+      if (!q || typeof q !== 'object') continue;
+      const e = { u, n: frClean(q.n, 12) || '?', av: frClean(q.av, 44), c: frClean(q.c, 6) };
+      const f = FR.list.find(x => x.u === u);
+      if (q.ok || (f && f.st === 'out')) {   // нас приняли (или мы позвали друг друга одновременно)
+        if (f) Object.assign(f, { n: e.n, av: e.av, st: 'ok' }); else FR.list.push({ ...e, st: 'ok' });
+        if (!q.ok) frAccept(e); else fbReq('DELETE', 'freq/' + FB.uid + '/' + u).catch(() => {});
+        frSave();
+      } else FR.inbox.push(e);
+    }
+    FR.inv = [];
+    for (const [u, q] of Object.entries(iv || {})) {
+      if (!q || typeof q !== 'object' || typeof q.r !== 'string') continue;
+      if (frNow() - (+q.t || 0) > 90000) { fbReq('DELETE', 'inv/' + FB.uid + '/' + u).catch(() => {}); continue; }
+      FR.inv.push({ u, n: frClean(q.n, 12) || '?', av: frClean(q.av, 44), r: q.r });
+    }
+    if (FR.inv.length && !PT.on && state === 'menu' && !BT.on) frInvitePop(FR.inv[0]);
+    if (moStack.length && moStack[moStack.length - 1].fr) moRefresh();
+  } catch (e) {}
+}
+async function frPresAll() {
+  const ok = FR.list.filter(f => f.st === 'ok').slice(0, 30);
+  await Promise.all(ok.map(async f => { try { const d = await fbReq('GET', 'pres/' + f.u); FR.pres[f.u] = d || null; if (d && d.n) { f.n = frClean(d.n, 12); f.av = frClean(d.av, 44); } } catch (e) {} }));
+  frSave();
+}
+const frOnline = f => { const d = FR.pres[f.u]; return d && frNow() - (+d.t || 0) < 75000 ? d.st || 'menu' : ''; };
+async function frInvite(f) {
+  try {
+    await partyEnsure();
+    await fbReq('PUT', 'inv/' + f.u + '/' + FB.uid, { n: frNick(), av: frAv(), r: PT.code, t: FB_NOW });
+    f.invT = Date.now(); ptNote(tr('ПРИГЛАШЕНИЕ ОТПРАВЛЕНО: ', 'INVITE SENT: ') + f.n);
+  } catch (e) { ptNote(fbErrText(e)); }
+}
+function frInvitePop(q) {
+  if (frInvitePop.open === q.u) return; frInvitePop.open = q.u;
+  const close = () => { frInvitePop.open = ''; fbReq('DELETE', 'inv/' + FB.uid + '/' + q.u).catch(() => {}); FR.inv = FR.inv.filter(x => x.u !== q.u); };
+  moOpen(tr('ПРИГЛАШЕНИЕ', 'INVITE'), body => {
+    const c = moEl('div', 'card'); c.style.textAlign = 'center';
+    const av = avatarCnv(q.av || 'hamster', 80, true); av.className = 'av'; av.style.cssText += ';display:block;margin:0 auto'; c.appendChild(av);
+    c.appendChild(moTxt('div', 'big ol', q.n)); c.lastChild.style.margin = '8px 0';
+    c.appendChild(moTxt('div', '', tr('ЗОВЁТ ТЕБЯ В КОМАНДУ НА БОЙ 3 НА 3!', 'INVITES YOU TO A 3 VS 3 BATTLE TEAM!')));
+    const r = moEl('div', 'row'); r.style.cssText = 'margin-top:14px;justify-content:center';
+    const ok = moTxt('button', 'btn pulse', tr('ПРИНЯТЬ', 'ACCEPT')), no = moTxt('button', 'btn red', tr('НЕТ', 'NO'));
+    ok.onclick = () => { sfx.click(); close(); partyJoin(q.r); openFriends(); };
+    no.onclick = () => { sfx.click(); close(); moClose(); };
+    r.append(ok, no); c.appendChild(r); body.appendChild(c);
+  });
+  try { sfx.achieve(); } catch (e) {}
+}
+// раз в секунду: присутствие (раз в 30 с) и почта (раз в 8 с, а с открытыми друзьями — чаще)
+setInterval(() => {
+  if (!frLive() || document.hidden) return;
+  const now = Date.now(), frOpen = moStack.length && moStack[moStack.length - 1].fr;
+  if (now - FR.presT > 30000) { FR.presT = now; frPresence(); }
+  if (now - FR.pollT > (frOpen ? 4000 : 8000) && (state === 'menu' || frOpen || PT.on)) { FR.pollT = now; frPoll(); if (frOpen) frPresAll().then(() => { if (moStack.length && moStack[moStack.length - 1].fr) moRefresh(); }); }
+}, 1000);
+
+// ---------- команда (до 3 друзей): лидер держит комнату, остальные подключаются ----------
+const PT = { on: false, lead: false, code: '', peer: null, conns: [], hc: null, mem: [], st: 'idle', note: '', noteT: 0, lostLead: false };
+function ptNote(s) { PT.note = s; PT.noteT = Date.now(); if (moStack.length && moStack[moStack.length - 1].fr) moRefresh(); }
+const ptMe = () => ({ u: FB.uid || mp.id, n: frNick(), sk: skinId, ally: allySel || '', av: frAv(), r: false });
+function ptBroadcast(m) { for (const c of PT.conns) if (c.open && c.u) c.send(m); }
+function ptSync() { if (PT.lead) ptBroadcast({ t: 'party', L: PT.mem }); if (moStack.length && moStack[moStack.length - 1].fr) moRefresh(); }
+function partyEnsure() {   // лидер: создаём комнату команды
+  if (PT.on) return Promise.resolve();
+  return new Promise((ok, no) => {
+    const code = mpCode(), peer = new FirePeer(code);
+    peer.on('open', () => { Object.assign(PT, { on: true, lead: true, code, peer, conns: [], hc: null, mem: [ptMe()], st: 'idle', lostLead: false }); frPresence('party'); ok(); ptSync(); });
+    peer.on('error', e => { peer.destroy(); no({ step: 'db', msg: e.type }); });
+    peer.on('connection', c => {
+      PT.conns.push(c);
+      c.on('data', d => ptHostMsg(c, d));
+      c.on('close', () => { PT.conns = PT.conns.filter(x => x !== c); if (BT.on && BT.host) { const f = BT.F.find(g => g.id === c.u); if (f) f.bot = true; } if (MM.on && MM.host) MM.got = MM.got.filter(x => x.c !== c); PT.mem = PT.mem.filter(m => m.u !== c.u || c.match); ptSync(); });
+    });
+  });
+}
+function partyJoin(code) {
+  partyLeave(true);
+  const peer = new FirePeer(null);
+  Object.assign(PT, { on: true, lead: false, code, peer, conns: [], hc: null, mem: [], st: 'idle', lostLead: false });
+  peer.on('open', () => {
+    const c = peer.connect(code); PT.hc = c; PT.conns = [c];
+    c.on('open', () => { c.send({ t: 'hi', ...ptMe() }); frPresence('party'); });
+    c.on('data', d => ptMemMsg(c, d));
+    c.on('close', () => { if (PT.hc !== c) return; if (BT.on) { if (BT.hostC === c) btHostLost(); PT.lostLead = true; } else { ptNote(tr('КОМАНДА РАСПАЛАСЬ', 'THE TEAM DISBANDED')); if (state === 'battle') mmBack(); partyLeave(true); } });
+  });
+  peer.on('error', () => { ptNote(tr('КОМАНДА УЖЕ НЕ ЖДЁТ', 'THAT TEAM IS GONE')); partyLeave(true); });
+}
+function partyLeave(quiet) {
+  if (!PT.on) return;
+  if (MM.on) mmStop();
+  if (PT.lead) ptBroadcast({ t: 'bye' }); else if (PT.hc) PT.hc.send({ t: 'bye' });
+  try { PT.peer && PT.peer.destroy(); } catch (e) {}
+  Object.assign(PT, { on: false, lead: false, code: '', peer: null, conns: [], hc: null, mem: [], st: 'idle', lostLead: false });
+  if (!quiet) ptSync(); frPresence('menu');
+}
+function ptReady(v) {
+  if (!PT.on) return;
+  if (PT.lead) { PT.mem[0].r = v; ptCheckGo(); ptSync(); }
+  else if (PT.hc) { const m = PT.mem.find(x => x.u === (FB.uid || mp.id)); if (m) m.r = v; PT.hc.send({ t: 'rdy', r: v }); ptSync(); }
+}
+function ptCheckGo() { if (PT.lead && PT.st === 'idle' && PT.mem.length && PT.mem.every(m => m.r)) mmStart(); }
+// лидер (он же хост боя) получает сообщения
+function ptHostMsg(c, d) {
+  if (!d || typeof d !== 'object') return;
+  const s = (v, n) => String(v || '').slice(0, n);
+  if (d.t === 'hi') {
+    c.u = s(d.u, 40); const me = { u: c.u, n: s(d.n, 12) || '?', sk: s(d.sk, 44), ally: s(d.ally, 20), av: s(d.av, 44), r: false };
+    if (d.m && MM.on && MM.host) { c.match = true; me.tm = d.tm ? 1 : 0; MM.got = MM.got.filter(x => x.u !== me.u); MM.got.push({ ...me, c }); return; }   // игрок другой команды пришёл на бой
+    if (PT.st !== 'idle' || PT.mem.length >= 3) { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); return; }
+    PT.mem = PT.mem.filter(m => m.u !== me.u); PT.mem.push(me); sfx.click(); ptSync();
+  } else if (d.t === 'rdy') { const m = PT.mem.find(x => x.u === c.u); if (m) { m.r = !!d.r; if (!m.r && MM.on && !MM.host) mmCancel(); else ptCheckGo(); ptSync(); } }
+  else if (d.t === 'bye') { c.close(); }
+  else if (d.t === 'bi' && BT.on && BT.host) { const f = BT.F.find(g => g.id === c.u && !g.bot); if (f && (d.a === 'L' || d.a === 'R' || d.a === 'A')) btApply(f, d.a); }
+}
+// участник команды (или игрок, пришедший на чужой бой) получает сообщения хоста
+function ptMemMsg(c, d) {
+  if (!d || typeof d !== 'object') return;
+  if (d.t === 'party' && Array.isArray(d.L)) { PT.mem = d.L.slice(0, 3); ptSync(); }
+  else if (d.t === 'full') { ptNote(tr('В КОМАНДЕ УЖЕ НЕТ МЕСТ', 'THE TEAM IS FULL')); partyLeave(true); }
+  else if (d.t === 'bye') { if (c === PT.hc && !BT.on) { ptNote(tr('ЛИДЕР РАСПУСТИЛ КОМАНДУ', 'THE LEADER DISBANDED THE TEAM')); partyLeave(true); } }
+  else if (d.t === 'srch') { PT.st = 'search'; mmShow(d.n || 1); }
+  else if (d.t === 'mmx') { PT.st = 'idle'; if (BT.ph === 'search') mmBack(); }
+  else if (d.t === 'mmc') { MM.cnt = d.n | 0; }
+  else if (d.t === 'mm' && typeof d.r === 'string') mmJoinHost(d.r, d.tm);   // наш лидер нашёл чужой бой
+  else if (d.t === 'bgo' && Array.isArray(d.R)) {
+    MM.on = false;
+    btStart(d.R.slice(0, 6), { host: false, myId: FB.uid || mp.id, map: d.map | 0 }); BT.hostC = c;
+    BT.net = { send: m => c.send(m), close: () => { if (c.match) c.close(); } };
+    frPresence('battle');
+  }
+  else if (d.t === 'bs') btSnap(d);
+}
+// хост ушёл посреди боя: доигрываем сами, остальные становятся ботами
+function btHostLost() {
+  if (!BT.on || BT.host) return;
+  BT.host = true; BT.net = null;
+  for (const f of BT.F) { if (f.id !== BT.myId) f.bot = true; if (f.tx != null) { f.x = f.tx; f.y = f.ty; } }
+  if (BT.ph === 'load') BT.ph = 'intro';
+  BT.feed.push({ a: tr('СВЯЗЬ', 'LINK'), at: -1, v: tr('ПОТЕРЯНА', 'LOST'), vt: -1, t: BT.t });
+}
+
+// ---------- подбор: очередь лидеров в базе; самый давний собирает бой и становится хостом ----------
+const MM = { on: false, host: false, t0: 0, cnt: 1, got: [], timer: 0, picked: [], hostWait: 0, joinCode: '', lastPut: 0 };
+const MM_WAIT = 10000, MM_JOIN_WAIT = 9000;
+function bt3Play() {   // кнопка «БОЙ 3 НА 3»
+  audio(); startMusic();
+  if (PT.on && !PT.lead) { ptReady(true); return; }
+  if (!frLive()) { mmBots(); return; }
+  partyEnsure().then(() => { if (PT.mem.length === 1) PT.mem[0].r = true; ptSync(); if (PT.mem.every(m => m.r)) mmStart(); else ptReady(true); }).catch(() => mmBots());
+}
+function mmBots() {   // без сети: сразу бой с ботами
+  const me = ptMe(); me.id = me.u; me.team = 0;
+  btStart(mmFill([{ id: me.u, n: me.n, sk: me.sk, ally: me.ally, team: 0 }]), { host: true, myId: me.u });
+}
+function mmFill(R) {   // добиваем команды ботами до 3 на 3
+  const used = new Set(R.map(r => r.n)), owned0 = SKINS.filter(k => !k.hide), names = BOT_NAMES.filter(n => !used.has(n));
+  for (const tm of [0, 1]) while (R.filter(r => r.team === tm).length < 3) {
+    const k = owned0[Math.floor(Math.random() * owned0.length)], n = names.splice(Math.floor(Math.random() * names.length), 1)[0] || 'BOT';
+    R.push({ id: 'bot' + R.length + Math.random().toString(36).slice(2, 5), n, sk: k.id, team: tm, bot: true, ally: Math.random() < 0.4 ? ALLIES[Math.floor(Math.random() * ALLIES.length)].id : '' });
+  }
+  return R;
+}
+function mmShow(n) {   // экран подбора — тоже в режиме боя (фаза 'search')
+  MM.cnt = n; BT.on = true; BT.ph = 'search'; BT.t = 0; BT.map = Math.floor(Math.random() * B_MAPS.length); BT.F = []; BT.C = []; BT.X = []; BT.fx = []; BT.feed = []; BT.camX = 0; BT.mirror = false;
+  if (moUi) moClose(); state = 'battle'; startMusic();
+}
+function mmStart() {
+  if (MM.on) return;
+  PT.st = 'search'; Object.assign(MM, { on: true, host: false, t0: Date.now(), cnt: PT.mem.length, got: [], picked: [], hostWait: 0, joinCode: '', lastPut: 0 });
+  ptBroadcast({ t: 'srch', n: PT.mem.length });
+  mmShow(PT.mem.length); frPresence('battle');
+  clearInterval(MM.timer); MM.timer = setInterval(mmTick, 1500); mmTick();
+}
+function mmStop() {
+  clearInterval(MM.timer); MM.on = false; PT.st = 'idle';
+  if (FB.uid) { fbReq('DELETE', 'mm3/' + FB.uid).catch(() => {}); fbReq('DELETE', 'mm3c/' + FB.uid).catch(() => {}); }
+  for (const m of PT.mem) m.r = false;
+}
+function mmCancel() {   // «ОТМЕНА» на экране подбора (или кто-то из команды передумал)
+  if (PT.lead) { mmStop(); ptBroadcast({ t: 'party', L: PT.mem }); ptBroadcast({ t: 'mmx' }); }
+  else ptReady(false);
+  if (BT.ph === 'search') mmBack();
+}
+function mmBack() { BT.on = false; BT.ph = 'off'; state = 'menu'; menuAt = time; if (PT.on) openFriends(); }
+async function mmTick() {
+  if (!MM.on || !PT.lead) return;
+  const el = Date.now() - MM.t0;
+  try {
+    if (MM.host) {   // собрали бой: ждём, пока подключатся игроки других команд
+      MM.cnt = PT.mem.length + MM.got.length; ptBroadcast({ t: 'mmc', n: MM.cnt });
+      if (MM.got.length >= MM.picked.reduce((a, p) => a + p.n, 0) || Date.now() - MM.hostWait > MM_JOIN_WAIT) mmGo();
+      return;
+    }
+    if (!MM.lastPut) await fbReq('DELETE', 'mm3c/' + FB.uid).catch(() => {});   // старое «нас забрали» с прошлого боя
+    if (Date.now() - MM.lastPut > 4000) { MM.lastPut = Date.now(); await fbReq('PUT', 'mm3/' + FB.uid, { n: PT.mem.length, r: PT.code, t: FB_NOW }); }
+    const [all, cl] = await Promise.all([fbReq('GET', 'mm3', undefined, '&orderBy=' + encodeURIComponent('"t"') + '&limitToLast=30'), fbReq('GET', 'mm3c/' + FB.uid)]);
+    if (!MM.on || MM.host) return;
+    if (cl && typeof cl.r === 'string' && cl.r !== PT.code) {   // нас забрал чужой хост
+      clearInterval(MM.timer); fbReq('DELETE', 'mm3/' + FB.uid).catch(() => {});
+      ptBroadcast({ t: 'mm', r: cl.r, tm: cl.tm ? 1 : 0 }); mmJoinHost(cl.r, cl.tm); return;
+    }
+    const now = frNow(), q = Object.entries(all || {}).filter(([u, e]) => e && now - (+e.t || 0) < 15000 && (+e.n || 0) >= 1 && (+e.n || 0) <= 3 && typeof e.r === 'string')
+      .map(([u, e]) => ({ u, n: +e.n | 0, r: e.r, t: +e.t })).sort((a, b) => a.t - b.t);
+    MM.cnt = Math.min(6, q.reduce((a, e) => a + (e.u === FB.uid ? 0 : e.n), PT.mem.length)); ptBroadcast({ t: 'mmc', n: MM.cnt });
+    const oldest = q.length && q[0].u === FB.uid;
+    if (!(MM.cnt >= 6 || (oldest && el > MM_WAIT) || el > MM_WAIT * 1.6)) return;
+    // собираем: своя команда — синие; остальных раскладываем так, чтобы в каждой было не больше 3
+    try { await fbReq('PUT', 'mm3c/' + FB.uid, { r: PT.code, tm: 0, t: FB_NOW }); } catch (e) { return; }   // занимаем себя: теперь нас никто не заберёт (база пишет только в пустое место)
+    MM.host = true; MM.hostWait = Date.now();
+    let a = PT.mem.length, b = 0;
+    for (const e of q) {
+      if (e.u === FB.uid) continue;
+      const tm = a + e.n <= 3 ? 0 : b + e.n <= 3 ? 1 : -1; if (tm < 0) continue;
+      try { await fbReq('PUT', 'mm3c/' + e.u, { r: PT.code, tm, t: FB_NOW }); } catch (x) { continue; }   // его уже забрал другой хост
+      MM.picked.push({ ...e, tm }); if (tm) b += e.n; else a += e.n;
+      if (a + b >= 6) break;
+    }
+    fbReq('DELETE', 'mm3/' + FB.uid).catch(() => {});
+    if (!MM.picked.length) mmGo();
+  } catch (e) {
+    if (el > MM_WAIT * 2) mmGo();   // база не отвечает — играем с ботами
+  }
+}
+function mmGo() {   // хост: старт боя для всех
+  clearInterval(MM.timer); MM.on = false; PT.st = 'battle';
+  const R = PT.mem.map(m => ({ id: m.u, n: m.n, sk: m.sk, ally: m.ally, team: 0 }));
+  for (const g of MM.got) if (R.filter(r => r.team === g.tm).length < 3) R.push({ id: g.u, n: g.n, sk: g.sk, ally: g.ally, team: g.tm });
+  const map = Math.floor(Math.random() * B_MAPS.length), RR = mmFill(R);
+  const inMatch = new Set(RR.filter(r => !r.bot).map(r => r.id));
+  for (const g of MM.got) if (!inMatch.has(g.u)) { g.c.send({ t: 'full' }); g.c.close(); }
+  btStart(RR, { host: true, myId: FB.uid || mp.id, map });
+  BT.net = { send: m => { for (const c of PT.conns) if (c.open && inMatch.has(c.u)) c.send(m); }, close: () => { for (const c of PT.conns) if (c.match) c.close(); PT.conns = PT.conns.filter(c => !c.match); } };
+  BT.net.send({ t: 'bgo', R: RR, map });
+  for (const m of PT.mem) m.r = false;
+  frPresence('battle');
+}
+// нас (нашу команду) забрал другой хост: каждый подключается к нему сам
+function mmJoinHost(code, tm) {
+  MM.on = false; clearInterval(MM.timer); MM.joinCode = code; PT.st = 'battle';
+  const go = () => {
+    const c = PT.peer.connect(code); c.match = true;
+    c.on('open', () => c.send({ t: 'hi', m: 1, tm: tm ? 1 : 0, ...ptMe() }));
+    c.on('data', d => ptMemMsg(c, d));
+    c.on('close', () => { if (BT.on && BT.hostC === c) btHostLost(); });
+    setTimeout(() => { if (!BT.on || BT.ph === 'search') { c.close(); mmBots(); } }, MM_JOIN_WAIT + 6000);   // хост не дождался — бой с ботами
+  };
+  if (PT.peer) go();
+}
+// экран подбора (рисуется движком боя)
+function mmDraw() {
+  btDrawBg();
+  ctx.fillStyle = 'rgba(8,2,24,0.72)'; ctx.fillRect(0, 0, W, H);
+  const t = BT.t, pulse = 1 + Math.sin(t * 6) * 0.05;
+  ctx.save(); ctx.translate(W / 2, 120); ctx.scale(pulse, pulse); text(tr('БОЙ 3 НА 3', '3 VS 3 BATTLE'), 0, 0, 4, '#ffd23a', 'center', OL); ctx.restore();
+  text(tr('ПОДБОР ИГРОКОВ', 'FINDING PLAYERS') + '.'.repeat(1 + Math.floor(t * 2) % 3), W / 2, 160, 2, '#ffffff', 'center', OL);
+  // вращающийся радар
+  const cx = W / 2, cy = 300;
+  for (let r = 30; r <= 90; r += 30) { ctx.strokeStyle = 'rgba(122,216,255,0.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * 3); const g = ctx.createLinearGradient(0, 0, 90, 0); g.addColorStop(0, 'rgba(122,216,255,0.6)'); g.addColorStop(1, 'rgba(122,216,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 90, -0.5, 0); ctx.closePath(); ctx.fill(); ctx.restore();
+  heroSprite(curSkin(), 'idle', t, false); ctx.save(); ctx.translate(cx, cy + 20); ctx.scale(0.8, 0.8); ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
+  // 6 мест: найденные горят
+  const n = clamp(MM.cnt | 0, 1, 6);
+  for (let i = 0; i < 6; i++) {
+    const x = W / 2 - 125 + i * 50 + (i >= 3 ? 0 : 0), y = 440, on = i < n, col = i < 3 ? '#3ab0ff' : '#ff5a5a';
+    pell(ctx, x, y, 19, 19, OL); pell(ctx, x, y, 16, 16, on ? col : '#2a1a4a');
+    if (on) { pell(ctx, x, y - 4, 6, 6, '#ffffff'); pell(ctx, x, y + 9, 10, 6, '#ffffff'); } else text('?', x, y + 6, 2, '#5a4a7a', 'center', null);
+  }
+  text(tr('НАЙДЕНО ', 'FOUND ') + n + tr(' ИЗ 6', ' OF 6'), W / 2, 500, 3, '#ffffff', 'center', OL);
+  text(tr('НЕ ХВАТИТ ИГРОКОВ — ДОБАВИМ БОТОВ', 'NOT ENOUGH PLAYERS - BOTS WILL JOIN'), W / 2, 524, 1, '#c8b8f0', 'center', OL);
+  button(MM_X, tr('ОТМЕНА', 'CANCEL'), '#ff6a5a', '#c01a0a');
+}
+const MM_X = { x: W / 2 - 70, y: 560, w: 140, h: 40 };
+
+// ---------- экран «ДРУЗЬЯ» ----------
+function openFriends() {
+  moOpen(tr('ДРУЗЬЯ', 'FRIENDS'), body => {
+    const top = moStack[moStack.length - 1]; top.fr = true;
+    if (!fbOn()) {
+      const c = moEl('div', 'card'); c.appendChild(moTxt('div', '', tr('ДРУЗЬЯ И КОМАНДЫ РАБОТАЮТ ЧЕРЕЗ FIREBASE — ОН ЕЩЁ НЕ НАСТРОЕН. ПОКА МОЖНО ПОИГРАТЬ 3 НА 3 С БОТАМИ.', 'FRIENDS AND TEAMS NEED FIREBASE, WHICH IS NOT SET UP YET. YOU CAN STILL PLAY 3 VS 3 WITH BOTS.')));
+      const b = moTxt('button', 'btn gold pulse', tr('⚔ БОЙ С БОТАМИ', '⚔ BATTLE BOTS')); b.style.cssText += ';width:100%;margin-top:12px'; b.onclick = () => { sfx.click(); mmBots(); moClose(); }; c.appendChild(b);
+      body.appendChild(c); return;
+    }
+    if (!FR.code && Date.now() - (FR.codeTry || 0) > 10000) { FR.codeTry = Date.now(); frCode().then(() => { FR.err = ''; moRefresh(); }).catch(e => { FR.err = fbErrText(e); if (moStack.length && moStack[moStack.length - 1].fr) moRefresh(); }); }
+    if (PT.note && Date.now() - PT.noteT < 5000) { const n = moTxt('div', 'card', PT.note); n.style.cssText += ';background:#ffd23a;color:#2a1408;text-align:center'; body.appendChild(n); }
+    // моя команда: 3 места
+    const team = moEl('div', 'card');
+    team.appendChild(moTxt('div', 'ol', tr('МОЯ КОМАНДА · БОЙ 3 НА 3', 'MY TEAM · 3 VS 3 BATTLE'))); team.lastChild.style.cssText = 'color:#ffd23a;margin-bottom:8px';
+    const slots = moEl('div', 'row'); slots.style.cssText = 'justify-content:space-around;margin-bottom:10px';
+    const mem = PT.on ? PT.mem : [ptMe()];
+    for (let i = 0; i < 3; i++) {
+      const m = mem[i], s = moEl('div'); s.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;width:30%;font-size:11px;text-align:center';
+      if (m) {
+        const k = skinById(m.sk) || SKINS[0], h = heroCnv(k, 64, { anim: true, bg: '#1a1030', pose: m.r ? 'wave' : 'idle' }); h.className = 'av'; h.style.borderColor = m.r ? '#3ce06a' : '#2a1408';
+        s.append(h, moTxt('div', 'ol', m.n + (i === 0 ? ' 👑' : '')), moTxt('div', 'chip' + (m.r ? ' gold' : ''), m.r ? tr('ГОТОВ ✓', 'READY ✓') : tr('ЖДЁМ…', 'WAITING…')));
+      } else {
+        const e = moTxt('div', 'av', '+'); e.style.cssText += ';width:64px;height:64px;display:grid;place-items:center;font-size:28px;color:#5a4a7a;border-style:dashed';
+        s.append(e, moTxt('div', 'sm', tr('ПОЗОВИ ДРУГА НИЖЕ ИЛИ ИГРОК НАЙДЁТСЯ САМ', 'INVITE A FRIEND OR A PLAYER WILL BE FOUND')));
+      }
+      slots.appendChild(s);
+    }
+    team.appendChild(slots);
+    const meR = PT.on && (PT.mem.find(x => x.u === (FB.uid || mp.id)) || {}).r;
+    const go = moTxt('button', 'btn ' + (meR ? 'red' : 'gold pulse'), meR ? tr('ОТМЕНИТЬ ГОТОВНОСТЬ', 'UNREADY') : tr('⚔ ГОТОВ!', '⚔ READY!'));
+    go.style.cssText += ';width:100%;font-size:18px'; go.onclick = () => { sfx.click(); if (meR) ptReady(false); else if (!PT.on || (PT.lead && PT.mem.length === 1)) { moClose(); bt3Play(); } else ptReady(true); };
+    team.appendChild(go);
+    team.appendChild(moTxt('div', 'sm', tr('КОГДА ВСЕ В КОМАНДЕ НАЖМУТ «ГОТОВ», НАЧНЁТСЯ ПОДБОР. ЕСЛИ ВАС ДВОЕ — ТРЕТИЙ БУДЕТ СЛУЧАЙНЫЙ.', 'WHEN EVERYONE IN THE TEAM IS READY, MATCHMAKING STARTS. IF THERE ARE TWO OF YOU, THE THIRD IS RANDOM.'))); team.lastChild.style.marginTop = '8px';
+    if (PT.on) { const lv = moTxt('button', 'btn red', tr('ВЫЙТИ ИЗ КОМАНДЫ', 'LEAVE TEAM')); lv.style.cssText += ';width:100%;margin-top:8px;font-size:12px'; lv.onclick = () => { sfx.click(); partyLeave(); moRefresh(); }; team.appendChild(lv); }
+    body.appendChild(team);
+    // мой код и добавление
+    const add = moEl('div', 'card');
+    const cr = moEl('div', 'row'); cr.append(moTxt('div', '', tr('ТВОЙ КОД:', 'YOUR CODE:')), moTxt('div', 'big ol', FR.code || '…')); cr.lastChild.style.cssText = 'color:#ffd23a;letter-spacing:4px;flex:1';
+    const cp = moTxt('button', 'btn blue', tr('КОПИРОВАТЬ', 'COPY')); cp.style.fontSize = '11px'; cp.onclick = () => { sfx.click(); try { navigator.clipboard.writeText(FR.code); cp.textContent = tr('ГОТОВО ✓', 'COPIED ✓'); } catch (e) {} };
+    cr.appendChild(cp); add.appendChild(cr);
+    const ar = moEl('div', 'row'); ar.style.marginTop = '10px';
+    const inp = document.createElement('input'); inp.maxLength = 6; inp.placeholder = tr('КОД ДРУГА', 'FRIEND CODE'); inp.style.cssText = 'flex:1;min-width:0;font:inherit;font-size:18px;letter-spacing:3px;text-transform:uppercase;padding:9px;border:3px solid #2a1408;border-radius:10px;background:#fff;color:#2a1408';
+    const ab = moTxt('button', 'btn', tr('ДОБАВИТЬ', 'ADD'));
+    ab.onclick = async () => { sfx.click(); ab.disabled = true; const er = await frAdd(inp.value); ab.disabled = false; FR.err = er || ''; if (!er) { inp.value = ''; ptNote(tr('ЗАЯВКА ОТПРАВЛЕНА!', 'REQUEST SENT!')); } else moRefresh(); };
+    ar.append(inp, ab); add.appendChild(ar);
+    if (FR.err) { const e = moTxt('div', 'sm', FR.err); e.style.cssText = 'color:#ff8a8a;margin-top:6px'; add.appendChild(e); }
+    body.appendChild(add);
+    // заявки
+    if (FR.inbox.length) {
+      const ib = moEl('div', 'card'); ib.appendChild(moTxt('div', 'ol', tr('ЗАЯВКИ В ДРУЗЬЯ', 'FRIEND REQUESTS'))); ib.lastChild.style.cssText = 'color:#ffd23a;margin-bottom:8px';
+      for (const q of FR.inbox) {
+        const r = moEl('div', 'rk'); r.append(avatarCnv(q.av || 'hamster', 36), moTxt('div', '', q.n));
+        const y = moTxt('button', 'btn', '✓'), n = moTxt('button', 'btn red', '✕'); y.style.marginLeft = 'auto';
+        y.onclick = async e => { e.stopPropagation(); sfx.click(); await frAccept(q); moRefresh(); }; n.onclick = e => { e.stopPropagation(); sfx.click(); frDecline(q); moRefresh(); };
+        r.append(y, n); ib.appendChild(r);
+      }
+      body.appendChild(ib);
+    }
+    // список друзей
+    const fl = moEl('div', 'card'); fl.appendChild(moTxt('div', 'ol', tr('ДРУЗЬЯ', 'FRIENDS') + ' (' + FR.list.filter(f => f.st === 'ok').length + ')')); fl.lastChild.style.cssText = 'color:#ffd23a;margin-bottom:8px';
+    if (!FR.list.length) fl.appendChild(moTxt('div', 'sm', tr('ПОКА НИКОГО. ДАЙ ДРУГУ СВОЙ КОД ИЛИ ВВЕДИ ЕГО КОД ВЫШЕ.', 'NO ONE YET. SHARE YOUR CODE OR ENTER A FRIEND CODE ABOVE.')));
+    const order = [...FR.list].sort((a, b) => (frOnline(b) ? 1 : 0) - (frOnline(a) ? 1 : 0));
+    for (const f of order) {
+      const on = f.st === 'ok' ? frOnline(f) : '', r = moEl('div', 'rk');
+      const av = avatarCnv(f.av || 'hamster', 40); r.appendChild(av);
+      const nm = moEl('div'); nm.append(moTxt('div', '', f.n), moTxt('div', 'sm', f.st === 'out' ? tr('ЖДЁМ ОТВЕТА…', 'PENDING…') : on === 'battle' ? tr('● В БОЮ', '● IN BATTLE') : on === 'party' ? tr('● В КОМАНДЕ', '● IN A TEAM') : on ? tr('● В СЕТИ', '● ONLINE') : tr('НЕ В СЕТИ', 'OFFLINE')));
+      nm.lastChild.style.color = on ? '#3ce06a' : '#a898c8'; r.appendChild(nm);
+      if (f.st === 'ok' && on && on !== 'battle' && (!PT.on || (PT.lead && PT.mem.length < 3 && !PT.mem.some(m => m.u === f.u)))) {
+        const iv = moTxt('button', 'btn gold', f.invT && Date.now() - f.invT < 20000 ? tr('ЗОВЁМ…', 'SENT…') : tr('ПОЗВАТЬ', 'INVITE')); iv.style.cssText += ';margin-left:auto;font-size:11px';
+        iv.onclick = async e => { e.stopPropagation(); sfx.click(); await frInvite(f); moRefresh(); }; r.appendChild(iv);
+      }
+      const del = moTxt('button', 'btn red', '✕'); del.style.cssText += ';font-size:10px;padding:5px 8px;' + (r.lastChild.tagName === 'BUTTON' ? '' : 'margin-left:auto');
+      del.onclick = e => { e.stopPropagation(); sfx.click(); FR.list = FR.list.filter(x => x !== f); frSave(); moRefresh(); }; r.appendChild(del);
+      fl.appendChild(r);
+    }
+    body.appendChild(fl);
+  });
+  frPoll(); frPresAll().then(() => { if (moStack.length && moStack[moStack.length - 1].fr) moRefresh(); });
+}
+
 reset();
-window.__game = { get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; } };
+window.__game = { get BT() { return BT; }, get PT() { return PT; }, get MM() { return MM; }, get FR() { return FR; }, get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; } };
 requestAnimationFrame(frame);
 // Музыка включается сразу: если браузер разрешает звук — с первой секунды, иначе от самого первого касания или клавиши
 musicOn = true; audio();
