@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.googleapis.com https://apis.google.com; frame-src https://*.firebaseapp.com https://*.web.app https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1881,6 +1881,7 @@ const cloudPath = () => 'data/users/' + cloud.uid + '/save';
 function markDirty() {
   try { localStorage.setItem('wk3__savedAt', String(Date.now())); } catch (e) {}
   if (cloud.db) { clearTimeout(cloud.timer); cloud.timer = setTimeout(pushCloud, 2500); }
+  if (fbOn()) fbSaveSoon();   // аккаунт Google — копия в Firebase
 }
 function localSave() {
   const data = {};
@@ -1929,6 +1930,7 @@ const FIREBASE = {
   apiKey: 'AIzaSyAZ3PX79SZJBTdCwo7F8aNhUSq_2hbmtmc',          // Project settings → General → Web API Key (пример: 'AIzaSy...')
   databaseURL: 'https://wall-play-4abb3-default-rtdb.europe-west1.firebasedatabase.app',     // Realtime Database → адрес сверху (пример: 'https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app')
   turn: [],            // необязательно: свои TURN-серверы для мультиплеера через строгие сети [{ urls, username, credential }]
+  authDomain: '',      // необязательно: домен окна входа Google; пусто — <проект>.firebaseapp.com из databaseURL
   emu: null,           // только для разработки: { auth: 'http://127.0.0.1:9099', ns: 'demo-x' } — локальный эмулятор
 };
 const FB = { uid: null, tok: null, exp: 0, busy: null };
@@ -2074,6 +2076,248 @@ async function fbBoardTop(field) {
 }
 async function fbProfile(e) {
   try { const d = await fbReq('GET', 'profiles/' + e.id); const p = d && typeof d.p === 'string' ? JSON.parse(d.p) : {}; return boardClean(e.id, { ...e, ...p }); } catch (x) { return e; }
+}
+// ---- аккаунт: гость (анонимный вход) или Google ----
+// Окно входа Google и привязку делает официальный Firebase Auth SDK: он грузится только по кнопке «Google».
+// Дальше игра, как и раньше, работает по REST с тем же ключом обновления; у гостя после привязки остаётся тот же uid.
+const FB_SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+const fbAuthDomain = () => FIREBASE.authDomain || (FIREBASE.databaseURL.match(/\/\/([a-z0-9-]+?)(?:-default-rtdb)?\./) || [])[1] + '.firebaseapp.com';
+const acctInfo = () => { const a = store.get('acct', null); return a && typeof a === 'object' ? a : null; };
+const acctG = () => fbOn() && !!(acctInfo() || {}).g;   // вошёл через Google: прогресс хранится в облаке
+let fbSdkP = null, fbSdkN = 0;
+function fbSdkMods() {
+  return fbSdkP || (fbSdkP = Promise.all([import(FB_SDK + 'firebase-app.js'), import(FB_SDK + 'firebase-auth.js')]).then(([A, U]) => ({ A, U }), () => { fbSdkP = null; throw { code: 'sdk' }; }));
+}
+// новый игрок — нечего терять: при входе в существующий аккаунт его прогресс просто загружается
+const saveFresh = () => best === 0 && owned.length <= 1 && troTotal() === 0;
+async function fbGoogle() {
+  const { A, U } = await fbSdkMods();
+  const fresh = saveFresh();
+  if (!fresh) await fbAuth().catch(() => { throw { code: 'auth/network-request-failed' }; });
+  const old = { uid: FB.uid, tok: FB.tok };
+  const name = 'wp' + (++fbSdkN), key = 'firebase:authUser:' + FIREBASE.apiKey + ':' + name, sv = store.get('fbAuth', null);
+  if (!fresh && sv && sv.rt && FB.uid) {   // отдаём SDK текущего гостя, чтобы привязать Google именно к нему
+    try { sessionStorage.setItem(key, JSON.stringify({ uid: FB.uid, isAnonymous: true, emailVerified: false, providerData: [], stsTokenManager: { refreshToken: sv.rt, accessToken: FB.tok, expirationTime: FB.exp }, createdAt: String(Date.now()), lastLoginAt: String(Date.now()), apiKey: FIREBASE.apiKey, appName: name })); } catch (e) {}
+  }
+  const app = A.initializeApp({ apiKey: FIREBASE.apiKey, authDomain: fbAuthDomain() }, name);
+  let user, linked = false;
+  try {
+    const auth = U.initializeAuth(app, { persistence: U.browserSessionPersistence, popupRedirectResolver: U.browserPopupRedirectResolver });
+    if (FIREBASE.emu) U.connectAuthEmulator(auth, FIREBASE.emu.auth, { disableWarnings: true });
+    await auth.authStateReady();
+    const prov = new U.GoogleAuthProvider(); prov.setCustomParameters({ prompt: 'select_account' });
+    try {
+      if (auth.currentUser) { user = (await U.linkWithPopup(auth.currentUser, prov)).user; linked = true; }
+      else user = (await U.signInWithPopup(auth, prov)).user;
+    } catch (e) {
+      // этот Google уже привязан к другому аккаунту — входим в него, а что делать с прогрессом, решает игрок
+      if (!e || (e.code !== 'auth/credential-already-in-use' && e.code !== 'auth/email-already-in-use')) throw e;
+      const cred = U.GoogleAuthProvider.credentialFromError(e); if (!cred) throw e;
+      user = (await U.signInWithCredential(auth, cred)).user;
+    }
+    const res = await user.getIdTokenResult(), g = (user.providerData || []).find(q => q.providerId === 'google.com') || {};
+    FB.uid = user.uid; FB.tok = res.token; FB.exp = Date.parse(res.expirationTime) || Date.now() + 3e6;
+    store.set('fbAuth', { rt: user.refreshToken, uid: user.uid });
+    store.set('acct', { g: 1, email: String(g.email || user.email || '').slice(0, 80), name: String(g.displayName || user.displayName || '').slice(0, 40) });
+    await U.signOut(auth).catch(() => {});
+  } finally { try { sessionStorage.removeItem(key); } catch (e) {} A.deleteApp(app).catch(() => {}); }
+  return { fresh, linked, same: !!old.uid && old.uid === FB.uid, old };
+}
+// старая строка гостя в рейтинге после перехода в другой аккаунт — обнуляем (удалять строки правила не дают)
+function fbBoardBlank(old) {
+  if (!old.uid || !old.tok || old.uid === FB.uid) return;
+  fetch(FIREBASE.databaseURL.replace(/\/$/, '') + '/board/' + old.uid + '.json?auth=' + encodeURIComponent(old.tok) + (FIREBASE.emu ? '&ns=' + FIREBASE.emu.ns : ''),
+    { method: 'PUT', body: JSON.stringify({ n: '-', av: 'hamster', c: 0, g: 0, r: 0, b: 0, tr: 0, t: FB_NOW }) }).catch(() => {});
+}
+
+// ---- облачное сохранение аккаунта Google: saves/<uid> = { d: всё сохранение строкой, s: время сохранения, t: время сервера } ----
+const ACCT_KEYS = ['wk3_fbAuth', 'wk3_acct', 'wk3_authAsk', 'wk3__savedAt'];   // вход и служебное — не часть прогресса
+const fbSave = { st: 'off', at: 0, busy: false, again: false, timer: 0 };
+function fbSaveData() { const d = localSave(); for (const k of ACCT_KEYS) delete d[k]; return d; }
+async function fbCloudPush(force) {
+  if (!acctG() || quiet || !(fbSave.ready || force)) return;   // пока не сверились с облаком, старое сохранение туда не шлём
+  if (fbSave.busy) { fbSave.again = true; return; }
+  fbSave.busy = true; fbSave.st = 'saving';
+  try {
+    const d = JSON.stringify(fbSaveData()); if (d.length > 400000) throw { status: 413 };
+    await fbReq('PUT', 'saves/' + FB.uid, { d, s: +(localStorage.getItem('wk3__savedAt') || Date.now()), t: FB_NOW });
+    fbSave.st = 'on'; fbSave.at = Date.now();
+  } catch (e) { fbSave.st = e && (e.status === 401 || e.status === 403) ? 'rules' : 'error'; fbSave.busy = false; throw e; }
+  fbSave.busy = false;
+  if (fbSave.again) { fbSave.again = false; fbCloudPush().catch(() => {}); }
+}
+async function fbCloudGet() {
+  const c = await fbReq('GET', 'saves/' + FB.uid);
+  if (!c || typeof c.d !== 'string' || !Number.isFinite(c.s)) return null;
+  try { const d = JSON.parse(c.d); return d && typeof d === 'object' ? { d, s: c.s } : null; } catch (e) { return null; }
+}
+// загрузить сохранение из облака вместо того, что на устройстве, и перезапустить игру
+function fbCloudApply(c) {
+  try {
+    const keep = {}; for (const k of ACCT_KEYS) { const v = localStorage.getItem(k); if (v !== null) keep[k] = v; }
+    for (const k of Object.keys(localStorage)) if (k.startsWith('wk3_')) localStorage.removeItem(k);
+    for (const k of Object.keys(c.d)) if (/^wk3_[A-Za-z0-9]\w{0,39}$/.test(k) && !ACCT_KEYS.includes(k) && typeof c.d[k] === 'string' && c.d[k].length < 2e5) localStorage.setItem(k, c.d[k]);
+    if (!('wk3_sig' in c.d)) localStorage.removeItem('wk3_sig');
+    for (const k in keep) localStorage.setItem(k, keep[k]);
+    localStorage.setItem('wk3__savedAt', String(c.s)); sessionStorage.setItem('wk3_fbCloudT', String(c.s));
+  } catch (e) {}
+  location.reload();
+}
+// коротко о сохранении: для выбора «какой прогресс оставить»
+function saveSummary(d) {
+  const j = k => { try { return JSON.parse(d['wk3_' + k]); } catch (e) { return null; } };
+  const tro = j('tro'), own = j('ownedIds');
+  return { b: nat(j('best')), tr: tro && typeof tro === 'object' ? Object.values(tro).reduce((a, v) => a + nat(v), 0) : 0, sk: Array.isArray(own) ? own.length : 1, c: nat(j('coins')) };
+}
+function fbSaveSoon() {   // через 4 с после последнего изменения, но не реже раза в минуту
+  if (!acctG()) return; clearTimeout(fbSave.timer);
+  const go = () => { fbSave.first = 0; fbCloudPush().catch(() => {}); };
+  if (!fbSave.first) fbSave.first = Date.now();
+  if (Date.now() - fbSave.first > 60000) go(); else fbSave.timer = setTimeout(go, 4000);
+}
+// при запуске: в облаке свежее (играл на другом устройстве) — забираем; на устройстве свежее — отправляем
+async function fbCloudSync() {
+  if (!acctG()) return;
+  const localT = fbSave.t0 || (fbSave.t0 = +(localStorage.getItem('wk3__savedAt') || 0));   // время сохранения до запуска: дальше игра сама что-то пишет
+  try {
+    await fbAuth(); const c = await fbCloudGet();
+    if (c && c.s > localT && sessionStorage.getItem('wk3_fbCloudT') !== String(c.s)) { fbCloudApply(c); return; }
+    fbSave.ready = true;
+    if (!c || +(localStorage.getItem('wk3__savedAt') || 0) > c.s) await fbCloudPush(); else { fbSave.st = 'on'; fbSave.at = Date.now(); }
+  } catch (e) { if (!fbSave.ready) { fbSave.st = 'error'; setTimeout(fbCloudSync, 30000); } }
+}
+function acctErrText(e) {
+  const c = e && e.code || '';
+  if (c === 'auth/popup-blocked') return tr('БРАУЗЕР НЕ ОТКРЫЛ ОКНО ВХОДА. НАЖМИ КНОПКУ ЕЩЁ РАЗ', 'THE BROWSER BLOCKED THE SIGN-IN WINDOW. TAP THE BUTTON AGAIN');
+  if (c === 'auth/unauthorized-domain') return tr('ВХОД GOOGLE НЕ РАЗРЕШЁН НА САЙТЕ ' + location.hostname + '. ДОБАВЬ ЕГО В FIREBASE: AUTHENTICATION → SETTINGS → AUTHORIZED DOMAINS', 'GOOGLE SIGN-IN IS NOT ALLOWED ON ' + location.hostname + '. ADD IT IN FIREBASE: AUTHENTICATION → SETTINGS → AUTHORIZED DOMAINS');
+  if (c === 'auth/operation-not-supported-in-this-environment' || !/^https?:$/.test(location.protocol)) return tr('ВХОД GOOGLE РАБОТАЕТ, КОГДА ИГРА ОТКРЫТА С САЙТА (НАПРИМЕР ' + fbAuthDomain().replace('firebaseapp.com', 'web.app') + '), А НЕ ИЗ ФАЙЛА', 'GOOGLE SIGN-IN WORKS WHEN THE GAME IS OPENED FROM A WEBSITE, NOT FROM A FILE');
+  if (c === 'auth/operation-not-allowed') return tr('В FIREBASE ВЫКЛЮЧЕН ВХОД GOOGLE (AUTHENTICATION → SIGN-IN METHOD)', 'GOOGLE SIGN-IN IS OFF IN FIREBASE (AUTHENTICATION → SIGN-IN METHOD)');
+  if (c === 'sdk' || c === 'auth/network-request-failed' || e && e.net) return tr('НЕТ СВЯЗИ С GOOGLE. ПРОВЕРЬ ИНТЕРНЕТ', 'NO CONNECTION TO GOOGLE. CHECK THE INTERNET');
+  return tr('НЕ ПОЛУЧИЛОСЬ ВОЙТИ', 'SIGN-IN FAILED') + (c ? ' (' + c.replace('auth/', '') + ')' : '');
+}
+const acctQuiet = e => e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request' || e.code === 'auth/user-cancelled');
+// кнопка «Google» с цветной буквой G
+function googleBtn(label, onTap) {
+  const b = moEl('button', 'btn'); b.style.cssText += ';background:#fff;color:#3a2a6a;text-shadow:none;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;font-size:15px';
+  b.innerHTML = '<svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>';
+  b.appendChild(moTxt('span', '', label)); b.onclick = onTap; return b;
+}
+// нажали «Google»: вход или привязка, потом решаем судьбу прогресса
+async function acctGoogle(msg) {
+  if (acctGoogle.busy) return; acctGoogle.busy = true;
+  const say = (t, bad) => { if (msg && msg.isConnected) { msg.textContent = t; msg.style.color = bad ? '#ff8a7a' : '#d8d0ff'; } };
+  say(tr('ОТКРЫВАЮ ВХОД GOOGLE…', 'OPENING GOOGLE SIGN-IN…'));
+  try {
+    const prev = { auth: store.get('fbAuth', null), acct: localStorage.getItem('wk3_acct'), uid: FB.uid, tok: FB.tok, exp: FB.exp };
+    const r = await fbGoogle(); fbSave.ready = true;
+    if (r.same) {   // гость стал аккаунтом Google — прогресс тот же, просто кладём его в облако
+      await fbCloudPush().catch(() => {}); boardPush();
+      moOpen(tr('АККАУНТ', 'ACCOUNT'), bd => acctDone(bd, tr('GOOGLE ПРИВЯЗАН! ПРОГРЕСС СОХРАНЁН В ОБЛАКЕ', 'GOOGLE LINKED! PROGRESS SAVED TO THE CLOUD')));
+      return;
+    }
+    const c = await fbCloudGet().catch(() => null);
+    if (c && (r.fresh || saveFresh())) { fbBoardBlank(r.old); fbCloudApply(c); return; }
+    if (!c) { fbBoardBlank(r.old); await fbCloudPush().catch(() => {}); boardPush(); moOpen(tr('АККАУНТ', 'ACCOUNT'), bd => acctDone(bd, tr('ВЫ ВОШЛИ ЧЕРЕЗ GOOGLE. ПРОГРЕСС СОХРАНЁН В ОБЛАКЕ', 'SIGNED IN WITH GOOGLE. PROGRESS SAVED TO THE CLOUD'))); return; }
+    // пока игрок не выбрал, ничего не сохраняем в облако; «назад» — остаёмся гостем, как было
+    fbSave.ready = false;
+    acctPick(c, () => fbBoardBlank(r.old), () => {
+      if (prev.auth) store.set('fbAuth', prev.auth);
+      try { if (prev.acct === null) { localStorage.removeItem('wk3_acct'); delete memStore.wk3_acct; } else localStorage.setItem('wk3_acct', prev.acct); } catch (e) {}
+      FB.uid = prev.uid; FB.tok = prev.tok; FB.exp = prev.exp;
+    });
+  } catch (e) { if (!acctQuiet(e)) say(acctErrText(e), true); else say(''); }
+  finally { acctGoogle.busy = false; }
+}
+function acctDone(bd, text) {
+  const c = moEl('div', 'card'); c.style.textAlign = 'center';
+  c.append(moTxt('div', 'ol big', '✓'), moTxt('div', 'ol', text)); const a = acctInfo(); if (a && a.email) c.appendChild(moTxt('div', 'sm', a.email));
+  const ok = moTxt('button', 'btn', 'OK'); ok.style.cssText += ';margin-top:10px;width:100%'; ok.onclick = () => { sfx.click(); moClose(); }; c.appendChild(ok); bd.appendChild(c);
+}
+// у аккаунта Google уже есть прогресс, и на устройстве тоже — игрок выбирает, какой оставить
+function acctPick(c, onPick, onCancel) {
+  const cl = saveSummary(c.d), me = saveSummary(fbSaveData());
+  let chosen = false, seen = null;
+  const iv = setInterval(() => { if (chosen) clearInterval(iv); else if (seen && !seen.isConnected) { clearInterval(iv); chosen = true; onCancel(); } }, 300);
+  moOpen(tr('КАКОЙ ПРОГРЕСС ОСТАВИТЬ?', 'WHICH PROGRESS TO KEEP?'), bd => {
+    seen = bd;
+    bd.appendChild(moTxt('div', 'sm', tr('В ЭТОМ АККАУНТЕ GOOGLE УЖЕ ЕСТЬ ПРОГРЕСС. ВЫБЕРИ, КАКОЙ ОСТАВИТЬ — ДРУГОЙ ЗАМЕНИТСЯ', 'THIS GOOGLE ACCOUNT ALREADY HAS PROGRESS. PICK ONE TO KEEP — THE OTHER IS REPLACED')));
+    const card = (title, s, cls, fn) => {
+      const k = moEl('div', 'card');
+      k.appendChild(moTxt('div', 'ol', title));
+      const g = moEl('div', 'row'); g.style.cssText = 'flex-wrap:wrap;gap:10px;margin:6px 0;font-size:13px';
+      for (const [ic, v] of [['trophy', s.tr], ['', tr('РЕКОРД ', 'BEST ') + s.b + T('m')], ['gift', s.sk], ['coins', s.c]]) { const q = moEl('span', 'row'); q.style.gap = '3px'; if (ic) q.appendChild(iconCnv(ic, 0, 18)); q.appendChild(moTxt('span', 'ol', String(v))); g.appendChild(q); }
+      const b = moTxt('button', 'btn ' + cls, tr('ОСТАВИТЬ ЭТОТ', 'KEEP THIS')); b.style.width = '100%'; b.onclick = () => { if (chosen) return; chosen = true; fbSave.ready = true; onPick(); sfx.click(); fn(); };
+      k.append(g, b); bd.appendChild(k);
+    };
+    card(tr('ИЗ АККАУНТА GOOGLE', 'FROM THE GOOGLE ACCOUNT'), cl, 'blue', () => fbCloudApply(c));
+    card(tr('С ЭТОГО УСТРОЙСТВА', 'FROM THIS DEVICE'), me, 'gold', async () => { await fbCloudPush().catch(() => {}); boardPush(); moOpen(tr('АККАУНТ', 'ACCOUNT'), bd2 => acctDone(bd2, tr('ПРОГРЕСС С УСТРОЙСТВА СОХРАНЁН В АККАУНТЕ GOOGLE', 'DEVICE PROGRESS SAVED TO THE GOOGLE ACCOUNT'))); });
+  });
+}
+// выход: сначала сохраняем в облако, потом очищаем устройство — следующий игрок начинает с чистого листа
+function acctLogout() {
+  moOpen(tr('ВЫЙТИ?', 'SIGN OUT?'), bd => {
+    const c = moEl('div', 'card'); c.style.textAlign = 'center';
+    c.appendChild(moTxt('div', 'ol', tr('ПРОГРЕСС ОСТАНЕТСЯ В АККАУНТЕ GOOGLE, А С ЭТОГО УСТРОЙСТВА БУДЕТ УДАЛЁН. ВОЙДИ СНОВА — И ОН ВЕРНЁТСЯ', 'YOUR PROGRESS STAYS IN THE GOOGLE ACCOUNT AND IS REMOVED FROM THIS DEVICE. SIGN IN AGAIN TO GET IT BACK')));
+    const msg = moTxt('div', 'sm', ''); msg.style.marginTop = '8px';
+    const row = moEl('div', 'row'); row.style.cssText = 'margin-top:12px;gap:8px';
+    const no = moTxt('button', 'btn blue', tr('ОТМЕНА', 'CANCEL')), yes = moTxt('button', 'btn red', tr('ВЫЙТИ', 'SIGN OUT')); no.style.flex = yes.style.flex = '1';
+    no.onclick = () => { sfx.click(); moBack(); };
+    let force = false;
+    yes.onclick = async () => {
+      sfx.click(); msg.textContent = tr('СОХРАНЯЮ…', 'SAVING…');
+      clearTimeout(fbSave.timer);
+      try { await fbAuth(); await fbCloudPush(true); }
+      catch (e) { if (!force) { force = true; msg.style.color = '#ff8a7a'; msg.textContent = tr('НЕ УДАЛОСЬ СОХРАНИТЬ В ОБЛАКО — ИЗМЕНЕНИЯ С ПРОШЛОГО СОХРАНЕНИЯ ПРОПАДУТ. НАЖМИ «ВЫЙТИ» ЕЩЁ РАЗ, ЕСЛИ ВСЁ РАВНО ВЫХОДИШЬ', 'COULD NOT SAVE TO THE CLOUD — CHANGES SINCE THE LAST SAVE WILL BE LOST. TAP SIGN OUT AGAIN TO LEAVE ANYWAY'); return; } }
+      quiet = true;   // больше ничего не пишем: устройство очищается
+      try { for (const k of Object.keys(localStorage)) if (k.startsWith('wk3_')) localStorage.removeItem(k); sessionStorage.removeItem('wk3_fbCloudT'); } catch (e) {}
+      location.reload();
+    };
+    row.append(no, yes); c.append(row, msg); bd.appendChild(c);
+  }, true);
+}
+// карточка аккаунта в профиле
+function acctCard() {
+  const c = moEl('div', 'card'), a = acctInfo();
+  if (acctG()) {
+    const top = moEl('div', 'row'); top.style.gap = '8px';
+    top.append(moTxt('div', 'ol', 'GOOGLE'), moTxt('div', 'sm', a.email || a.name || '')); c.appendChild(top);
+    const st = moTxt('div', 'sm', ''), paint = () => {
+      const t = fbSave.at ? new Date(fbSave.at).toTimeString().slice(0, 5) : '';
+      st.textContent = fbSave.st === 'saving' ? tr('СОХРАНЯЮ В ОБЛАКО…', 'SAVING TO THE CLOUD…') : fbSave.st === 'on' ? '☁ ' + tr('СОХРАНЕНО В ОБЛАКЕ ', 'SAVED TO THE CLOUD ') + t
+        : fbSave.st === 'rules' ? tr('ОБЛАКО ЗАКРЫТО ПРАВИЛАМИ БАЗЫ — ОПУБЛИКУЙ НОВЫЙ DATABASE.RULES.JSON', 'THE CLOUD IS CLOSED BY DATABASE RULES — PUBLISH THE NEW DATABASE.RULES.JSON') : fbSave.st === 'error' ? tr('НЕТ СВЯЗИ — СОХРАНЮ ПОЗЖЕ', 'NO CONNECTION — WILL SAVE LATER') : '';
+    };
+    paint(); const iv = setInterval(() => { if (!st.isConnected) clearInterval(iv); else paint(); }, 1000);
+    const out = moTxt('button', 'btn red', tr('ВЫЙТИ ИЗ АККАУНТА', 'SIGN OUT')); out.style.cssText += ';margin-top:8px;width:100%'; out.onclick = () => { sfx.click(); acctLogout(); };
+    c.append(st, out);
+  } else {
+    c.append(moTxt('div', 'ol', tr('ГОСТЬ', 'GUEST')), moTxt('div', 'sm', tr('ПРОГРЕСС ХРАНИТСЯ ТОЛЬКО НА ЭТОМ УСТРОЙСТВЕ. ПРИВЯЖИ GOOGLE — ОН СОХРАНИТСЯ В ОБЛАКЕ И НИЧЕГО НЕ ПОТЕРЯЕТСЯ', 'PROGRESS IS ONLY ON THIS DEVICE. LINK GOOGLE TO SAVE IT IN THE CLOUD WITHOUT LOSING ANYTHING')));
+    const msg = moTxt('div', 'sm', ''), b = googleBtn(tr('ПРИВЯЗАТЬ GOOGLE', 'LINK GOOGLE'), () => { sfx.click(); acctGoogle(msg); }); b.style.marginTop = '8px';
+    c.append(b, msg); fbSdkMods().catch(() => {}); fbAuth().catch(() => {});   // заранее, чтобы окно Google открылось сразу по нажатию
+  }
+  return c;
+}
+// первый запуск: войти через Google или играть гостем (игрок, который уже играл, остаётся гостем со всем прогрессом)
+function openLogin() {
+  store.set('authAsk', 1);
+  fbSdkMods().catch(() => {});
+  moOpen(tr('ДОБРО ПОЖАЛОВАТЬ!', 'WELCOME!'), bd => {
+    const c = moEl('div', 'card'); c.style.cssText += 'text-align:center;padding:18px 14px';
+    const hv = heroCnv(curSkin(), 120, { anim: true, pose: 'idle' }); hv.style.margin = '0 auto'; c.appendChild(hv);
+    c.appendChild(moTxt('div', 'ol big', 'WALL PLAY'));
+    const msg = moTxt('div', 'sm', ''); msg.style.marginTop = '8px';
+    const g = googleBtn(tr('ВОЙТИ ЧЕРЕЗ GOOGLE', 'SIGN IN WITH GOOGLE'), () => { sfx.click(); acctGoogle(msg); }); g.style.marginTop = '14px';
+    const guest = moTxt('button', 'btn blue', tr('ИГРАТЬ КАК ГОСТЬ', 'PLAY AS GUEST')); guest.style.cssText += ';margin-top:10px;width:100%;font-size:15px';
+    guest.onclick = () => { sfx.click(); moClose(); };
+    c.append(g, guest, msg, moTxt('div', 'sm', tr('GOOGLE: ПРОГРЕСС В ОБЛАКЕ, МОЖНО ИГРАТЬ НА ЛЮБОМ УСТРОЙСТВЕ. ГОСТЬ: ВСЁ НА ЭТОМ УСТРОЙСТВЕ, GOOGLE МОЖНО ПРИВЯЗАТЬ ПОТОМ В ПРОФИЛЕ', 'GOOGLE: PROGRESS IN THE CLOUD, PLAY ON ANY DEVICE. GUEST: EVERYTHING STAYS ON THIS DEVICE, LINK GOOGLE LATER IN THE PROFILE')));
+    c.lastChild.style.marginTop = '12px';
+    bd.appendChild(c);
+  });
+}
+if (fbOn()) {
+  store.onSet = markDirty;
+  fbCloudSync();
+  document.addEventListener('visibilitychange', () => { if (document.hidden && acctG()) { clearTimeout(fbSave.timer); fbSave.first = 0; fbCloudPush().catch(() => {}); } });
+  const ask = setInterval(() => { if (store.get('authAsk', 0) || acctG()) { clearInterval(ask); return; } if (state === 'menu' && !moStack.length && !quiet) { clearInterval(ask); openLogin(); } }, 700);
 }
 // всё, что читается из сохранения, проверяется: повреждённые или подделанные данные не ломают игру
 const nat = v => Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), 1e9) : 0;
@@ -14531,6 +14775,7 @@ function openProfile() {
       const b = moTxt('button', 'btn ' + cls, nm); b.style.flex = '1'; b.onclick = () => { sfx.click(); fn(); }; quick.appendChild(b);
     }
     bd.insertBefore(quick, bd.children[1]);
+    if (fbOn()) bd.insertBefore(acctCard(), bd.children[2]);   // аккаунт: гость или Google, привязка и выход
     if (tampered) bd.insertBefore(moTxt('div', 'card sm', tr('СОХРАНЕНИЕ ИЗМЕНЕНО ВРУЧНУЮ — РЕЗУЛЬТАТЫ НЕ ПОПАДАЮТ В РЕЙТИНГ', 'SAVE WAS EDITED BY HAND — RESULTS ARE NOT RANKED')), bd.children[1]);
   });
 }
@@ -14713,6 +14958,7 @@ function openBoard(keep) {
       box.innerHTML = '';
       if (!rows.length) { box.appendChild(moTxt('div', 'card sm', tr('ПОКА НИКОГО — СЫГРАЙ И СТАНЬ ПЕРВЫМ!', 'NOBODY YET — PLAY AND BE FIRST!'))); return; }
       const myId = cloud.db ? cloud.uid : FB.uid;
+      rows = rows.filter(e => e.tr || e.b || e.id === myId);   // пустые строки (бывшие гости) не показываем
       rows.forEach((e, i) => {
         const me = e.id === myId, f = frameStyle(e.fr), r = moEl('div', 'rk' + (me ? ' glow' : ''));
         r.style.background = f.bg; r.style.backgroundSize = '300% 100%'; if (f.anim) r.style.animation = 'moFr 5s linear infinite';
