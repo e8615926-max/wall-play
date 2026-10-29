@@ -15815,7 +15815,7 @@ function tutRewindStart(reason) {
 }
 // точка перемотки — момент, когда герой висел на безопасном столбе
 function tutRewindPoint(from) {
-  for (let i = from; i >= 0; i--) { const h = TUT.hist[i]; if (h && h.pole && poles.includes(h.pole) && !thornHits(h.pole, h.side)) return i; }
+  for (let i = from; i >= 0; i--) { const h = TUT.hist[i]; if (h && h.pole && !thornHits(h.pole, h.side)) return i; }
   return -1;
 }
 function tutRewindStep(dt) {
@@ -15840,8 +15840,8 @@ function tutRewindStep(dt) {
     const h = TUT.hist[R.at];
     for (let i = ents.length - 1; i >= 0; i--) { const e = ents[i]; if (!SAFE_ENTS.has(e.type) && Math.abs(e.y - p.y) < 260) ents.splice(i, 1); }
     state = 'play'; deadT = 0; p.dk = null; p.vanish = false; p.vanishLater = false; p.zapT = 0; p.rot = 0; p.spin = 0; p.revive = false;
-    if (h && h.pole && poles.includes(h.pole)) {
-      const q = h.pole; camY = h.cam; camR = even(camY); putOnPole(q);
+    if (h && h.pole) {
+      const q = h.pole; if (!poles.includes(q)) poles.push(q);   // столб могли убрать из списка, пока он был за экраном — возвращаем camY = h.cam; camR = even(camY); putOnPole(q);
       p.y = clamp(h.y, q.y0 + PH / 2 + 2, q.y1 - PH / 2); p.x = h.x; p.side = h.side; p.face = h.face;
     } else {   // на всякий случай — ближайший безопасный столб
       let c = null, cd = 1e9;
