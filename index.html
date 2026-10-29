@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.googleapis.com https://apis.google.com; frame-src https://*.firebaseapp.com https://*.web.app https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://www.googleapis.com https://apis.google.com https://accounts.google.com; frame-src https://*.firebaseapp.com https://*.web.app https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1937,6 +1937,7 @@ const FIREBASE = {
   databaseURL: 'https://wall-play-4abb3-default-rtdb.europe-west1.firebasedatabase.app',     // Realtime Database → адрес сверху (пример: 'https://wall-play-1234-default-rtdb.europe-west1.firebasedatabase.app')
   turn: [],            // необязательно: свои TURN-серверы для мультиплеера через строгие сети [{ urls, username, credential }]
   authDomain: '',      // необязательно: домен окна входа Google; пусто — <проект>.firebaseapp.com из databaseURL
+  googleClientId: '',  // необязательно: Web client ID (Authentication → Google → Web SDK configuration) — тогда вход Google — панелью поверх игры (One Tap), без перехода на сайт Google
   emu: null,           // только для разработки: { auth: 'http://127.0.0.1:9099', ns: 'demo-x' } — локальный эмулятор
 };
 const FB = { uid: null, tok: null, exp: 0, busy: null };
@@ -2108,7 +2109,35 @@ function fbSdkMods() {
 }
 // новый игрок — нечего терять: при входе в существующий аккаунт его прогресс просто загружается
 const saveFresh = () => best === 0 && owned.length <= 1 && troTotal() === 0;
+// вход Google панелью поверх игры (Google One Tap): токен Google сразу меняем на аккаунт Firebase через REST
+const gisLoad = () => gisLoad.p || (gisLoad.p = new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = ok; sc.onerror = () => { gisLoad.p = null; no({ code: 'gis/load' }); }; document.head.appendChild(sc); }));
+async function fbGoogleTap() {
+  await gisLoad();
+  const idTok = await new Promise((ok, no) => {
+    google.accounts.id.initialize({ client_id: FIREBASE.googleClientId, callback: r => r && r.credential ? ok(r.credential) : no({ code: 'auth/popup-closed-by-user' }), cancel_on_tap_outside: false, context: 'signin', use_fedcm_for_prompt: true, itp_support: true });
+    google.accounts.id.prompt(n => { if ((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment())) no({ code: 'gis/not-shown' }); });
+  });
+  const fresh = saveFresh();
+  if (!fresh) await fbAuth().catch(() => { throw { code: 'auth/network-request-failed' }; });
+  const old = { uid: FB.uid, tok: FB.tok }, key = encodeURIComponent(FIREBASE.apiKey);
+  const call = async link => {
+    const body = { postBody: 'id_token=' + encodeURIComponent(idTok) + '&providerId=google.com', requestUri: location.origin && location.origin !== 'null' ? location.origin : 'http://localhost', returnSecureToken: true, returnIdpCredential: true };
+    if (link) body.idToken = FB.tok;   // гость → привязываем Google к нему, прогресс тот же
+    const r = await fetch(fbAuthBase() + '/v1/accounts:signInWithIdp?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
+    if (!r) throw { code: 'auth/network-request-failed' };
+    const j = await r.json().catch(() => ({})); return { ok: r.ok, j };
+  };
+  let link = !fresh && !!FB.tok, res = await call(link);
+  if (!res.ok && link && /ALREADY|IN_USE|EXISTS/.test(String((res.j.error || {}).message))) { link = false; res = await call(false); }   // этот Google уже у другого аккаунта — входим в него
+  if (!res.ok) throw { code: /OPERATION_NOT_ALLOWED/.test(String((res.j.error || {}).message)) ? 'auth/operation-not-allowed' : 'auth/internal-error' };
+  const j = res.j;
+  FB.uid = j.localId; FB.tok = j.idToken; FB.exp = Date.now() + (+j.expiresIn || 3600) * 1000;
+  store.set('fbAuth', { rt: j.refreshToken, uid: j.localId });
+  store.set('acct', { g: 1, email: String(j.email || '').slice(0, 80), name: String(j.displayName || j.fullName || '').slice(0, 40) });
+  return { fresh, linked: link, same: !!old.uid && old.uid === FB.uid, old };
+}
 async function fbGoogle() {
+  if (FIREBASE.googleClientId && !FIREBASE.emu) { try { return await fbGoogleTap(); } catch (e) { if (!e || (e.code !== 'gis/not-shown' && e.code !== 'gis/load')) throw e; } }   // панель не показалась — обычное окно Google
   const { A, U } = await fbSdkMods();
   const fresh = saveFresh();
   if (!fresh) await fbAuth().catch(() => { throw { code: 'auth/network-request-failed' }; });
@@ -2392,14 +2421,18 @@ function resize() {
   const ww = document.body.clientWidth || window.innerWidth, wh = document.body.clientHeight || window.innerHeight;
   scale = Math.min(ww / W, wh / H);
   const dpr = Math.min(DPR_STEPS[dprLvl], window.devicePixelRatio || 1);   // пиксель-арт: больше 2× не видно глазом; на медленном телефоне — чуть меньше
+  const cw = Math.floor(W * scale * dpr), ch = Math.floor(H * scale * dpr);
+  // в браузере телефона адресная строка то прячется, то появляется — каждый раз приходит resize; если размер тот же, холст не пересоздаём
+  if (cv.width === cw && cv.height === ch && cv.style.width === Math.floor(W * scale) + 'px') return;
   cv.style.width = Math.floor(W * scale) + 'px';
   cv.style.height = Math.floor(H * scale) + 'px';
-  cv.width = Math.floor(W * scale * dpr);
-  cv.height = Math.floor(H * scale * dpr);
+  cv.width = cw;
+  cv.height = ch;
   ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   ctx.imageSmoothingEnabled = false;
 }
-window.addEventListener('resize', resize);
+let resizeT = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { resize(); if (typeof draw === 'function' && state) draw(); }, 120); });   // пока панель браузера едет — ждём, потом один раз
 resize();
 
 // ---------- Встроенный пиксельный шрифт (без интернета), с диакритикой для 10 языков ----------
@@ -14517,9 +14550,13 @@ function draw() {
 // ---------- Цикл ----------
 // непрозрачное окно поверх игры (знакомство, профиль, Pass, рейтинг…) — рисовать мир под ним незачем
 function screenCovered() { return obOpen() || (!!moUi && moUi.style.display !== 'none' && moStack.length > 0); }
-let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0, perfSlow = 0, perfDownAt = -1e9;
+let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0, perfSlow = 0, perfDownAt = -1e9, frameDebt = 0;
 function frame(now) {
-  if (now - last < 10) { requestAnimationFrame(frame); return; }   // экраны 120–144 Гц: лишние вызовы пропускаем — работы вдвое меньше, плавность та же
+  // экраны 90–144 Гц (в Chrome на телефоне они включены, во встроенных окнах обычно нет): рисуем не чаще ~60 раз в секунду —
+  // работы меньше, телефон не греется и не сбрасывает частоту
+  const step = now - last;
+  if (step < 10 || (frameDebt + step < 15.5 && step < 15.5)) { requestAnimationFrame(frame); return; }
+  frameDebt = Math.min(8, Math.max(0, frameDebt + step - 16.67));
   const t0 = performance.now(), gap = now - last;
   let dt = gap / 1000; last = now;
   if (dt > 0.05) dt = 0.05;

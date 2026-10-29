@@ -68,6 +68,12 @@
 2. **Разреши сайт, с которого открывается игра.** Окно входа Google работает только на разрешённых адресах: **Authentication → Settings → Authorized domains → Add domain**. Уже разрешены `localhost`, `wall-play-4abb3.firebaseapp.com` и `wall-play-4abb3.web.app`. Если игра лежит на GitHub Pages, добавь `e8615926-max.github.io` (или свой домен). Если домен не добавлен, игра прямо напишет, какой адрес нужно добавить.
 3. Вход Google работает, только когда игра открыта **с сайта** (`https://…`). Из файла на телефоне (`file://…`) окно входа открыть нельзя: игра об этом скажет, а гостем можно играть и так.
 
+**Вход прямо в игре (Google One Tap, по желанию).** Обычно вход Google открывает отдельное окно Google. Чтобы вместо этого выезжала панель Google поверх игры (выбрал аккаунт — и всё, без перехода на другой сайт):
+1. **Authentication → Sign-in method → Google → Web SDK configuration** — скопируй **Web client ID** (вида `1234…apps.googleusercontent.com`).
+2. В `index.html` в блоке `FIREBASE` впиши его в `googleClientId: '…'`.
+3. В Google Cloud Console (**APIs & Services → Credentials →** этот Web client) в **Authorized JavaScript origins** добавь адрес сайта игры (например `https://wall-play.vercel.app`).
+Если панель не может показаться (браузер её запретил, игрок раньше её закрыл), игра сама откроет обычное окно Google. Полностью «спрятать» вход Google внутрь игры нельзя: выбор аккаунта всегда показывает сам Google — так он защищает пароли. Бесплатно, Spark.
+
 Окно входа делает официальный Firebase Auth SDK (`www.gstatic.com/firebasejs/10.14.1`). Он грузится, только когда игрок открывает экран входа или профиль. Всё это бесплатно на Spark.
 
 ## По желанию: бесплатный хостинг на Firebase (нужен компьютер с Node.js)
