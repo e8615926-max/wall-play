@@ -8596,15 +8596,24 @@ function setClick(pt) {
 
 // полный сброс: стираем всё сохранение игры, кроме входа, языка, настроек, имени и друзей, и перезапускаем игру
 function progressWipe() {
-  const keep = new Set([...ACCT_KEYS, 'wk3_lang', 'wk3_set', 'wk3_muted', 'wk3_mpnick', 'wk3_nickSet', 'wk3_nickChg', 'wk3_nickNoAsk', 'wk3_fcode', 'wk3_friends', 'wk3_tour']);
+  // сброс — в самое начало: язык, выбор входа (Google или гость), имя с Мистером Пиклсом, обучение
+  const g = acctG();
+  const keepCloud = new Set(['wk3_fcode', 'wk3_friends']);   // друзья и код друга — не прогресс, их оставляем в облаке аккаунта
+  const keepHere = new Set(g ? [] : ['wk3_fbAuth', 'wk3_fcode', 'wk3_friends', 'wk3_muted']);   // гость: тот же аккаунт гостя, чтобы друзья не пропали
   const ks = []; try { for (let i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); } catch (e) {}
-  for (const k of [...ks, ...Object.keys(memStore)]) if (k && k.startsWith('wk3_') && !keep.has(k)) { try { localStorage.removeItem(k); } catch (e) {} delete memStore[k]; }
-  try { localStorage.setItem('wk3__savedAt', String(Date.now())); } catch (e) {}
-  store.set = () => {};   // старые цифры из памяти больше не записываем
+  const all = [...new Set([...ks, ...Object.keys(memStore)])].filter(k => k && k.startsWith('wk3_'));
+  const wipe = keep => { for (const k of all) if (!keep.has(k)) { try { localStorage.removeItem(k); } catch (e) {} delete memStore[k]; } };
   sfx.die();
-  let done = false; const go = () => { if (done) return; done = true; location.reload(); };
-  if (acctG()) { fbSave.ready = true; quiet = false; fbCloudPush(true).catch(() => {}).then(() => setTimeout(go, 300)); }   // у аккаунта Google — и в облаке тоже
-  else setTimeout(go, 400);
+  let done = false; const go = () => {
+    if (done) return; done = true;
+    wipe(keepHere); try { localStorage.setItem('wk3__savedAt', String(Date.now())); } catch (e) {}
+    location.reload();
+  };
+  if (g) {   // аккаунт Google: сначала пустой прогресс в облако (иначе при входе вернётся старый), потом выходим из аккаунта
+    wipe(new Set([...ACCT_KEYS, ...keepCloud, 'wk3_lang']));
+    store.set = () => {};
+    fbSave.ready = true; quiet = false; fbCloudPush(true).catch(() => {}).then(() => setTimeout(go, 300));
+  } else { store.set = () => {}; setTimeout(go, 400); }
   setTimeout(go, 5000);
 }
 // ---------- Физика ----------
