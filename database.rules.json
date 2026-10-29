@@ -12,7 +12,7 @@
         ".write": "auth != null && auth.uid === $uid && newData.exists()",
         ".validate": "newData.hasChildren(['n', 'av', 'c', 'g', 'r', 'b', 'tr', 't']) && newData.child('tr').val() <= newData.child('b').val() * (newData.child('sk').isNumber() ? newData.child('sk').val() : 1) && (!data.exists() ? (newData.child('b').val() <= 1000 && newData.child('tr').val() <= 3000 && newData.child('c').val() <= 200000 && newData.child('g').val() <= 20000 && newData.child('r').val() <= 2000) : (now - data.child('t').val() >= 1000 && newData.child('b').val() - data.child('b').val() <= (now - data.child('t').val()) * 0.06 + 30 && newData.child('tr').val() - data.child('tr').val() <= (now - data.child('t').val()) * 0.1 + 100 && newData.child('c').val() - data.child('c').val() <= (now - data.child('t').val()) * 1 + 100000 && newData.child('g').val() - data.child('g').val() <= (now - data.child('t').val()) * 0.05 + 5000 && newData.child('r').val() - data.child('r').val() <= (now - data.child('t').val()) * 0.005 + 500))",
         "n": {
-          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 16 && !newData.val().matches(/^ /) && !newData.val().matches(/ $/) && !newData.val().matches(/  /) && !newData.val().matches(/[\u0001-\u001f\u007f-\u00a0\u00ad\u00a1-\u00a9\u00ab-\u00b4\u00b6-\u00b9\u00bb-\u00bf\u00d7\u00f7\u034f\u061c\u115f\u1160\u1680\u17b4\u17b5\u180b-\u180f\u2000-\u202f\u205f-\u206f\u2190-\u2bff\u2800\u3000\u3164\ud800-\udfff\ufe00-\ufe0f\ufeff\uffa0\ufff0-\uffff!-\\/:-@\\[-\\^`{-~]/)"
         },
         "av": {
           ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 44"
@@ -113,7 +113,7 @@
       "$code": {
         ".read": "auth != null",
         ".write": "auth != null && !data.exists() && newData.child('u').val() === auth.uid",
-        ".validate": "$code.matches(/^[A-Z0-9]{6}$/) && newData.hasChildren(['u', 't'])",
+        ".validate": "$code.matches(/^[A-Za-z0-9]{7}$/) && newData.hasChildren(['u', 't'])",
         "u": {
           ".validate": "newData.isString()"
         },
@@ -132,13 +132,13 @@
           ".write": "auth != null && $from !== $to && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
           ".validate": "newData.hasChildren(['n', 'c', 't']) && (!data.exists() || now - data.child('t').val() >= 2000)",
           "n": {
-            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
+            ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 16 && !newData.val().matches(/^ /) && !newData.val().matches(/ $/) && !newData.val().matches(/  /) && !newData.val().matches(/[\u0001-\u001f\u007f-\u00a0\u00ad\u00a1-\u00a9\u00ab-\u00b4\u00b6-\u00b9\u00bb-\u00bf\u00d7\u00f7\u034f\u061c\u115f\u1160\u1680\u17b4\u17b5\u180b-\u180f\u2000-\u202f\u205f-\u206f\u2190-\u2bff\u2800\u3000\u3164\ud800-\udfff\ufe00-\ufe0f\ufeff\uffa0\ufff0-\uffff!-\\/:-@\\[-\\^`{-~]/)"
           },
           "av": {
             ".validate": "newData.isString() && newData.val().length <= 44"
           },
           "c": {
-            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{6}$/)"
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9]{7}$/)"
           },
           "ok": {
             ".validate": "newData.isBoolean()"
@@ -158,85 +158,40 @@
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['n', 'st', 't']) && (!data.exists() || now - data.child('t').val() >= 1000)",
         "n": {
-          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 16 && !newData.val().matches(/^ /) && !newData.val().matches(/ $/) && !newData.val().matches(/  /) && !newData.val().matches(/[\u0001-\u001f\u007f-\u00a0\u00ad\u00a1-\u00a9\u00ab-\u00b4\u00b6-\u00b9\u00bb-\u00bf\u00d7\u00f7\u034f\u061c\u115f\u1160\u1680\u17b4\u17b5\u180b-\u180f\u2000-\u202f\u205f-\u206f\u2190-\u2bff\u2800\u3000\u3164\ud800-\udfff\ufe00-\ufe0f\ufeff\uffa0\ufff0-\uffff!-\\/:-@\\[-\\^`{-~]/)"
         },
         "av": {
           ".validate": "newData.isString() && newData.val().length <= 44"
         },
         "st": {
-          ".validate": "newData.isString() && newData.val().matches(/^(menu|party|battle)$/)"
+          ".validate": "newData.isString() && newData.val().matches(/^(menu|play)$/)"
         },
         "t": {
           ".validate": "newData.val() === now"
         },
         "$other": {
           ".validate": false
-        }
-      }
-    },
-    "inv": {
-      "$to": {
-        ".read": "auth != null && auth.uid === $to",
-        "$from": {
-          ".write": "auth != null && $from !== $to && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
-          ".validate": "newData.hasChildren(['n', 'r', 't']) && (!data.exists() || now - data.child('t').val() >= 3000)",
-          "n": {
-            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 12"
-          },
-          "av": {
-            ".validate": "newData.isString() && newData.val().length <= 44"
-          },
-          "r": {
-            ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4,6}$/)"
-          },
-          "t": {
-            ".validate": "newData.val() === now"
-          },
-          "$other": {
-            ".validate": false
-          }
-        }
-      }
-    },
-    "mm3": {
-      ".read": "auth != null && query.orderByChild == 't' && query.limitToLast <= 30",
-      ".indexOn": [
-        "t"
-      ],
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['n', 'r', 't'])",
-        "n": {
-          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3"
         },
-        "r": {
-          ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4,6}$/)"
+        "fr": {
+          ".validate": "newData.isString() && newData.val().length <= 44"
         },
-        "t": {
-          ".validate": "newData.val() === now"
+        "ti": {
+          ".validate": "newData.isString() && newData.val().length <= 44"
         },
-        "$other": {
-          ".validate": false
-        }
-      }
-    },
-    "mm3c": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && ((!data.exists() && newData.exists()) || (data.exists() && newData.exists() && now - data.child('t').val() > 60000) || (auth.uid === $uid && !newData.exists()))",
-        ".validate": "newData.hasChildren(['r', 'tm', 't'])",
-        "r": {
-          ".validate": "newData.isString() && newData.val().matches(/^[A-Z0-9]{4,6}$/)"
+        "b": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999"
         },
-        "tm": {
-          ".validate": "newData.val() === 0 || newData.val() === 1"
+        "tr": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000"
         },
-        "t": {
-          ".validate": "newData.val() === now"
+        "sk": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
         },
-        "$other": {
-          ".validate": false
+        "c": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+        },
+        "g": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
         }
       }
     }
