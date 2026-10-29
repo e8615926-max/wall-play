@@ -9047,7 +9047,7 @@ function updateParts(dt) {
 
 const LOAD_STEPS = [
   ...ZONES.map((z, i) => () => farTile(i)),
-  ...SKINS.map(k => () => heroSprite(k, 'idle', 0, false)),
+  ...SKINS.filter(k => owned.includes(k.id) || k.id === skinId).map(k => () => heroSprite(k, 'idle', 0, false)),   // заранее — только свои герои, остальные дорисуются, когда понадобятся
   () => { for (const n of T('zones')) textCanvas(n, 2, '#ffffff', OL); },
   () => { for (const t of T('tips')) textCanvas(t, 2, '#ffffff', OL); },
 ];
@@ -9074,7 +9074,8 @@ function updateLoad(dt) {
   if (window.__introOn) return;   // загрузка начинается после заставки ELDAR STUDIOS
   loadT += dt;
 
-  if (loadStep < LOAD_STEPS.length) LOAD_STEPS[loadStep++]();
+  const t0 = performance.now();   // за шаг — не дольше 3 мс, чтобы загрузка не дёргалась
+  do { if (loadStep < LOAD_STEPS.length) LOAD_STEPS[loadStep++](); } while (loadStep < LOAD_STEPS.length && performance.now() - t0 < 3);
   if (loadProgress() >= 1 && loadT > LOAD_MIN + 0.3 && !loadReady) {
     loadReady = true; loadDoneT = time;   // ждём касания: хомяк радуется, пока игрок не нажмёт
   }
@@ -15574,7 +15575,7 @@ function rrPath(x, y, w, h, r, keep) { r = Math.min(r, w / 2, h / 2); if (!keep)
 // пиксельные жесты руки (чёрный контур, белая перчатка, серая тень): '#' контур, 'w'/'l' белый, 'g' тень
 const PK_PIX = {
   point: ['......##.........', '.....#lw#........', '.....#lw#........', '.....#lw#........', '.....#lw#........', '.....#lwg###.....', '.....#lw#lw###...', '.....#lw#lw#lw##.', '..##.#lw#lw#lw#g#', '.#lw##lwwwwwwww#g#', '.#lww#wwwwwwwwwwg#', '..#lwwwwwwwwwwwgg#', '...#wwwwwwwwwwwgg#', '...#wwwwwwwwwwwg#.', '....#wwwwwwwwwgg#.', '....#gwwwwwwwggg#.', '.....#ggwwwwggg#..', '.....##########...', '.....#llllllll#...', '.....#wwwwwwwg#...', '.....##########...'],
-  open: ['......##..##......', '.##..#lw##lw#..##.', '#lw#.#lw##lw#.#lw#', '#lw#.#lw##lw#.#lw#', '#lw#.#lw##lw#.#lw#', '#lw#.#lw##lw#.#lw#', '.#lw##lw##lw##lwg#', '.#lw##lw##lw##lw#.', '.#lwg#lwg#lwg#lg#.', '..#lwwwwwwwwwwwg#.', '..#lwwwwwwwwwwwg#.##', '..#lwwwwwwwwwwwg##lw#', '..#lwwwwwwwwwwwg#lwg#', '..#lwwwwwwwwwwwwwwg#.', '...#wwwwwwwwwwwwgg#..', '...#gwwwwwwwwwwggg#..', '....#ggwwwwwwwggg#...', '.....############....', '.....#llllllllll#....', '.....#wwwwwwwwwg#....', '.....############....'],
+  open: ['.......##.........', '....###lw###......', '...#lw#lw#lw#.....', '...#lw#lw#lw###...', '...#lw#lw#lw#lw#..', '...#lw#lw#lw#lw#..', '.###lw#lw#lw#lw#..', '#lw#lw#lw#lw#lw#..', '#lw#lw#lw#lw#lw#..', '#lwwwwwwwwwwwwg#..', '.#lwwwwwwwwwwwg#..', '..#lwwwwwwwwwwg#..', '...#lwwwwwwwwwg#..', '...#lwwwwwwwwwg#..', '....#wwwwwwwwg#...', '.....#########....', '....###########...', '....#lllllllll#...', '....###########...'],   // раскрытая ладонь — тоньше: у пальцев общий контур
   thumb: ['.......##.........', '......#lw#........', '......#lw#........', '......#lwg#.......', '.....#lwwg#.......', '.....#lwwg#.......', '....#lwwg##.......', '...#lwwg#lw####...', '.##lwwwg##lwwwg##.', '#llwwwwwg#######g#', '#lwwwwwwg#lwwwwgg#', '#lwwwwwwwg#######.', '#lwwwwwwwg#lwwwgg#', '#lwwwwwwwwg######.', '#lwwwwwwwwg#lwwgg#', '#lwwwwwwwwwg#####.', '.#gwwwwwwwwg#lwg#.', '..#ggwwwwwwgg###..', '..##############..', '..#lllllllllll#...', '..#wwwwwwwwwwg#...', '..#############...'],
   fist: ['.....####.####....', '....#lwwg#lwwg#...', '...##lwwg#lwwg###.', '..#lw#lwg#lwg#lwg#', '..#lw#lwg#lwg#lwg#', '..#lw##########lg#', '..#lwwwwwwwwwwwwg#', '.##lwwwwwwwwwwwwg#', '#lw#lwwwwwwwwwwwg#', '#lwwwwwwwwwwwwwgg#', '#lwwwwwwwwwwwwwgg#', '.#gwwwwwwwwwwwwgg#', '..#ggwwwwwwwwwggg#', '...#ggwwwwwwwggg#.', '....############..', '....#llllllllll#..', '....#wwwwwwwwwg#..', '....############..'],
   peace: ['...##.....##......', '..#lw#...#lw#.....', '..#lw#...#lw#.....', '..#lwg#.#lwg#.....', '...#lw#.#lw#......', '...#lwg#lwg#......', '...#lwg#lwg###....', '....#lw#lw#lw###..', '.##.#lw#lw#lw#lw#.', '#lw##lwwwwwwwwwg#.', '#lwwwwwwwwwwwwwg#.', '.#lwwwwwwwwwwwwg#.', '..#wwwwwwwwwwwgg#.', '..#gwwwwwwwwwggg#.', '...#ggwwwwwwggg#..', '....###########...', '....#lllllllll#...', '....#wwwwwwwwg#...', '....###########...']
@@ -15622,8 +15623,9 @@ function drawBubble(cx, y, w, str, shown, tail) {   // tail: {x, y} — куда
 }
 const PKS = { str: '', shown: 0, t: 0 };   // что Пиклс сейчас говорит
 function pkSay(str) { if (PKS.str === str) return; PKS.str = str; PKS.shown = 0; PKS.t = 0; tone(660, 880, 0.05, 'triangle', 0.03); }
-function pkTalkStep(dt) { PKS.t += dt; const L = pkPlain(PKS.str).length; if (PKS.shown < L) { PKS.shown = Math.min(L, PKS.shown + dt * 38); if (Math.floor(PKS.shown) % 6 === 0 && Math.random() < 0.3) tone(500 + Math.random() * 300, 420, 0.03, 'square', 0.012); } }
+function pkTalkStep(dt) { PKS.t += dt; const L = pkPlain(PKS.str).length; if (PKS.shown < L) { const a = Math.floor(PKS.shown); PKS.shown = Math.min(L, PKS.shown + dt * 38); const b = Math.floor(PKS.shown); if (b > a && b % 2 && pkPlain(PKS.str)[b - 1] !== ' ') pkBlip(b); } }
 const pkTalking = () => PKS.shown < pkPlain(PKS.str).length;
+function pkBlip(i) { tone(560 + (i * 37 % 5) * 70, 480 + (i * 13 % 3) * 40, 0.035, 'square', 0.028); }   // «блип» на появление буквы
 
 // ---------- обучающий раунд ----------
 const TUT = { on: false, step: 0, st: 0, jumps: 0, hist: [], histT: 0, rw: null, guard: false, endT: 0, pops: [], shots: [], seenEnemy: false, seenThorn: false };
@@ -15841,9 +15843,11 @@ function obCss() {
   const st = document.createElement('style'); st.id = 'obcss';
   st.textContent = `#ob{position:fixed;inset:0;z-index:104;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;font:900 15px Montserrat,system-ui,sans-serif;color:#fff;touch-action:manipulation;user-select:none;
 background:linear-gradient(180deg,#3aa8ff 0%,#8ad8ff 45%,#ffd8f0 100%)}
-#ob .cl{position:absolute;left:-40%;width:160px;height:56px;pointer-events:none;background:radial-gradient(ellipse 34% 48% at 30% 62%,#fff 98%,transparent 100%),radial-gradient(ellipse 30% 56% at 58% 46%,#fff 98%,transparent 100%),radial-gradient(ellipse 26% 40% at 80% 66%,#fff 98%,transparent 100%),radial-gradient(ellipse 50% 24% at 52% 80%,#fff 98%,transparent 100%);filter:drop-shadow(0 6px 0 #c8e4ff);animation:obCl linear infinite}
-@keyframes obCl{to{transform:translateX(190vw)}}
-#ob .sun{position:absolute;right:8%;top:8%;width:90px;height:90px;border-radius:50%;background:radial-gradient(#fff6a0,#ffd23a 60%,#ffb02a);box-shadow:0 0 60px #fff2a0;animation:obPulse 3s ease-in-out infinite}
+#ob .cl{position:absolute;left:0;width:150px;height:64px;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 60'%3E%3Cg fill='%23bfe4ff'%3E%3Ccircle cx='36' cy='38' r='18'/%3E%3Ccircle cx='62' cy='28' r='24'/%3E%3Ccircle cx='92' cy='32' r='20'/%3E%3Ccircle cx='114' cy='42' r='14'/%3E%3Crect x='22' y='38' width='104' height='20' rx='10'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='36' cy='34' r='18'/%3E%3Ccircle cx='62' cy='24' r='24'/%3E%3Ccircle cx='92' cy='28' r='20'/%3E%3Ccircle cx='114' cy='38' r='14'/%3E%3Crect x='22' y='34' width='104' height='20' rx='10'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;animation:obCl linear infinite;will-change:transform}
+@keyframes obCl{from{transform:translateX(-170px)}to{transform:translateX(calc(100vw + 20px))}}
+#ob .sun{position:absolute;right:8%;top:7%;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#ffffff 0 10%,#fff6a0 22%,#ffd23a 58%,#ffa21a 100%);box-shadow:0 0 0 5px #ffe27a66,0 0 50px 12px #fff2a0cc;animation:obPulse 3s ease-in-out infinite}
+#ob .sun::before{content:'';position:absolute;left:-60%;top:-60%;width:220%;height:220%;border-radius:50%;background:repeating-conic-gradient(#fff6a066 0 9deg,transparent 9deg 22.5deg);-webkit-mask:radial-gradient(circle,transparent 30%,#000 32%,#000 55%,transparent 70%);mask:radial-gradient(circle,transparent 30%,#000 32%,#000 55%,transparent 70%);animation:moSpin 14s linear infinite;z-index:-1}
+@keyframes moSpin{to{transform:rotate(360deg)}}
 @keyframes obPulse{50%{transform:scale(1.08)}}
 #ob *{box-sizing:border-box}
 #ob .col{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;padding:0 14px max(16px,env(safe-area-inset-bottom))}
@@ -15870,7 +15874,7 @@ function obStart(step) {
   obUi = document.createElement('div'); obUi.id = 'ob';
   for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown']) obUi.addEventListener(ev, e => e.stopPropagation(), { passive: !(ev === 'click') });
   const sun = document.createElement('div'); sun.className = 'sun'; obUi.appendChild(sun);
-  for (let i = 0; i < 7; i++) { const c = document.createElement('div'); c.className = 'cl'; const sc = 0.6 + (i % 3) * 0.35; c.style.cssText = `top:${4 + i * 9}%;transform:scale(${sc});animation-duration:${26 + i * 7}s;animation-delay:-${i * 6}s;opacity:${0.7 + (i % 2) * 0.3}`; obUi.appendChild(c); }
+  for (let i = 0; i < 6; i++) { const c = document.createElement('div'); c.className = 'cl'; const sc = 0.55 + (i % 3) * 0.3, dur = 34 + i * 8; c.style.cssText = `top:${3 + i * 8}%;width:${150 * sc}px;height:${64 * sc}px;animation-duration:${dur}s;animation-delay:-${(dur * ((i * 0.37 + 0.12) % 1)).toFixed(1)}s;opacity:${0.75 + (i % 2) * 0.25}`; obUi.appendChild(c); }   // облака сразу разбросаны по небу
   const col = document.createElement('div'); col.className = 'col'; obUi.appendChild(col);
   const cv2 = document.createElement('canvas'); cv2.width = cv2.height = 340; cv2.className = 'pk';
   const say = document.createElement('div'); say.className = 'say';
@@ -15889,17 +15893,19 @@ function obStart(step) {
     OB.pose = pose; clearInterval(OB.typing); say.textContent = ''; let i = 0;
     const esc = t2 => t2.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), plain = pkPlain(str);
     const html = n => { let out = '', g = false, k = 0; for (const ch of str) { if (ch === '[') { g = true; out += '<b>'; continue; } if (ch === ']') { g = false; out += '</b>'; continue; } if (k >= n) break; out += esc(ch); k++; } return out + (g ? '</b>' : ''); };
-    OB.typing = setInterval(() => { i++; say.innerHTML = html(i); if (i % 3 === 0) tone(520 + Math.random() * 260, 420, 0.03, 'square', 0.01); if (i >= plain.length) { clearInterval(OB.typing); OB.typing = null; } }, 26);
+    OB.typing = setInterval(() => { i++; say.innerHTML = html(i); const ch = plain[i - 1] || ' '; if (ch !== ' ' && i % 2) pkBlip(i); if (i >= plain.length) { clearInterval(OB.typing); OB.typing = null; } }, 30);
   };
   const btn = (label, cls, fn) => { const b = document.createElement('button'); if (cls) b.className = cls; b.textContent = label; b.onclick = () => { try { audio(); sfx.click(); } catch (e) {} fn(b); }; return b; };
   const show = (...els) => { panel.innerHTML = ''; panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = ''; panel.append(...els); };
   const go = st => { store.set('obStep', st); (({ lang: stLang, login: stLogin, gift: stGift, name: stName, tut: stTut })[st] || stLang)(); };
   function stLang() {
-    talk(tr('ПРИВЕТ! Я — [МИСТЕР ПИКЛС]! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ [ЯЗЫК].', "HI! I'M MR. PICKLES! 👋 FIRST, PICK A LANGUAGE."));
+    talk(tr('ПРИВЕТ! Я — [МИСТЕР ПИКЛС]! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ [ЯЗЫК].', "HI! I'M [MR. PICKLES]! 👋 FIRST, PICK A [LANGUAGE]."));
     const g = document.createElement('div'); g.className = 'grid2';
-    const ok = btn(tr('ПОДТВЕРДИТЬ', 'CONFIRM') + ' ✓', 'green', () => { store.set('lang', lang); go(fbOn() ? 'login' : 'name'); });
-    for (const code of LANGS) g.appendChild(btn(LANG_NAMES[code] || code.toUpperCase(), code === lang ? 'on' : '', b => {   // выбор — подсветкой, переход — по «Подтвердить»
-      lang = code; for (const x of g.children) x.classList.toggle('on', x === b); ok.textContent = tr('ПОДТВЕРДИТЬ', 'CONFIRM') + ' ✓';
+    const okTxt = () => (lang === 'ru' ? 'ПОДТВЕРДИТЬ' : 'CONFIRM') + ' ✓';
+    const ok = btn(okTxt(), 'green', () => { store.set('lang', lang); go(fbOn() ? 'login' : 'name'); });
+    for (const code of LANGS) g.appendChild(btn(LANG_NAMES[code] || code.toUpperCase(), code === lang ? 'on' : '', b => {   // выбор — подсветкой, переход — по кнопке подтверждения
+      const was = lang; lang = code; for (const x of g.children) x.classList.toggle('on', x === b); ok.textContent = okTxt();
+      if (was !== code) talk(tr('ПРИВЕТ! Я — [МИСТЕР ПИКЛС]! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ [ЯЗЫК].', "HI! I'M [MR. PICKLES]! 👋 FIRST, PICK A [LANGUAGE]."));
     }));
     show(g, ok);
   }
@@ -15939,7 +15945,13 @@ function obStart(step) {
   function stTut() {
     talk(tr('ПРИЯТНО ПОЗНАКОМИТЬСЯ, [' + mp.nick + ']! ПРОЙДЁМ [ОБУЧЕНИЕ]? Я ПОКАЖУ ВСЕ ФИШКИ!', 'NICE TO MEET YOU, ' + mp.nick + '! SHALL WE DO THE TUTORIAL? I WILL SHOW YOU EVERYTHING!'), 'thumb');
     const g = document.createElement('div'); g.className = 'grid2';
-    g.append(btn(tr('ДА!', 'YES!'), 'green', () => { obEnd(); tutStart(); }), btn(tr('НЕТ', 'NO'), 'red', () => { obEnd(); fakeLoad(null); }));
+    g.append(btn(tr('ДА!', 'YES!'), 'green', () => { obEnd(); tutStart(); }), btn(tr('НЕТ', 'NO'), 'red', () => stTutSure()));
+    show(g);
+  }
+  function stTutSure() {   // новичок может не сразу понять игру — переспрашиваем
+    talk(tr('ТОЧНО? ТЫ [НОВЕНЬКИЙ] — БЕЗ ОБУЧЕНИЯ МОЖНО [НЕ СРАЗУ ПОНЯТЬ] ИГРУ. ЭТО ВСЕГО МИНУТКА!', 'ARE YOU SURE? YOU ARE [NEW HERE] — WITHOUT THE TUTORIAL THE GAME MAY BE [HARD TO GET] AT FIRST. IT TAKES JUST A MINUTE!'), 'point');
+    const g = document.createElement('div'); g.className = 'grid2';
+    g.append(btn(tr('ЛАДНО, ДАВАЙ!', 'OK, LET\'S GO!'), 'green', () => { obEnd(); tutStart(); }), btn(tr('ТОЧНО НЕТ', 'NO, SKIP'), 'red', () => { obEnd(); fakeLoad(null); }));
     show(g);
   }
   function obEnd() { store.set('ob', 1); store.set('obStep', ''); clearInterval(OB.typing); clearInterval(OB.wait); obUi.remove(); obUi = null; }
