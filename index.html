@@ -2218,9 +2218,10 @@ function saveSummary(d) {
 }
 function fbSaveSoon() {   // через 4 с после последнего изменения, но не реже раза в минуту
   if (!acctG()) return; clearTimeout(fbSave.timer);
-  const go = () => { fbSave.first = 0; fbCloudPush().catch(() => {}); };
+  // во время забега не отправляем (сбор всего сохранения в текст — заметная работа): ждём конца забега, но не дольше 3 минут
+  const go = () => { if (state === 'play' && !document.hidden && Date.now() - fbSave.first < 180000) { fbSave.timer = setTimeout(go, 4000); return; } fbSave.first = 0; fbCloudPush().catch(() => {}); };
   if (!fbSave.first) fbSave.first = Date.now();
-  if (Date.now() - fbSave.first > 60000) go(); else fbSave.timer = setTimeout(go, 4000);
+  if (Date.now() - fbSave.first > 60000 && state !== 'play') go(); else fbSave.timer = setTimeout(go, 4000);
 }
 // при запуске: в облаке свежее (играл на другом устройстве) — забираем; на устройстве свежее — отправляем
 async function fbCloudSync() {
@@ -2903,6 +2904,7 @@ function scheduleStep(s, t) {
 }
 setInterval(() => {
   if (!ac || !musicOn || ac.state !== 'running' || window.__introOn) return;
+  if (muted || !SET.music || document.hidden) { mTime = 0; return; }   // музыку не слышно — ноты не создаём (это сотни звуковых узлов в минуту)
   if (mTime < ac.currentTime) mTime = ac.currentTime + 0.05;
   while (mTime < ac.currentTime + 0.25) { scheduleStep(mStep, mTime); mTime += STEP; mStep = (mStep + 1) % 64; }
 }, 40);
@@ -7121,9 +7123,15 @@ function generate0() {
 }
 
 // ---------- Фон ----------
-const farTiles = {};
+// дальний фон держим только для нескольких карт (каждая картинка ~1 МБ видеопамяти): раньше в памяти лежали все 68 —
+// на телефоне браузер упирался в лимит памяти видеокарты и начинал тормозить
+const farTiles = new Map(), FAR_KEEP = 4;
+// тяжёлую подготовку (фон следующей карты, следующий кусок кроны) делаем в паузах между кадрами, а не посреди кадра
+const idleRun = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 400 }) : setTimeout(f, 30));
+const idleWarm = (key, f) => { if (idleWarm.q.has(key)) return; idleWarm.q.add(key); idleRun(() => { idleWarm.q.delete(key); f(); }); };
+idleWarm.q = new Set();
 function farTile(zi) {
-  const fk = ZONES[zi].nid; if (farTiles[fk]) return farTiles[fk];
+  const fk = ZONES[zi].nid, had = farTiles.get(fk); if (had) { farTiles.delete(fk); farTiles.set(fk, had); return had; }
   const z = ZONES[zi], th = 640, kind = z.farKind || 'tree';
   const c = document.createElement('canvas'); c.width = W; c.height = th;
   const g = c.getContext('2d');
@@ -7175,7 +7183,7 @@ function farTile(zi) {
     for (let x = 0; x <= W; x++) { if (x < W && used[x]) { if (x0 < 0) x0 = x; } else if (x0 >= 0) { if (cols.length && x0 - cols[cols.length - 1][1] < 24) cols[cols.length - 1][1] = x; else cols.push([x0, x]); x0 = -1; } }
     c.cols = cols.map(([a, b]) => [Math.max(0, (a & ~1) - 2), Math.min(W, ((b + 1) & ~1) + 2)]);
   } catch (e) {}
-  farTiles[fk] = c;
+  farTiles.set(fk, c); while (farTiles.size > FAR_KEEP) farTiles.delete(farTiles.keys().next().value);
   return c;
 }
 
@@ -7198,14 +7206,14 @@ function bushTile(z, T, k, lazy) {
   const key = z.bush + z.bushD + z.bushL + k;
   let set = bushSets.get(key);
   if (set) { bushSets.delete(key); bushSets.set(key, set); }
-  else { set = new Map(); bushSets.set(key, set); if (bushSets.size > 3) bushSets.delete(bushSets.keys().next().value); }
+  else { set = new Map(); bushSets.set(key, set); if (bushSets.size > 2) bushSets.delete(bushSets.keys().next().value); }
   let tc = set.get(T);
   if (!tc) {
     if (lazy && bushTile.made) return null;   // для следующей карты — не больше одной новой плитки за кадр, без рывка
     bushTile.made = true;
     tc = document.createElement('canvas'); tc.width = Math.round(W * k); tc.height = Math.round(BUSH_TILE * k);
     const g = tc.getContext('2d'); g.imageSmoothingEnabled = false; g.scale(k, k); bushColumn(g, z.bush, z.bushD, z.bushL, T * BUSH_TILE, BUSH_TILE);   // без сглаживания овалы берутся готовыми из кэша
-    set.set(T, tc); if (set.size > 10) set.delete(set.keys().next().value);
+    set.set(T, tc); if (set.size > 5) set.delete(set.keys().next().value);   // на экране 3–4 плитки, лишние не держим
   }
   return tc;
 }
@@ -7217,6 +7225,8 @@ function drawBushColumn(b) {
     for (let T = Math.floor(off / BUSH_TILE); T * BUSH_TILE < off + H; T++) { const tc = bushTile(z, T, k, lazy); if (tc) ctx.drawImage(tc, 0, T * BUSH_TILE - off, W, BUSH_TILE); }
   };
   layer(b.z, 1, false);
+  { const T = Math.floor(off / BUSH_TILE) - 1, z = b.z, set = bushSets.get(z.bush + z.bushD + z.bushL + k);   // следующая плитка выше — заранее, в паузе
+    if (set && !set.has(T)) idleWarm('bush' + T + z.bush, () => { if (Math.abs(cv.width / W - k) < 1e-6) { const m = bushTile.made; bushTile.made = false; bushTile(z, T, k, false); bushTile.made = m; } }); }
   // смена карты: крона новой карты плавно проявляется поверх старой (те же плитки, без перерисовки)
   if (b.t > 0 && b.n !== b.z && (b.n.bush !== b.z.bush || b.n.bushD !== b.z.bushD || b.n.bushL !== b.z.bushL)) layer(b.n, b.t, true);
   ctx.globalAlpha = 1;
@@ -7315,6 +7325,7 @@ function drawBackground() {
   };
   drawTile(b.i, 1);
   if (b.t > 0 && ZONES[b.i + 1]) drawTile(b.i + 1, b.t);
+  else if (ZONES[b.i + 1] && !farTiles.has(ZONES[b.i + 1].nid)) { const ni = b.i + 1; idleWarm('far' + ni, () => { if (ZONES[ni]) farTile(ni); }); }   // фон следующей карты — заранее, в паузе
   ctx.globalAlpha = 1;
   drawBushColumn(b);
   drawDyn(b.z, 1 - b.t, true);
@@ -9098,7 +9109,7 @@ function updateParts(dt) {
 }
 
 const LOAD_STEPS = [
-  ...ZONES.map((z, i) => () => farTile(i)),
+  () => farTile(0), () => farTile(1),   // фон остальных карт готовится по ходу забега, в паузах между кадрами
   ...SKINS.filter(k => owned.includes(k.id) || k.id === skinId).map(k => () => heroSprite(k, 'idle', 0, false)),   // заранее — только свои герои, остальные дорисуются, когда понадобятся
   () => { for (const n of T('zones')) textCanvas(n, 2, '#ffffff', OL); },
   () => { for (const t of T('tips')) textCanvas(t, 2, '#ffffff', OL); },
@@ -14576,7 +14587,7 @@ function frame(now) {
   if (!screenCovered()) draw();
   // телефон не успевает (кадры приходят реже 45 в секунду или кадр считается долго) — разрешение холста на ступень ниже;
   // долго всё легко — обратно выше, но не раньше чем через 20 с после понижения, чтобы не качаться туда-сюда
-  perfAcc += performance.now() - t0; perfN++; if (gap > 23 && gap < 100) perfSlow++;
+  perfAcc += performance.now() - t0; perfN++; if (gap > 27 && gap < 100) perfSlow++;   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
   if (perfN >= 90) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
