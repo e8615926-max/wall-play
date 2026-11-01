@@ -6791,10 +6791,10 @@ function drawEmotes() {
     if (!own) { coinIcon(r.x + r.w / 2 - 26, r.y + 148, 8); text(String(e.p), r.x + r.w / 2 - 12, r.y + 156, 2, bank >= e.p ? '#ffffff' : '#ffb0b0', 'left', OL); }
   });
   ctx.fillStyle = '#2a1050'; ctx.fillRect(0, 0, W, 90); ctx.fillStyle = '#ff5ab0'; ctx.fillRect(0, 90, W, 2); ctx.fillStyle = '#2a1050'; ctx.fillRect(0, H - 22, W, 22);
-  text(tr('ЭМОЦИИ', 'EMOTES'), W / 2, 44, 3, '#ffd23a', 'center', OL); roundBtn(BACK_BTN); text('<', BACK_BTN.x + 20, BACK_BTN.y + 28, 3, OL);
-  coinIcon(W / 2 - 30, 78); text(String(bank), W / 2 - 16, 86, 2, '#ffffff', 'left', OL);
+  text(tr('ЭМОЦИИ', 'EMOTES'), W / 2, 44, 3, '#ffd23a', 'center', OL); roundBtn(BACK_BTN); text('<', BACK_BTN.x + 21, BACK_BTN.y + 28, 3, OL, 'center', null);
+  coinIcon(16, 78); text(String(bank), 30, 86, 2, '#ffffff', 'left', OL);   // монеты слева — длинная надпись «в раунд» справа на них не налезает
   const full = time - emFull < 1.2;
-  text(tr('В РАУНД: ', 'IN ROUND: ') + emSel.length + '/' + EM_SLOTS, W - 14, 86, 2, full && Math.sin(time * 20) > 0 ? '#ff6a6a' : '#7cf08a', 'right', OL);
+  text(tr('В РАУНД: ', 'IN ROUND: ') + emSel.length + '/' + EM_SLOTS, W - 14, 86, 2, full && Math.sin(time * 20) > 0 ? '#ff6a6a' : '#7cf08a', 'right', OL, W - 130);
   text(full ? tr('Уже 5! Сначала убери одну', 'Already 5! Remove one first') : tr('Листай. Нажми на купленную — взять в раунд (до 5)', 'Scroll. Tap an owned one to take it (up to 5)'), W / 2, H - 8, 1, full ? '#ff9a9a' : '#ffffff', 'center', OL, W - 20);
 }
 function emoSnd(id) {   // у каждой эмоции свой звук
@@ -8912,7 +8912,7 @@ function modalClick(pt) {
 
 // Настройки
 const SET_KEYS = ['music', 'sfx', 'shake', 'fx', 'vibe', 'hints', 'inf'];
-const setRow = i => ({ x: 20, y: 80 + i * 37, w: W - 40, h: 32 });
+const setRow = i => ({ x: 20, y: 78 + i * 36, w: W - 40, h: 31 });   // 7 строк — последняя не налезает на заголовок «язык»
 const langRect = i => ({ x: 20 + (i % 2) * 164, y: 362 + Math.floor(i / 2) * 36, w: 156, h: 30 });
 const RESET_BTN = { x: 40, y: 550, w: W - 80, h: 34 };
 const PAUSE_BTNS = [{ x: 80, y: 270, w: 200, h: 44 }, { x: 80, y: 330, w: 200, h: 44 }, { x: 80, y: 390, w: 200, h: 44 }];
@@ -14566,6 +14566,7 @@ function revealSnd(r) {
   }
 }
 function confetti(c, n, cols, x, y, spd) {
+  c.fx = c.fx || [];   // нажали раньше первого кадра сундука — массива ещё нет
   for (let i = 0; i < n; i++) { const an = rand(0, Math.PI * 2), v = rand(spd * 0.3, spd); c.fx.push({ x, y, vx: Math.cos(an) * v, vy: Math.sin(an) * v - spd * 0.4, col: cols[i % cols.length], life: rand(1, 1.8), rot: rand(0, 6), w: rand(3, 6) }); }
 }
 function chestLand(c) {
