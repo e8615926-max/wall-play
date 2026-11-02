@@ -16771,6 +16771,13 @@ function frCodeCard() {
 // ---------- экран «ДРУЗЬЯ»: письма и таблица друзей ----------
 // ---------- Новости: что нового в игре (кнопка-газета вверху меню; «!» — пока не прочитано) ----------
 const NEWS = [
+  { v: 5, d: '02.11.2026', hero: 'king', items: [
+    ['В «СЕТИ» — РЕЖИМЫ! ЛИСТАЙ КАРТОЧКИ: ЗАБЕГ И ЦАРЬ ГОРЫ. 10 ИГРОКОВ, ПОДБОР ПО КУБКАМ.', 'MODES IN «ONLINE»! SWIPE THE CARDS: RACE AND KING OF THE HILL. 10 PLAYERS, MATCHED BY TROPHIES.'],
+    ['ЗАБЕГ: КТО ПЕРВЫМ ДОЛЕЗЕТ ДО ФИНИША НА 300 М. ТРИ ФИНИША — И ПЬЕДЕСТАЛ С КОРОНОЙ.', 'RACE: FIRST TO THE FINISH AT 300 M. THREE FINISHERS — AND A PODIUM WITH A CROWN.'],
+    ['ЦАРЬ ГОРЫ: КОСНИСЬ ЦАРЯ — КОРОНА ТВОЯ. ПОБУДЬ ЦАРЁМ 30 СЕКУНД!', 'KING OF THE HILL: TOUCH THE KING — THE CROWN IS YOURS. STAY KING FOR 30 SECONDS!'],
+    ['В РЕЙТИНГЕ — ПОСТОЯННЫЕ СОПЕРНИКИ, А ПОД ДОРОЖКОЙ PASS — ЗАДАНИЯ РЕЖИМОВ.', 'THE RANKING HAS REGULAR RIVALS, AND MODE QUESTS ARE UNDER THE PASS TRACK.'],
+    ['ИГРА САМА ЧИНИТ КАРТИНКУ, ЕСЛИ ТЕЛЕФОН ДОЛГО ДЕРЖАЛ ЕЁ В ФОНЕ. ГЕРОИ В МАГАЗИНЕ И БОИ — БЕЗ ЛАГОВ.', 'THE GAME REPAIRS ITS PICTURE AFTER A LONG TIME IN THE BACKGROUND. HEROES IN THE SHOP AND BATTLES — NO LAG.'],
+  ] },
   { v: 4, d: '01.11.2026', hero: 'smiley', items: [
     ['ХОМЯК-УЛЫБКА ТЕПЕРЬ С ЭМОЦИЯМИ: ПОДМИГИВАЕТ, ВЛЮБЛЯЕТСЯ, ХОХОЧЕТ В ПРЫЖКЕ. МАСКА — НА РЕМЕШКЕ.', 'SMILEY HAMSTER NOW HAS EMOTIONS: WINKS, FALLS IN LOVE, LAUGHS IN A JUMP. THE MASK IS ON A STRAP.'],
     ['ВСЕ ЗНАЧКИ В ИГРЕ — СВОИ, ПИКСЕЛЬНЫЕ.', 'ALL ICONS IN THE GAME ARE OUR OWN PIXEL ONES.'],
@@ -17733,7 +17740,8 @@ function arQuestsCard() {
   if (state === 'dead' && !AR.meFin) { AR.respT += dt; if (AR.respT >= AR_RESP) { AR.respT = 0; arRespawn(); } }
 }; }
 { const d0 = die; die = function (reason) { if (mp.mode && mp.active && (AR.meFin || AR.phase !== 'play')) return; const cam0 = camY; d0.apply(this, arguments); if (mp.mode && state === 'dead') { AR.respT = 0; AR.deadCam = cam0; } }; }
-{ const p0 = press; press = function () { if (mp.mode && mp.active && state === 'play' && (AR.phase !== 'play' || AR.meFin || (AR.mode === 'king' && arKgHead() > 0 && AR.king !== arMe()))) { held = true; return; } p0.apply(this, arguments); }; }
+{ const p0 = press; press = function () { if (!mp.active && (AR.phase === 'search' || AR.phase === 'lobby' || AR.phase === 'go')) return;   // идёт подбор — игра под окном не стартует
+  if (mp.mode && mp.active && state === 'play' && (AR.phase !== 'play' || AR.meFin || (AR.mode === 'king' && arKgHead() > 0 && AR.king !== arMe()))) { held = true; return; } p0.apply(this, arguments); }; }
 { const c0 = uiClick; uiClick = function (pt) { if (mp.mode && mp.active && arClick(pt)) return true; return c0.apply(this, arguments); }; }
 { const h0 = mpHud; mpHud = function () { if (mp.mode && mp.active) { arHud(); return; } h0(); }; }
 { const g0 = mpGhost; mpGhost = function () { g0(); arWorldFx(); }; }
@@ -17753,7 +17761,7 @@ function arQuestsCard() {
 reset();
 window.__game = { get FR() { return FR; }, get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; },
   // для автотестов и замеров скорости
-  get mp() { return mp; }, get AR() { return AR; }, arPlay, arInfo, mpOpen, openBoard, openPass, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
+  get mp() { return mp; }, get AR() { return AR; }, arPlay, arInfo, mpOpen, openBoard, openPass, arLobby, mpHi, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
   bench(n = 60) { const t0 = performance.now(); for (let i = 0; i < n; i++) { time += 1 / 60; draw(); } return (performance.now() - t0) / n; } };
 requestAnimationFrame(frame);
 // Музыка включается сразу: если браузер разрешает звук — с первой секунды, иначе от самого первого касания или клавиши
