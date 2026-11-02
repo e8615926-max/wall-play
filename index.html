@@ -2072,14 +2072,17 @@ function FireConn(pc) {
   const h = {}, me = this; me.open = false; me.pc = pc;
   me.on = (e, f) => { h[e] = f; }; const emit = (e, a) => { if (h[e]) h[e](a); };
   me.bind = ch => {
+    if (ch.label === 'wpu') {   // быстрый канал без повторов: только снимки движения — старый снимок не задерживает новый
+      me.uch = ch; ch.onmessage = ev => { let d; try { d = JSON.parse(ev.data); } catch (e) { return; } emit('data', d); }; return;
+    }
     me.ch = ch;
     ch.onopen = () => { me.open = true; emit('open'); };
     ch.onmessage = ev => { let d; try { d = JSON.parse(ev.data); } catch (e) { return; } emit('data', d); };
     ch.onclose = () => me.close();
   };
   pc.addEventListener('connectionstatechange', () => { if (pc.connectionState === 'failed' || pc.connectionState === 'closed') me.close(); });
-  me.send = d => { if (me.open) try { me.ch.send(JSON.stringify(d)); } catch (e) {} };
-  me.close = () => { const was = me.open; me.open = false; try { me.ch && me.ch.close(); } catch (e) {} try { pc.close(); } catch (e) {} if (was || !me.closedOnce) { me.closedOnce = true; if (was) emit('close'); } };
+  me.send = d => { if (!me.open) return; try { const u = d && d.t === 's' && me.uch && me.uch.readyState === 'open'; (u ? me.uch : me.ch).send(JSON.stringify(d)); } catch (e) {} };
+  me.close = () => { const was = me.open; me.open = false; try { me.ch && me.ch.close(); } catch (e) {} try { me.uch && me.uch.close(); } catch (e) {} try { pc.close(); } catch (e) {} if (was || !me.closedOnce) { me.closedOnce = true; if (was) emit('close'); } };
 }
 function FirePeer(id) {
   const me = this, h = {}, conns = [], pend = {};
@@ -2107,7 +2110,7 @@ function FirePeer(id) {
   };
   me.connect = hostId => {   // игрок стучится в комнату по коду
     const pc = new RTCPeerConnection({ iceServers: fbIce() }), c = new FireConn(pc);
-    c.bind(pc.createDataChannel('wp', { ordered: true })); conns.push(c);
+    c.bind(pc.createDataChannel('wp', { ordered: true })); c.bind(pc.createDataChannel('wpu', { ordered: false, maxRetransmits: 0 })); conns.push(c);
     (async () => {
       try {
         const code = String(hostId).replace(/^wallplay-/, '').toUpperCase(), room = await fbReq('GET', 'rooms/' + code);
@@ -6106,7 +6109,7 @@ const trf = (ru, en, v) => tr(ru, en).replace(/\{(\w+)\}/g, (x, k) => v[k] != nu
 const mpClean = s => String(s || '').toUpperCase().replace(/[^A-ZА-ЯЁ0-9 _-]/g, '').trim().slice(0, 10);
 const mpCode = () => { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 5; i++) c += a[Math.floor(Math.random() * a.length)]; return c; };
 const mpIds = () => Object.keys(mp.pl);
-const mpSkin = id => SKINS.find(s => s.id === id) || SKINS[0];
+const mpSkin = id => skinById(id) || SKINS[0];
 let mpUi = null;
 const $m = id => mpUi.querySelector('#' + id);
 function mpBuild() {
@@ -11475,7 +11478,27 @@ function drawCardArt(k, r, t, sp) {
   cardFx(k, r, t, sp, true);
 }
 const heroBlink = t => ((t * 1.13) % 3.1 + 3.1) % 3.1 < 0.14;   // герои на карточках моргают — каждый в свой момент
+// карточка героя рисуется в свою картинку 15 раз в секунду (у разных карточек — в разные кадры), а между ними
+// ставится готовая: сценки легенд и мификов — это тысячи мелких прямоугольников, 60 раз в секунду телефон не тянул
+const CARD_CACHE = new Map(), CARD_FPS = 15, CARD_M = { l: 16, t: 50, r: 16, b: 16 };
 function drawSkinCard(r, k) {
+  const K = cv.width / W;
+  if (!(K > 0) || ctx.canvas !== cv) return drawSkinCard0(r, k);
+  const cw = Math.ceil((r.w + CARD_M.l + CARD_M.r) * K), ch = Math.ceil((r.h + CARD_M.t + CARD_M.b) * K);
+  const ph = ((r.x * 7 + r.y * 3) % 10) / 10, tq = Math.floor(time * CARD_FPS + ph);
+  const stamp = tq + '|' + (k.id === skinId) + '|' + owned.includes(k.id) + '|' + canPay(priceOf(k)) + '|' + r.x + ',' + r.y + '|' + cw + '|' + lang;
+  let e = CARD_CACHE.get(k.id);
+  if (!e) { if (CARD_CACHE.size > 40) CARD_CACHE.delete(CARD_CACHE.keys().next().value); e = { c: document.createElement('canvas'), stamp: '' }; CARD_CACHE.set(k.id, e); }
+  if (e.stamp !== stamp) {
+    if (e.c.width !== cw || e.c.height !== ch) { e.c.width = cw; e.c.height = ch; }
+    const g = e.c.getContext('2d'), old = ctx;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch); g.setTransform(K, 0, 0, K, (CARD_M.l - r.x) * K, (CARD_M.t - r.y) * K); g.imageSmoothingEnabled = false;
+    ctx = g; try { drawSkinCard0(r, k); } finally { ctx = old; }
+    e.stamp = stamp;
+  }
+  drawRaw.call(ctx, e.c, r.x - CARD_M.l, r.y - CARD_M.t, cw / K, ch / K);
+}
+function drawSkinCard0(r, k) {
   const R = RARITY[k.r], sel = k.id === skinId, own = owned.includes(k.id), cx = r.x + r.w / 2;
   if (k.r >= 3) { ctx.globalAlpha = 0.3 + Math.sin(time * 4 + r.x) * 0.15; pell(ctx, cx, r.y + r.h / 2, r.w / 2 + 8, r.h / 2 + 8, k.myth ? k.myth[Math.sin(time * 2 + r.x) > 0 ? 0 : 1] : R.col); ctx.globalAlpha = 1; }
   ctx.fillStyle = OL; ctx.fillRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6);
@@ -14982,6 +15005,30 @@ function draw() {
 // непрозрачное окно поверх игры (знакомство, профиль, Pass, рейтинг…) — рисовать мир под ним незачем
 function screenCovered() { return obOpen() || (!!moUi && moUi.style.display !== 'none' && moStack.length > 0); }
 let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0, perfSlow = 0, perfDownAt = -1e9, frameDebt = 0;
+// ---------- Восстановление графики: телефон долго держал игру в фоне и выбросил память картинок ----------
+// после этого холст «сбрасывается» (сглаживание включается — хомяк размытый, масштаб слетает), а готовые картинки
+// (овалы кнопок, монеты, герои, фон) становятся пустыми — остаётся только текст. Тогда всё перерисовываем заново.
+const GFX_PROBE = document.createElement('canvas'); GFX_PROBE.width = GFX_PROBE.height = 300;   // большой — такие телефон выбрасывает первыми
+{ const g = GFX_PROBE.getContext('2d'); g.fillStyle = '#ff00ff'; g.fillRect(0, 0, 300, 300); }
+function gfxProbeLost() {
+  try { const g = GFX_PROBE.getContext('2d'); if (g.isContextLost && g.isContextLost()) return true; const d = g.getImageData(150, 150, 1, 1).data; return d[3] === 0 || d[0] !== 255; } catch (e) { return false; }
+}
+function gfxReset() {
+  for (const m of [textCache, PELL_CACHE, SPR_CACHE, WING_CACHE, EYE_WING_CACHE, farTiles, bushSets, AV_PIX, CARD_CACHE]) m.clear();
+  groundCv = null; mp.icons = {}; if (sv) sv.bg = null;
+  try { const g = GFX_PROBE.getContext('2d'); g.fillStyle = '#ff00ff'; g.fillRect(0, 0, 300, 300); } catch (e) {}
+  const k = cv.width / (W * scale || 1); ctx.setTransform(scale * k, 0, 0, scale * k, 0, 0); ctx.imageSmoothingEnabled = false;
+  perfAcc = 0; perfN = 0; perfSlow = 0; perfGrace = 3;   // перерисовка кэшей тяжёлая — не считаем это тормозами и не мылим картинку
+  try { if (moUi && moUi.style.display !== 'none' && moStack.length) moRefresh(); } catch (e) {}
+}
+let hiddenAt = 0, perfGrace = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = performance.now(); return; }
+  perfAcc = 0; perfN = 0; perfSlow = 0; perfGrace = 2;   // первые кадры после возврата всегда медленные — это не повод снижать резкость
+  if (gfxProbeLost() || (hiddenAt && performance.now() - hiddenAt > 120000)) gfxReset();
+});
+window.addEventListener('pageshow', e => { if (e.persisted) gfxReset(); });
+cv.addEventListener('contextrestored', () => gfxReset());
 function frame(now) {
   // экраны 90–144 Гц (в Chrome на телефоне они включены, во встроенных окнах обычно нет): рисуем не чаще ~60 раз в секунду —
   // работы меньше, телефон не греется и не сбрасывает частоту
@@ -14995,7 +15042,10 @@ function frame(now) {
   const ts = state === 'play' && p && p.slow > 0 && !pmenu ? 0.45 : 1;   // замедление времени
   if (mp.active) { const now = Date.now(); if (now < mp.startAt) mp.cd = Math.ceil((mp.startAt - now) / 1000); else { mp.cd = 0; if (!mp.go) { mp.go = true; } const target = Math.floor((now - mp.startAt) * 0.12); for (let n = 0; mp.step < target && n < 40; n++) { update(1 / 120); mp.step++; } } }
   else for (let i = 0; i < steps; i++) update(dt / steps * ts);
+  if (ctx.isContextLost && ctx.isContextLost()) { last = performance.now(); requestAnimationFrame(frame); return; }   // холст потерян — ждём, пока браузер вернёт
+  if (ctx.imageSmoothingEnabled !== false) gfxReset();   // холст сброшен браузером (масштаб и резкость слетели)
   if (!screenCovered()) draw();
+  if (perfGrace > 0) { perfGrace -= gap / 1000; perfAcc = 0; perfN = 0; perfSlow = 0; }
   // телефон не успевает (кадры приходят реже 45 в секунду или кадр считается долго) — разрешение холста на ступень ниже;
   // долго всё легко — обратно выше, но не раньше чем через 20 с после понижения, чтобы не качаться туда-сюда
   perfAcc += performance.now() - t0; perfN++; if (gap > 27 && gap < 100) perfSlow++;   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
@@ -16833,7 +16883,10 @@ function openFriends() {
 }
 
 reset();
-window.__game = { get FR() { return FR; }, get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; } };
+window.__game = { get FR() { return FR; }, get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; },
+  // для автотестов и замеров скорости
+  get mp() { return mp; }, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
+  bench(n = 60) { const t0 = performance.now(); for (let i = 0; i < n; i++) { time += 1 / 60; draw(); } return (performance.now() - t0) / n; } };
 requestAnimationFrame(frame);
 // Музыка включается сразу: если браузер разрешает звук — с первой секунды, иначе от самого первого касания или клавиши
 musicOn = true; audio();
