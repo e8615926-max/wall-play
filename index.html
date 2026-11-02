@@ -1507,9 +1507,9 @@ const MORE_SKINS10 = [
   { id: 'capybara', r: 1, body: '#b0804a', dark: '#6a4a24', light: '#d8b080', ear: '#6a4a24', ol: '#2a1a08', noMuzzle: true, noScarf: true, parts: ['capySnout', 'sleepyLids', 'yuzu'] },
   { id: 'axolotl', r: 1, body: '#ffb0d0', dark: '#e070a0', light: '#ffe0f0', ear: '#ff6aa8', ol: '#5a1a3a', ears: 'none', tail: 'fish', noMuzzle: true, noScarf: true, parts: ['axoGills', 'axoSmile'] },
   { id: 'redpanda', r: 1, body: '#d0501a', dark: '#3a1a10', light: '#ffffff', ear: '#ffffff', ol: '#2a0c04', ears: 'cat', tail: 'ring', tailTip: '#3a1a10', whiskers: true, nose: '#1a0a04', scarf: '#3ab0ff', scarfD: '#1a70c0', parts: ['rpFace'] },
-  { id: 'sloth', r: 1, body: '#a89070', head: '#e8d8b8', dark: '#6a5038', light: '#e8d8b8', ear: '#a89070', ol: '#2a1e10', ears: 'none', noEyes: true, nose: '#3a2a1a', scarf: '#3ce06a', scarfD: '#1a9a3a', parts: ['slothEyes', 'slothClaws', 'zzz'] },
+  { id: 'sloth', r: 1, body: '#a89070', head: '#e8d8b8', dark: '#6a5038', light: '#e8d8b8', ear: '#a89070', ol: '#2a1e10', ears: 'none', noEyes: true, nose: '#3a2a1a', scarf: '#3ce06a', scarfD: '#1a9a3a', parts: ['slothEyes', 'slothClaws', 'zzz2'] },
   // эпические
-  { id: 'anglerfish', r: 2, body: '#2a3a6a', dark: '#141e3a', light: '#5a7ab0', ear: '#2a3a6a', ol: '#05081a', ears: 'none', tail: 'fish', eye: '#ffe03a', noMuzzle: true, noScarf: true, parts: ['anglerLure', 'fangs'], trail: { kind: 'bubble', cols: ['#bff0ff', '#ffffff'] } },
+  { id: 'anglerfish', r: 2, body: '#2a3a6a', dark: '#141e3a', light: '#5a7ab0', ear: '#2a3a6a', ol: '#05081a', ears: 'none', tail: 'fish', eye: '#ffe03a', noMuzzle: true, noScarf: true, parts: ['anglerLure', 'fangs2'], trail: { kind: 'bubble', cols: ['#bff0ff', '#ffffff'] } },
   { id: 'peacock', r: 2, body: '#1a6ad8', head: '#1a8ad8', dark: '#0a3a8a', light: '#5ac8ff', ear: '#1a6ad8', ol: '#04143a', ears: 'none', beak: true, noScarf: true, parts: ['peacockFan', 'crest'], trail: { kind: 'dot', cols: ['#3ad8a0', '#ffd23a', '#1a6ad8'] } },
   { id: 'snail', r: 2, body: '#c8b090', dark: '#8a7050', light: '#f0e0c8', ear: '#c8b090', ol: '#3a2a14', ears: 'none', noEyes: true, noScarf: true, parts: ['snailShell', 'eyeStalks'], trail: { kind: 'drip', cols: ['#c8f0ff', '#9ad8ff'] } },
   { id: 'firefly', r: 2, body: '#5a4a8a', dark: '#2a1a4a', light: '#c8b8f0', ear: '#5a4a8a', ol: '#140a24', ears: 'none', antCol: '#fff27a', noScarf: true, parts: ['bugWings', 'glowBum', 'antennae'], trail: { kind: 'spark', cols: ['#fff27a', '#c8ff6a'] } },
@@ -1573,7 +1573,7 @@ const MORE_SKINS12 = [
   { id: 'polarbear', r: 2, body: '#f4f8ff', dark: '#b8c8e0', light: '#ffffff', ear: '#d8e4f4', earC: '#f4f8ff', ol: '#2a3a5a', ears: 'big', nose: '#1a1a24', tail: 'stub', scarf: '#e8261a', scarfD: '#a01008', parts: ['frostAura'], trail: { kind: 'snow', cols: ['#ffffff', '#bfe8ff'] } },
   { id: 'sushi', r: 2, body: '#ffffff', dark: '#d8d8e0', light: '#ffffff', ear: '#ffffff', ol: '#3a3a4a', ears: 'none', noScarf: true, parts: ['noriBand', 'salmonTop'], trail: { kind: 'dot', cols: ['#ff8a5a', '#ffffff'] } },
   { id: 'cactus', r: 2, body: '#5ac04a', dark: '#2a8a2a', light: '#9af07a', ear: '#5ac04a', ol: '#0a3a0a', ears: 'none', noScarf: true, parts: ['cactusSpines', 'cactusFlower'], trail: { kind: 'dot', cols: ['#ff6ab0', '#9af07a'] } },
-  { id: 'aviator', r: 2, ...HAM, scarf: '#ffffff', scarfD: '#d8d8e0', cape: true, parts: ['aviatorCap'], trail: { kind: 'smoke', cols: ['#ffffff', '#d8d8e0'] } },
+  { id: 'aviator', r: 2, ...HAM, scarf: '#ffffff', scarfD: '#d8d8e0', cape: true, parts: ['aviatorCap2'], trail: { kind: 'smoke', cols: ['#ffffff', '#d8d8e0'] } },
   { id: 'beetle', r: 2, body: '#2a6a5a', dark: '#14342a', light: '#5ab09a', ear: '#2a6a5a', ol: '#06140f', ears: 'none', antCol: '#9af0ff', noScarf: true, parts: ['beetleShell', 'beetleHorn', 'antennae'], trail: { kind: 'spark', cols: ['#9af0ff', '#5ab09a'] } },
   { id: 'popcorn', r: 2, body: '#ffffff', dark: '#e8261a', light: '#ffffff', ear: '#ffffff', ol: '#4a0a0a', ears: 'none', noScarf: true, parts: ['popStripes', 'popcornTop'], trail: { kind: 'dot', cols: ['#fff6d0', '#ffd23a'] } },
   // легенды
@@ -2176,7 +2176,8 @@ const gisLoad = () => gisLoad.p || (gisLoad.p = new Promise((ok, no) => { const 
 async function fbGoogleTap() {
   await gisLoad();
   const idTok = await new Promise((ok, no) => {
-    google.accounts.id.initialize({ client_id: FIREBASE.googleClientId, callback: r => r && r.credential ? ok(r.credential) : no({ code: 'auth/popup-closed-by-user' }), cancel_on_tap_outside: false, context: 'signin', use_fedcm_for_prompt: true, itp_support: true });
+    fbGoogleTap.cb = r => r && r.credential ? ok(r.credential) : no({ code: 'auth/popup-closed-by-user' });   // initialize — только один раз, повторный вызов GIS не любит
+    if (!fbGoogleTap.init) { google.accounts.id.initialize({ client_id: FIREBASE.googleClientId, callback: r => fbGoogleTap.cb && fbGoogleTap.cb(r), cancel_on_tap_outside: false, context: 'signin', use_fedcm_for_prompt: true, itp_support: true }); fbGoogleTap.init = true; }
     google.accounts.id.prompt(n => { if ((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment())) no({ code: 'gis/not-shown' }); });
   });
   const fresh = saveFresh();
@@ -5178,7 +5179,6 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
       case 'stretchArm': if (flying) { const L = 4 + Math.abs(Math.sin(t * 6)) * 10; R(A1.x + 1, A1.y - 1, L, 2, sk.head || sk.body); O(A1.x + 2 + L, A1.y, 2, 2, sk.head || sk.body); } break;
       case 'termFace': R(hx + 1, hy - 4, 7, 9, '#a8b0c0'); R(hx + 2, hy - 3, 1, 7, '#e0e8f0'); R(ex2 - 1, ey - 1, 4, 3, '#1a1a24'); c.globalAlpha = 0.6 + Math.sin(t * 5) * 0.3; R(ex2 - 1, ey - 2, 5, 5, '#ff2a2a'); c.globalAlpha = 1; R(ex2, ey, 2, 1, '#ffffff'); break;
       case 'clownFace': R(hx - 4, hy - 4, 11, 9, '#f4f4f0'); R(ex1 - 1, ey - 3, 1, 4, '#c01a1a'); R(ex2 + 2, ey - 3, 1, 4, '#c01a1a'); R(hx + 2, hy + 3, 6, 1, '#c01a1a'); R(hx + 7, hy + 1, 1, 2, '#c01a1a'); O(hx + 7, hy, 1.4, 1.4, '#e8261a'); c.globalAlpha = Math.sin(t * 3) > 0.5 ? 0.9 : 0; R(ex1, ey, 2, 2, '#ffd23a'); R(ex2, ey, 2, 2, '#ffd23a'); c.globalAlpha = 1; break;
-      case 'clownHair': for (const dx of [-9, 7]) { O(hx + dx, hy - 4, 3, 3, '#e8501a'); R(hx + dx - 1, hy - 7, 2, 2, '#ff8a3a'); } break;
       case 'ruffle': for (let i = 0; i < 6; i++) O(bx - 5 + i * 2, by - 6 + (i % 2), 1.6, 1.6, '#f4f4f0'); for (const dy of [-2, 2]) R(bx, by + dy, 2, 2, '#e8261a'); break;
       case 'blackSuit': c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, 40); c.clip(); E(B.x, B.y, B.rx, B.ry, '#1a1a24'); c.restore(); R(bx - 1, by - 5, 3, 4, '#ffffff'); R(bx, by - 4, 1, 5, '#1a1a24'); break;
       case 'longHair': R(hx - 8, hy - 7, 12, 3, '#1a1410'); R(hx - 9, hy - 5, 3, 9, '#1a1410'); R(hx + 3, hy + 2, 5, 3, '#2a2018'); break;
@@ -5773,7 +5773,7 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
       case 'salmonTop': R(hx - 8, hy - 10, 16, 5, ol); R(hx - 7, hy - 9, 14, 3, '#ff8a5a'); for (const x of [-5, -1, 3]) R(hx + x, hy - 9, 1, 3, '#ffd0b8'); R(hx - 7, hy - 9, 14, 1, '#ffb08a'); break;
       case 'cactusSpines': for (const [x, y] of [[hx - 6, hy - 4], [hx - 3, hy - 7], [hx + 2, hy - 7], [hx - 7, hy + 1], [bx - 6, by - 2], [bx - 6, by + 2], [bx + 5, by - 1], [bx - 2, by + 3]]) R(x, y, 1, 1, '#fff6c0'); R(hx - 1, hy - 6, 1, 10, sk.dark); break;
       case 'cactusFlower': O(hx + 2, hy - 8, 2.2, 1.6, '#ff6ab0'); R(hx + 2, hy - 8, 1, 1, '#ffd23a'); R(hx - 1, hy - 8, 2, 1, '#ff9ad0'); break;
-      case 'aviatorCap':   // кожаный шлем с очками на лбу и ушами-клапанами
+      case 'aviatorCap2':   // кожаный шлем с очками на лбу и ушами-клапанами
         cowl('#7a4a2a', hy - 3); R(hx - 8, hy - 4, 3, 7, ol); R(hx - 7, hy - 3, 2, 5, '#7a4a2a'); R(hx - 6, hy - 8, 12, 1, '#a0703a');
         R(hx - 2, hy - 8, 10, 3, ol); O(hx, hy - 7, 1.6, 1.2, '#7cf0ff'); O(hx + 5, hy - 7, 1.6, 1.2, '#7cf0ff'); R(hx - 1, hy - 8, 1, 1, '#ffffff'); break;
       case 'beetleShell': O(bx - 3, by - 1, 6, 5.5, '#1a5a7a'); R(bx - 3, by - 6, 1, 11, '#0a2a3a'); R(bx - 6, by - 4, 2, 2, '#9af0ff'); R(bx - 1, by - 3, 1, 1, '#9af0ff'); break;
@@ -5883,7 +5883,7 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
         else { R(ex1, ey, 2, 2, '#1a1010'); R(ex2 + 1, ey, 2, 2, '#1a1010'); R(ex1, ey, 1, 1, '#ffffff'); R(ex2 + 1, ey, 1, 1, '#ffffff'); }
         R(hx + 4, hy + 3, 3, 1, ol); break;
       case 'slothClaws': for (let i = 0; i < 3; i++) R(A1.x + 1 + i, A1.y + 1 + (i % 2), 1, 2, '#f0e8d0'); break;
-      case 'zzz': if (pose === 'idle' || pose === 'sit') for (let k = 0; k < 2; k++) {   // сонные «з-з-з»
+      case 'zzz2': if (pose === 'idle' || pose === 'sit') for (let k = 0; k < 2; k++) {   // сонные «з-з-з»
         const ph = (t * 0.6 + k * 0.5) % 1, x = hx + 6 + ph * 4, y = hy - 9 - ph * 8;
         c.globalAlpha = 1 - ph; R(x, y, 3, 1, '#ffffff'); R(x + 1, y + 1, 1, 1, '#ffffff'); R(x, y + 2, 3, 1, '#ffffff'); c.globalAlpha = 1;
       } break;
@@ -5894,7 +5894,7 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
         c.globalAlpha = 0.25 + g * 0.25; E(lx, ly, 3.5 + g, 3.5 + g, '#fff27a'); c.globalAlpha = 1;
         O(lx, ly, 1.4, 1.4, '#fff6a0'); R(lx, ly - 1, 1, 1, '#ffffff'); break;
       }
-      case 'fangs': R(hx + 2, hy + 3, 6, 1, ol); R(hx + 3, hy + 4, 1, 1, '#ffffff'); R(hx + 5, hy + 4, 1, 1, '#ffffff'); R(hx + 7, hy + 4, 1, 1, '#ffffff'); R(hx + 4, hy + 2, 1, 1, '#ffffff'); R(hx + 6, hy + 2, 1, 1, '#ffffff'); break;
+      case 'fangs2': R(hx + 2, hy + 3, 6, 1, ol); R(hx + 3, hy + 4, 1, 1, '#ffffff'); R(hx + 5, hy + 4, 1, 1, '#ffffff'); R(hx + 7, hy + 4, 1, 1, '#ffffff'); R(hx + 4, hy + 2, 1, 1, '#ffffff'); R(hx + 6, hy + 2, 1, 1, '#ffffff'); break;
       case 'peacockFan': {   // хвост-веер раскрывается в прыжке
         const open = flying ? 1 : 0.8 + Math.sin(t * 2) * 0.05;
         for (let i = 0; i < 7; i++) {
@@ -10405,7 +10405,7 @@ function drawMythDeath(sk) {
     ctx.drawImage(hcv, -32, -52, 64, 80); if (o.tint) { ctx.globalAlpha *= o.ta; ctx.drawImage(tintSprite(o.tint, 0), -32, -52, 64, 80); } ctx.restore(); ctx.globalAlpha = 1;
   };
   if (u < 0) {   // начало: как именно погиб
-    if (m.v === 'zap') { const img = Math.floor(time * 16) % 2 ? xraySprite() : hcv; heroSprite(sk, 'fall', time, true); ctx.save(); ctx.translate(even(x + rand(-2, 2)), even(y)); ctx.scale(p.face, 1); ctx.drawImage(Math.floor(time * 16) % 2 ? xraySprite() : hcv, -32, -52, 64, 80); ctx.restore(); if (once('zz')) tone(110, 95, 0.5, 'sawtooth', 0.05); for (let k = 0; k < 2; k++) { ctx.strokeStyle = k ? c1 : '#fff6a0'; ctx.lineWidth = 2; ctx.beginPath(); let lx = x + rand(-26, 26), ly = y - 44; ctx.moveTo(lx, ly); for (let s2 = 0; s2 < 5; s2++) { lx += rand(-9, 9); ly += 16; ctx.lineTo(lx, ly); } ctx.stroke(); } }
+    if (m.v === 'zap') { heroSprite(sk, 'fall', time, true); ctx.save(); ctx.translate(even(x + rand(-2, 2)), even(y)); ctx.scale(p.face, 1); ctx.drawImage(Math.floor(time * 16) % 2 ? xraySprite() : hcv, -32, -52, 64, 80); ctx.restore(); if (once('zz')) tone(110, 95, 0.5, 'sawtooth', 0.05); for (let k = 0; k < 2; k++) { ctx.strokeStyle = k ? c1 : '#fff6a0'; ctx.lineWidth = 2; ctx.beginPath(); let lx = x + rand(-26, 26), ly = y - 44; ctx.moveTo(lx, ly); for (let s2 = 0; s2 < 5; s2++) { lx += rand(-9, 9); ly += 16; ctx.lineTo(lx, ly); } ctx.stroke(); } }
     else if (m.v === 'flat') { const q = clamp(t / 0.12, 0, 1); spr({ sx: 1 + 0.5 * q, sy: 1 - 0.5 * q, dy: 12 * q, tint: '#ffffff', ta: 0.3 }); if (once('ff')) { burst(x, y + 20, 14, '#ffffff', 160, 0.4, 4, 300); noise(0.2, 0.2, 0, 800); } }
     else spr({ tint: c1, ta: 0.6 + Math.sin(time * 40) * 0.3, rot: m.v === 'fall' ? t * 6 : 0 });
     return;
@@ -16703,7 +16703,7 @@ function frCodeCard() {
   const cr = moEl('div', 'row'); cr.append(moTxt('div', 'sm', tr('ТВОЙ КОД:', 'YOUR CODE:')), moTxt('div', 'big ol', FR.code || '…'));
   cr.lastChild.style.cssText = 'color:#ffd23a;letter-spacing:3px;flex:1;font-family:monospace;font-size:24px;text-transform:none;user-select:all;-webkit-user-select:all';
   const cp = moTxt('button', 'btn blue', tr('КОПИРОВАТЬ', 'COPY')); cp.style.fontSize = '11px';
-  cp.onclick = () => { sfx.click(); try { navigator.clipboard.writeText(FR.code); pxiSet(cp, tr('ГОТОВО ✓', 'COPIED ✓')); } catch (e) {} };
+  cp.onclick = () => { sfx.click(); const okc = () => pxiSet(cp, tr('ГОТОВО ✓', 'COPIED ✓')); try { navigator.clipboard.writeText(FR.code).then(okc, () => {}); } catch (e) {} };
   cr.appendChild(cp); c.appendChild(cr);
   c.appendChild(moTxt('div', 'sm', tr('ДАЙ ЭТОТ КОД ДРУГУ — ЕМУ НУЖНО ВПИСАТЬ ЕГО У СЕБЯ В ПРОФИЛЕ. БОЛЬШИЕ И МАЛЕНЬКИЕ БУКВЫ ВАЖНЫ.', 'GIVE THIS CODE TO A FRIEND — THEY ENTER IT IN THEIR PROFILE. UPPER AND LOWER CASE MATTER.'))); c.lastChild.style.margin = '6px 0 10px';
   const ar = moEl('div', 'row');
@@ -16839,6 +16839,11 @@ requestAnimationFrame(frame);
 musicOn = true; audio();
 for (const ev of ['pointerdown', 'touchstart', 'touchend', 'mousedown', 'keydown', 'click']) window.addEventListener(ev, () => { musicOn = true; audio(); }, { capture: true, passive: true });
 
+// Офлайн: кэшируем игру, если она открыта с сайта (регистрация пропала в одной из прошлых правок — sw.js лежал без дела)
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  const swReg = () => { try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) {} };
+  if (document.readyState === 'complete') setTimeout(swReg, 3000); else window.addEventListener('load', () => setTimeout(swReg, 3000));   // после загрузки — не мешает старту
+}
 })();
 </script>
 </body>
