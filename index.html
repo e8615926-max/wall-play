@@ -22,546 +22,9 @@
 </style>
 </head>
 <body>
-<!-- Заставка ELDAR STUDIOS: играет сразу при запуске, потом начинается загрузка -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
-<style>
-  /* Layout: one black cinematic screen, emblem + wordmark stacked in the centre, particles behind */
-  #intro {
-    --void: #000000;
-    --smoke: #0d0e10;
-    --silver: #e9eaec;
-    --steel: #9ea1a6;
-    --light: #ffffff;
-    --font-display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
-  }
-  #intro {
-    position: fixed; inset: 0; z-index: 50;
-    background: var(--void); color: var(--silver); font-family: var(--font-display);
-    overflow: hidden; transition: opacity .6s;
-  }
-  #intro.gone { opacity: 0; pointer-events: none; }
-  .stage {
-    position: fixed; inset: 0;
-    display: grid; place-items: center;
-    overflow: hidden;
-    background: radial-gradient(ellipse at 50% 45%, var(--smoke) 0%, var(--void) 70%);
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-  }
-  .stage::after { /* vignette */
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.85) 100%);
-  }
-  #fx { image-rendering: auto; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-
-  .content {
-    position: relative; z-index: 2;
-    display: flex; flex-direction: column; align-items: center;
-    gap: clamp(14px, 3vmin, 30px);
-  }
-
-  .emblem-box { position: relative; width: min(50vmin, 380px); aspect-ratio: 420 / 430; max-width: 100%; }
-  .emblem { position: relative; width: 100%; height: 100%; overflow: visible; display: block; }
-
-  .halo {
-    position: absolute; inset: -45%; pointer-events: none; opacity: 0;
-    background: radial-gradient(circle, rgba(255,255,255,.33) 0%, rgba(200,215,235,.12) 30%, transparent 62%);
-    transform: scale(.3);
-  }
-  .flare {
-    position: absolute; left: 50%; top: 48%; width: 260vw; height: 2px; margin-left: -130vw;
-    pointer-events: none; opacity: 0; transform: scaleX(0);
-    background: linear-gradient(90deg, transparent 0%, rgba(190,210,255,0) 25%, rgba(255,255,255,.95) 50%, rgba(190,210,255,0) 75%, transparent 100%);
-    box-shadow: 0 0 18px 2px rgba(220,230,255,.35);
-  }
-
-  /* SVG parts */
-  .piece { opacity: 0; transform-box: fill-box; transform-origin: center; }
-  .bladeRect { transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(0); }
-  .streak { opacity: 0; stroke-dasharray: .3 1.3; stroke-dashoffset: .3; }
-  .sheen { transform: translateX(0); }
-
-  /* Wordmark */
-  .title {
-    display: flex; font-weight: 600;
-    font-size: clamp(38px, 10.5vmin, 96px);
-    line-height: 1; letter-spacing: 0;
-  }
-  .ch { display: inline-block; opacity: 0; }
-  .ch + .ch { margin-left: .3em; }
-  .metal {
-    background: linear-gradient(180deg, var(--light) 0%, var(--silver) 42%, var(--steel) 58%, var(--silver) 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .flip { display: inline-block; transform: scaleY(-1); }
-
-  .sub { display: flex; align-items: center; gap: clamp(12px, 2.4vmin, 24px); }
-  .line { height: 3px; width: clamp(46px, 15vmin, 150px); transform: scaleX(0); }
-  .line.l { transform-origin: right center; clip-path: polygon(0 45%, 100% 0, 100% 100%, 0 55%);
-    background: linear-gradient(90deg, rgba(255,255,255,0), var(--silver)); }
-  .line.r { transform-origin: left center; clip-path: polygon(0 0, 100% 45%, 100% 55%, 0 100%);
-    background: linear-gradient(90deg, var(--silver), rgba(255,255,255,0)); }
-  .studios {
-    font-weight: 500; font-size: clamp(13px, 3.3vmin, 30px);
-    letter-spacing: .55em; margin-right: -.55em; opacity: 0; color: var(--silver);
-  }
-
-  .flash { position: absolute; inset: 0; background: var(--light); opacity: 0; pointer-events: none; z-index: 3; }
-
-  /* ---------- Timeline (seconds from start) ---------- */
-  .play .up   { animation: flyUp  .55s .6s cubic-bezier(.55,.05,.9,.45) both; }
-  .play .low  { animation: flyLow .55s .6s cubic-bezier(.55,.05,.9,.45) both; }
-  .play .h1   { animation: halo 1.3s 1.15s ease-out both; }
-  .play .f1   { animation: flash .6s 1.15s ease-out both; }
-  .play .streak    { animation: streak .45s 1.55s ease-in-out both; }
-  .play .bladeRect { animation: grow .35s 1.62s cubic-bezier(.2,.9,.2,1) both; }
-  .play .s1   { animation: sheen 1s 2.3s ease-in-out both; }
-  .play .ch   { animation: letterIn .45s calc(2.9s + var(--i) * .12s) cubic-bezier(.2,.8,.2,1) both; }
-  .play .line { animation: lineIn .7s 3.75s cubic-bezier(.2,.8,.2,1) both; }
-  .play .studios { animation: studios 1s 3.85s ease-out both; }
-  .play .emblem  { animation: glow 2.6s 4.5s ease-out both; }
-  .play .title   { animation: glow 2.6s 4.5s ease-out both; }
-  .play .h2   { animation: halo 2.4s 4.5s ease-out both; }
-  .play .f2   { animation: flash .9s 4.5s ease-out both; }
-  .play .flare { animation: flare 1.8s 4.5s ease-out both; }
-  .play .s2   { animation: sheen 1.1s 4.55s ease-in-out both; }
-  .play .content { animation: fadeOut 1.5s 7.6s ease-in both; }
-
-  @keyframes flyUp  { 0% { transform: translate(-340px,-240px) rotate(-14deg); opacity: 0 } 40% { opacity: 1 } 100% { transform: none; opacity: 1 } }
-  @keyframes flyLow { 0% { transform: translate(340px,240px) rotate(14deg); opacity: 0 } 40% { opacity: 1 } 100% { transform: none; opacity: 1 } }
-  @keyframes halo   { 0% { opacity: 0; transform: scale(.3) } 12% { opacity: 1 } 100% { opacity: 0; transform: scale(1.25) } }
-  @keyframes flash  { 0% { opacity: 0 } 8% { opacity: .55 } 100% { opacity: 0 } }
-  @keyframes streak { 0% { opacity: 0; stroke-dashoffset: .3 } 8% { opacity: 1 } 85% { opacity: 1 } 100% { opacity: 0; stroke-dashoffset: -1.05 } }
-  @keyframes grow   { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-  @keyframes sheen  { from { transform: translateX(0) } to { transform: translateX(640px) } }
-  @keyframes letterIn {
-    0%   { opacity: 0; transform: translateY(-.35em) scale(1.7); filter: blur(12px) }
-    60%  { opacity: 1 }
-    100% { opacity: 1; transform: none; filter: blur(0) }
-  }
-  @keyframes lineIn  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-  @keyframes studios { from { opacity: 0; letter-spacing: 1.2em; filter: blur(6px) } to { opacity: 1; letter-spacing: .55em; filter: blur(0) } }
-  @keyframes glow {
-    0%   { filter: drop-shadow(0 0 0 rgba(255,255,255,0)) brightness(1) }
-    8%   { filter: drop-shadow(0 0 26px rgba(255,255,255,.8)) brightness(1.4) }
-    100% { filter: drop-shadow(0 0 10px rgba(255,255,255,.16)) brightness(1) }
-  }
-  @keyframes flare   { 0% { opacity: 0; transform: scaleX(0) } 10% { opacity: 1; transform: scaleX(1) } 100% { opacity: 0; transform: scaleX(1.3) } }
-  @keyframes fadeOut { from { opacity: 1 } to { opacity: 0 } }
-
-  .shake { animation: shake .5s linear; }
-  .shake.big { animation: shake .8s linear; }
-  @keyframes shake {
-    0%,100% { transform: translate(0,0) }
-    10% { transform: translate(-9px, 6px) } 20% { transform: translate(8px,-7px) }
-    30% { transform: translate(-6px,-4px) } 40% { transform: translate(5px, 5px) }
-    55% { transform: translate(-3px, 2px) } 70% { transform: translate(2px,-2px) }
-    85% { transform: translate(-1px, 1px) }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .shake, .shake.big { animation: none; }
-  }
-</style>
-<div id="intro">
-<div class="stage play" id="stage">
-  <canvas id="fx"></canvas>
-  <div class="flash f1"></div>
-  <div class="flash f2"></div>
-
-  <div class="content">
-    <div class="emblem-box" id="emblemBox">
-      <div class="halo h1"></div>
-      <div class="halo h2"></div>
-      <div class="flare"></div>
-      <svg class="emblem" id="emblem" viewBox="430 300 420 430" aria-label="Eldar Studios emblem" role="img">
-        <defs>
-          <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#fbfbfb"/>
-            <stop offset=".33" stop-color="#cfd0d2"/>
-            <stop offset=".5" stop-color="#f3f3f4"/>
-            <stop offset=".72" stop-color="#a9abae"/>
-            <stop offset="1" stop-color="#e3e4e6"/>
-          </linearGradient>
-          <linearGradient id="sheenGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#fff" stop-opacity="0"/>
-            <stop offset=".5" stop-color="#fff" stop-opacity=".85"/>
-            <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-          </linearGradient>
-          <filter id="grain" x="0" y="0" width="100%" height="100%">
-            <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="3" seed="7" result="n"/>
-            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  .9 0 0 0 -.33" result="specks"/>
-            <feComposite in="specks" in2="SourceGraphic" operator="in" result="specksIn"/>
-            <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="specksIn"/></feMerge>
-          </filter>
-          <filter id="glowF" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="5" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <clipPath id="bladeClip">
-            <rect class="bladeRect" x="540" y="380" width="270" height="210"/>
-          </clipPath>
-          <clipPath id="eClip">
-            <polygon points="448,358 485,322 825,322 758,388 545,388 545,497 668,457 448,578"/>
-            <polygon points="448,603 545,546 545,600 808,600 745,665 490,665 448,707"/>
-            <polygon points="545,546 798,397 545,575"/>
-          </clipPath>
-        </defs>
-
-        <g class="piece up">
-          <polygon points="448,358 485,322 825,322 758,388 545,388 545,497 668,457 448,578" fill="url(#metal)" filter="url(#grain)"/>
-        </g>
-        <g class="piece low">
-          <polygon points="448,603 545,546 545,600 808,600 745,665 490,665 448,707" fill="url(#metal)" filter="url(#grain)"/>
-        </g>
-        <g clip-path="url(#bladeClip)">
-          <polygon points="545,546 798,397 545,575" fill="url(#metal)"/>
-        </g>
-        <g clip-path="url(#eClip)">
-          <g transform="rotate(22 640 515)">
-            <rect class="sheen s1" x="190" y="200" width="110" height="640" fill="url(#sheenGrad)"/>
-            <rect class="sheen s2" x="190" y="200" width="160" height="640" fill="url(#sheenGrad)"/>
-          </g>
-        </g>
-        <line class="streak" x1="410" y1="612" x2="850" y2="361" pathLength="1"
-              stroke="#fff" stroke-width="5" stroke-linecap="round" filter="url(#glowF)"/>
-      </svg>
-    </div>
-
-    <div class="title" aria-label="ELDAR">
-      <span class="ch metal" style="--i:0">E</span>
-      <span class="ch metal" style="--i:1">L</span>
-      <span class="ch metal" style="--i:2">D</span>
-      <span class="ch" style="--i:3"><span class="flip metal">V</span></span>
-      <span class="ch metal" style="--i:4">R</span>
-    </div>
-
-    <div class="sub">
-      <span class="line l"></span>
-      <span class="studios">STUDIOS</span>
-      <span class="line r"></span>
-    </div>
-  </div>
-</div>
-
-</div>
-<script>
-(() => {
-  const stage = document.getElementById('stage');
-  const emblem = document.getElementById('emblem');
-  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (location.hash === '#nointro') { window.__introOn = false; document.getElementById('intro').remove(); return; }   // для автотестов
-  window.__introOn = true;
-  /* ================= Particles ================= */
-  const cv = document.getElementById('fx');
-  const g2 = cv.getContext('2d');
-  let W = 0, H = 0;
-  function resize() {
-    const dpr = Math.min(2, devicePixelRatio || 1);
-    W = innerWidth; H = innerHeight;
-    cv.width = W * dpr; cv.height = H * dpr;
-    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  addEventListener('resize', resize); resize();
-
-  const parts = [];
-  let dustCount = 0;
-  function spawnDust(anywhere) {
-    dustCount++;
-    parts.push({ k: 'dust', x: Math.random() * W, y: anywhere ? Math.random() * H : H + 10,
-      vx: (Math.random() - .5) * .25, vy: -(.15 + Math.random() * .45),
-      life: 0, max: 500 + Math.random() * 500, s: .4 + Math.random() * 1.5, a: .12 + Math.random() * .35 });
-  }
-  for (let i = 0; i < 45; i++) spawnDust(true);
-
-  function burst(x, y, n, speed, ang = 0, spread = Math.PI * 2) {
-    for (let i = 0; i < n; i++) {
-      const a = ang + (Math.random() - .5) * spread;
-      const v = speed * (.25 + Math.random());
-      parts.push({ k: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
-        life: 0, max: 35 + Math.random() * 55, s: .8 + Math.random() * 1.6, a: 1,
-        warm: Math.random() < .25 });
-    }
-  }
-
-  function frame() {
-    g2.clearRect(0, 0, W, H);
-    g2.globalCompositeOperation = 'lighter';
-    if (dustCount < 70 && Math.random() < .4) spawnDust(false);
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const p = parts[i];
-      p.life++;
-      if (p.k === 'spark') {
-        p.vx *= .955; p.vy = p.vy * .955 + .06;
-        const f = 1 - p.life / p.max;
-        g2.strokeStyle = p.warm ? `rgba(255,226,180,${f})` : `rgba(235,242,255,${f})`;
-        g2.lineWidth = p.s;
-        g2.beginPath(); g2.moveTo(p.x, p.y); g2.lineTo(p.x - p.vx * 3, p.y - p.vy * 3); g2.stroke();
-      } else {
-        const f = Math.sin(Math.PI * p.life / p.max) * p.a;
-        g2.fillStyle = `rgba(220,225,235,${f})`;
-        g2.beginPath(); g2.arc(p.x, p.y, p.s, 0, Math.PI * 2); g2.fill();
-      }
-      p.x += p.vx; p.y += p.vy;
-      if (p.life > p.max) { if (p.k === 'dust') dustCount--; parts.splice(i, 1); }
-    }
-    if (document.getElementById('intro')) requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-
-  // map an emblem viewBox point (430 300 420 430) to screen coordinates
-  function svgPt(x, y) {
-    const r = emblem.getBoundingClientRect();
-    return [r.left + (x - 430) / 420 * r.width, r.top + (y - 300) / 430 * r.height];
-  }
-
-  function shake(big) {
-    if (reduceMotion) return;
-    stage.classList.remove('shake', 'big');
-    void stage.offsetWidth;
-    stage.classList.add('shake');
-    if (big) stage.classList.add('big');
-  }
-
-  /* ================= Sound (Web Audio, all synthesized) ================= */
-  let ac, master, rev, noise;
-  function initAudio() {
-    ac = new (window.AudioContext || window.webkitAudioContext)();
-    const comp = ac.createDynamicsCompressor();
-    comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = .003; comp.release.value = .25;
-    comp.connect(ac.destination);
-    master = ac.createGain(); master.gain.value = .9; master.connect(comp);
-
-    rev = ac.createConvolver();
-    const len = ac.sampleRate * 3.4, ir = ac.createBuffer(2, len, ac.sampleRate);
-    for (let c = 0; c < 2; c++) {
-      const d = ir.getChannelData(c);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
-    }
-    rev.buffer = ir;
-    const revOut = ac.createGain(); revOut.gain.value = .5;
-    rev.connect(revOut).connect(comp);
-
-    const nl = ac.sampleRate * 2;
-    noise = ac.createBuffer(1, nl, ac.sampleRate);
-    const nd = noise.getChannelData(0);
-    for (let i = 0; i < nl; i++) nd[i] = Math.random() * 2 - 1;
-  }
-
-  function out(node, wet) {
-    node.connect(master);
-    const s = ac.createGain(); s.gain.value = wet;
-    node.connect(s).connect(rev);
-  }
-  function noiseSrc(t, dur) {
-    const s = ac.createBufferSource(); s.buffer = noise; s.loop = true;
-    s.start(t, Math.random()); s.stop(t + dur + .05);
-    return s;
-  }
-  function pan(p0, p1, t, dur) {
-    const p = ac.createStereoPanner ? ac.createStereoPanner() : ac.createGain();
-    if (p.pan) { p.pan.setValueAtTime(p0, t); p.pan.linearRampToValueAtTime(p1, t + dur); }
-    return p;
-  }
-
-  function drone(t, dur) {
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 7;
-    lp.frequency.setValueAtTime(110, t); lp.frequency.exponentialRampToValueAtTime(900, t + dur);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(.13, t + 2);
-    g.gain.setValueAtTime(.13, t + dur - .3);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur + .2);
-    [[55, 'sawtooth'], [55.4, 'sawtooth'], [82.4, 'triangle'], [27.5, 'sine']].forEach(([f, type]) => {
-      const o = ac.createOscillator(); o.type = type; o.frequency.value = f;
-      o.connect(lp); o.start(t); o.stop(t + dur + .3);
-    });
-    lp.connect(g); out(g, .35);
-  }
-
-  function whoosh(t, dur, f0, f1, p0, p1, vol) {
-    const s = noiseSrc(t, dur);
-    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.1;
-    bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + dur * .75);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    const p = pan(p0, p1, t, dur);
-    s.connect(bp).connect(g).connect(p); out(p, .3);
-  }
-
-  function impact(t, vol) {
-    // sub drop through soft saturation
-    const o = ac.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(34, t + .5);
-    const ws = ac.createWaveShaper();
-    const curve = new Float32Array(1024);
-    for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; curve[i] = Math.tanh(3 * x); }
-    ws.curve = curve;
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .006);
-    g.gain.exponentialRampToValueAtTime(.0001, t + 1.8);
-    o.connect(ws).connect(g); out(g, .5);
-    o.start(t); o.stop(t + 1.9);
-
-    // crack
-    const n = noiseSrc(t, .8);
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(5000, t); lp.frequency.exponentialRampToValueAtTime(250, t + .5);
-    const ng = ac.createGain();
-    ng.gain.setValueAtTime(.0001, t); ng.gain.exponentialRampToValueAtTime(.7 * vol, t + .004);
-    ng.gain.exponentialRampToValueAtTime(.0001, t + .7);
-    n.connect(lp).connect(ng); out(ng, .7);
-
-    // metallic body
-    [311, 467, 693, 1013, 1487].forEach((f, i) => {
-      const m = ac.createOscillator(); m.type = 'triangle'; m.frequency.value = f;
-      const mg = ac.createGain();
-      mg.gain.setValueAtTime(.0001, t); mg.gain.exponentialRampToValueAtTime(.06 * vol, t + .005);
-      mg.gain.exponentialRampToValueAtTime(.0001, t + 1.4 - i * .18);
-      m.connect(mg); out(mg, .8);
-      m.start(t); m.stop(t + 1.5);
-    });
-  }
-
-  function shing(t) {
-    const p = pan(-.6, .6, t, 1.2);
-    [2100, 2950, 3830, 5240, 7010, 8890].forEach((f, i) => {
-      const o = ac.createOscillator(); o.type = 'sine';
-      o.frequency.setValueAtTime(f * .97, t); o.frequency.exponentialRampToValueAtTime(f, t + .08);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.075, t + .01);
-      g.gain.exponentialRampToValueAtTime(.0001, t + 2.2 - i * .25);
-      o.connect(g).connect(p); o.start(t); o.stop(t + 2.3);
-    });
-    const n = noiseSrc(t, .3);
-    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 4500;
-    const ng = ac.createGain();
-    ng.gain.setValueAtTime(.0001, t); ng.gain.exponentialRampToValueAtTime(.3, t + .005);
-    ng.gain.exponentialRampToValueAtTime(.0001, t + .28);
-    n.connect(hp).connect(ng).connect(p);
-    out(p, .6);
-  }
-
-  function slam(t, i) {
-    const o = ac.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(120 - i * 6, t); o.frequency.exponentialRampToValueAtTime(45, t + .22);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.55, t + .004);
-    g.gain.exponentialRampToValueAtTime(.0001, t + .35);
-    o.connect(g); out(g, .3); o.start(t); o.stop(t + .4);
-
-    const n = noiseSrc(t, .1);
-    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600 + i * 250; bp.Q.value = 2.5;
-    const ng = ac.createGain();
-    ng.gain.setValueAtTime(.0001, t); ng.gain.exponentialRampToValueAtTime(.35, t + .002);
-    ng.gain.exponentialRampToValueAtTime(.0001, t + .08);
-    const p = pan(-.5 + i * .25, -.5 + i * .25, t, .1);
-    n.connect(bp).connect(ng).connect(p); out(p, .5);
-  }
-
-  function riser(t, dur) {
-    const n = noiseSrc(t, dur);
-    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3;
-    bp.frequency.setValueAtTime(350, t); bp.frequency.exponentialRampToValueAtTime(6000, t + dur);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.32, t + dur);
-    g.gain.linearRampToValueAtTime(.0001, t + dur + .03);
-    n.connect(bp).connect(g); out(g, .4);
-
-    const o = ac.createOscillator(); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(440, t + dur);
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
-    const og = ac.createGain();
-    og.gain.setValueAtTime(.0001, t); og.gain.exponentialRampToValueAtTime(.06, t + dur);
-    og.gain.linearRampToValueAtTime(.0001, t + dur + .03);
-    o.connect(lp).connect(og); out(og, .4); o.start(t); o.stop(t + dur + .05);
-  }
-
-  function pad(t) {
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 2;
-    lp.frequency.setValueAtTime(300, t);
-    lp.frequency.exponentialRampToValueAtTime(2600, t + .25);
-    lp.frequency.exponentialRampToValueAtTime(600, t + 5);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.32, t + .03);
-    g.gain.exponentialRampToValueAtTime(.12, t + 1.2);
-    g.gain.exponentialRampToValueAtTime(.0001, t + 5.5);
-    lp.connect(g); out(g, .8);
-    [55, 110, 164.81, 220, 261.63, 329.63, 440].forEach(f => {
-      [-6, 6].forEach(det => {
-        const o = ac.createOscillator(); o.type = 'sawtooth';
-        o.frequency.value = f; o.detune.value = det;
-        const og = ac.createGain(); og.gain.value = .07;
-        o.connect(og).connect(lp); o.start(t); o.stop(t + 5.6);
-      });
-    });
-  }
-
-  function shimmer(t, dur, n) {
-    for (let i = 0; i < n; i++) {
-      const tt = t + Math.random() * dur;
-      const o = ac.createOscillator(); o.type = 'sine';
-      o.frequency.value = 3000 + Math.random() * 6000;
-      const g = ac.createGain();
-      g.gain.setValueAtTime(.0001, tt); g.gain.exponentialRampToValueAtTime(.035, tt + .01);
-      g.gain.exponentialRampToValueAtTime(.0001, tt + .5);
-      const p = pan(Math.random() * 2 - 1, Math.random() * 2 - 1, tt, .5);
-      o.connect(g).connect(p); out(p, .9);
-      o.start(tt); o.stop(tt + .55);
-    }
-  }
-
-  /* ================= Timeline ================= */
-  // заставка идёт сразу при запуске. Браузер не даёт сайту звучать до первого касания:
-  // если звук ещё нельзя — первое касание запускает заставку заново с самого начала, уже со звуком
-  let t0 = performance.now(), timers = [];
-  const elapsed = () => (performance.now() - t0) / 1000;
-  const SOUNDS = [
-    [0, t => drone(t, 4.5)], [.5, t => whoosh(t, .65, 180, 2600, -.9, -.1, .45)], [.5, t => whoosh(t, .65, 220, 2200, .9, .1, .45)],
-    [1.15, t => impact(t, 1)], [1.5, t => whoosh(t, .2, 900, 7000, -.6, .6, .35)], [1.66, t => shing(t)], [2.3, t => shimmer(t, .9, 10)],
-    ...[0, 1, 2, 3, 4].map(i => [3 + i * .12, t => slam(t, i)]),
-    [3.75, t => whoosh(t, .6, 2400, 500, 0, 0, .12)], [3.55, t => riser(t, .95)], [4.5, t => impact(t, 1.1)], [4.5, t => pad(t)], [4.6, t => shimmer(t, 1.8, 24)],
-  ];
-  let soundStarted = false;
-  function playSounds() {
-    soundStarted = true;
-    const now = ac.currentTime + .03, e = elapsed();
-    for (const [s, fn] of SOUNDS) if (s >= e - .05) fn(now + Math.max(0, s - e));
-  }
-  function runTimeline() {
-    timers.forEach(clearTimeout); timers = [];
-    t0 = performance.now();
-    stage.classList.remove('play'); void stage.offsetWidth; stage.classList.add('play');
-    const at = (sec, fn) => timers.push(setTimeout(fn, sec * 1000));
-    at(1.15, () => { shake(false); const [x1, y1] = svgPt(500, 590), [x2, y2] = svgPt(700, 480); burst(x1, y1, 50, 9); burst(x2, y2, 50, 9); });
-    at(1.62, () => { const [x, y] = svgPt(798, 397); burst(x, y, 60, 11, -Math.PI / 6, .9); });
-    at(4.5, () => { shake(true); const [x, y] = svgPt(640, 515); burst(x, y, 140, 13); });
-    // конец: заставка тает, начинается загрузка игры
-    at(9.1, () => { document.getElementById('intro').classList.add('gone'); window.__introOn = false; });
-    at(10.6, () => { document.getElementById('intro').remove(); try { ac && ac.close(); } catch (e) {} });
-  }
-  runTimeline();
-  try { initAudio(); ac.resume().then(() => { if (ac.state === 'running' && !soundStarted && elapsed() < 1) playSounds(); }, () => {}); } catch (e) {}
-  // iPhone разрешает звук только при отпускании пальца (touchend/click), поэтому слушаем и эти события,
-  // а в самом жесте проигрываем тихий звук — так iOS окончательно «открывает» звук для страницы
-  const onGesture = () => {
-    if (!window.__introOn || soundStarted) return;
-    try {
-      if (!ac) initAudio();
-      ac.resume();
-      const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination); src.start(0);
-    } catch (e) { return; }
-    if (elapsed() > 0.4 && elapsed() < 7.5) runTimeline();   // заново с начала — теперь со звуком
-    if (elapsed() < 7.5) playSounds();
-  };
-  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown']) addEventListener(ev, onGesture, { capture: true, passive: true });
-})();
-</script>
 <canvas id="game"></canvas>
 <!-- PeerJS 1.5.4 (MIT, peerjs.com) встроен в файл: мультиплееру не нужно ничего скачивать, только связь с сервером комнат.
      Это запасной путь (основной — Firebase), поэтому код хранится как текст и запускается, только когда понадобится -->
@@ -2602,6 +2065,13 @@ function textCanvas(s, k, color, outline) {
 // y — нижняя линия букв; если не влезает — шрифт уменьшается
 function text(s, x, y, k, color = '#fff', align = 'center', outline = OL, maxW = W - 12) {
   const str = String(s).replace(/…/g, '...').replace(/[«»"“”]/g, '').toUpperCase();   // кавычек и многоточия в пиксельном шрифте нет
+  if (str.length > 1 && str.length < 12 && k === Math.floor(k) && /^[0-9:+\-\/ .%]+$/.test(str)) {   // числа меняются каждый кадр — собираем из готовых цифр, а не рисуем новую картинку
+    const o = outline ? k : 0, w = str.length * 6 * k - k + o * 2;
+    if (w > maxW && k > 1) return text(s, x, y, k - 1, color, align, outline, maxW);
+    let dx = Math.round(align === 'center' ? x - w / 2 : align === 'right' ? x - w : x);
+    for (const ch of str) { if (ch !== ' ') { const c = textCanvas(ch, k, color, outline); ctx.drawImage(c, dx, Math.round(y - c.height + 2 * k)); } dx += 6 * k; }
+    return w;
+  }
   let c = textCanvas(str, k, color, outline);
   if (c.width > maxW && k > 1) return text(s, x, y, k - 1, color, align, outline, maxW);
   const dx = align === 'center' ? x - c.width / 2 : align === 'right' ? x - c.width : x;
@@ -11457,7 +10927,7 @@ function drawMenu() {
   text(T('tap1'), W / 2 + 40, 492, 2, '#ffffff');
   text(T('tap2'), W / 2 + 20, 516, 2, '#ffffff', 'center', OL, W - 40);
   ctx.globalAlpha = 1;
-  if (hint > 0.05) drawHand(W / 2 - 6, 540);
+  if (hint > 0.05) drawHand(W / 2 + 40, 540);
   ctx.globalAlpha = 1;
 }
 // шаг времени для анимаций меню (draw не получает dt)
@@ -14289,21 +13759,23 @@ function drawDealsTab() {
       ctx.fillStyle = d.off >= 70 && Math.sin(time * 8) > 0 ? '#ffd23a' : '#ff3a3a'; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, 16);
       text(d.off >= 70 ? T('megaSale') : T('sale') + ' -' + d.off + '%', cx, r.y + 15, 1, '#ffffff', 'center', OL, r.w - 8);
     }
-    const [l1, l2] = skinLines(k);
-    text(l1, cx, r.y + 116, 1, OL, 'center', null, r.w - 4);
-    if (l2) text(l2, cx, r.y + 126, 1, R.dk, 'center', null, r.w - 4);
-    text(T('one')[k.r], cx, r.y + 138, 1, R.dk, 'center', null, r.w - 4);
-    if (own) text(k.id === skinId ? T('selected') : T('take'), cx, r.y + 168, 1, '#1a70c0', 'center', null, r.w - 4);
+    ctx.restore();
+    // надписи — уже без сжатия карточки: пиксельный шрифт в дробном масштабе мылился и пропадал
+    const sy = rr.h / 180, Y = v => Math.round(rr.y + v * sy), cxr = Math.round(rr.x + rr.w / 2), [l1, l2] = skinLines(k);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(rr.x + 2, Y(106), rr.w - 4, Y(144) - Y(106));
+    text(l1, cxr, Y(116), 1, OL, 'center', null, rr.w - 6);
+    if (l2) text(l2, cxr, Y(126), 1, R.dk, 'center', null, rr.w - 6);
+    ctx.fillStyle = R.col; ctx.fillRect(rr.x + 8, Y(130), rr.w - 16, 11); text(T('one')[k.r], cxr, Y(130) + 9, 1, '#ffffff', 'center', OL, rr.w - 18);
+    if (own) text(k.id === skinId ? T('selected') : T('take'), cxr, Y(168), 1, '#1a70c0', 'center', null, rr.w - 4);
     else {
       if (d.off) {
-        priceDraw(cx, r.y + 154, priceOf(k), 2, '#7a6a8a');
+        priceDraw(cxr, Y(155), priceOf(k), 1, '#7a6a8a');
         ctx.strokeStyle = '#ff3a3a'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(cx - 34, r.y + 152); ctx.lineTo(cx + 34, r.y + 140); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cxr - 22, Y(154)); ctx.lineTo(cxr + 22, Y(147)); ctx.stroke();
       }
       const pr = dealPrice(k, d.off);
-      priceDraw(cx, r.y + 174, pr, 2, canPay(pr) ? '#1a8a3a' : '#8a7a9a');
+      priceDraw(cxr, Y(174), pr, 2, canPay(pr) ? '#1a8a3a' : '#8a7a9a');
     }
-    ctx.restore();
   });
   dailyPlate(370); ribbon(W / 2, 346, 200, '#e8a820', '#a06a10'); text(T('dailyReward'), W / 2, 360, 2, '#ffffff', 'center', OL, 196);
   drawDailyRow(370);
@@ -14535,7 +14007,6 @@ function drawPremiumTab() {
   ctx.fillStyle = OL; ctx.fillRect(m.x - 2, m.y - 2, m.w + 4, m.h + 4); ctx.fillStyle = '#fff4dc'; ctx.fillRect(m.x, m.y, m.w, m.h);
   heart(m.x + 16, m.y + 12 + Math.sin(time * 4) * 1.5, true); heart(m.x + m.w - 16, m.y + 12 + Math.cos(time * 4) * 1.5, true);
   ['devMsg1', 'devMsg2', 'devMsg3', 'devMsg4'].forEach((k, i) => text(T(k), W / 2, m.y + 16 + i * 13, 1, OL, 'center', null, m.w - 50));
-  text(T('devSign'), W / 2, m.y + m.h - 6, 1, '#c01a5a', 'center', null, m.w - 10);
   text(T('goldShop'), W / 2, 576, 2, '#ffd23a', 'center', OL, W - 20);   // золото за кристаллы
   GOLD.forEach((G2, i) => {
     const r = goldRect(i), cx = r.x + r.w / 2, ok = gems >= G2.g;
@@ -15149,6 +14620,20 @@ const AVATARS = [
   { id: 'planet', nm: ['ПЛАНЕТА', 'PLANET'], g: 100, bg: ['#2a0a5a', '#05020f'] },
   { id: 'gem', nm: ['АЛМАЗ', 'DIAMOND'], g: 120, bg: ['#0a5a7a', '#021a2a'] },
   { id: 'eye', nm: ['ГЛАЗ ДРАКОНА', 'DRAGON EYE'], g: 150, bg: ['#1a5a1a', '#020a02'] },
+  { id: 'panda', nm: ['ПАНДА', 'PANDA'], g: 50, bg: ['#7ae0a0', '#1a7a4a'] },
+  { id: 'fox', nm: ['ЛИС', 'FOX'], g: 50, bg: ['#3a8ad8', '#0a2a6a'] },
+  { id: 'penguin', nm: ['ПИНГВИН', 'PENGUIN'], g: 60, bg: ['#9ad8ff', '#2a6ab0'] },
+  { id: 'cupcake', nm: ['КЕКС', 'CUPCAKE'], g: 60, bg: ['#ffb0e0', '#c04a9a'] },
+  { id: 'moon', nm: ['ЛУНА', 'MOON'], g: 70, bg: ['#2a1a6a', '#05021a'] },
+  { id: 'controller', nm: ['ДЖОЙСТИК', 'GAMEPAD'], g: 70, bg: ['#ff5a3a', '#7a0a0a'] },
+  { id: 'shark', nm: ['АКУЛА', 'SHARK'], g: 80, bg: ['#1a8ad8', '#022a5a'] },
+  { id: 'robot', nm: ['РОБОТ', 'ROBOT'], g: 90, bg: ['#5a6a8a', '#141a2a'] },
+  { id: 'sword', nm: ['МЕЧ', 'SWORD'], g: 100, bg: ['#8a1a1a', '#1a0404'] },
+  { id: 'unicorn', nm: ['ЕДИНОРОГ', 'UNICORN'], g: 120, bg: ['#c89aff', '#5a2aa0'] },
+  { id: 'tiger', nm: ['ТИГР', 'TIGER'], g: 120, bg: ['#2a5a1a', '#061a02'] },
+  { id: 'dragon', nm: ['ДРАКОН', 'DRAGON'], g: 150, bg: ['#5a0a3a', '#14020a'] },
+  { id: 'phoenix', nm: ['ФЕНИКС', 'PHOENIX'], g: 160, bg: ['#3a0a5a', '#0a0214'] },
+  { id: 'rainbow', nm: ['РАДУГА', 'RAINBOW'], g: 140, bg: ['#5ac8ff', '#2a5ad8'] },
   { id: 'divine', nm: ['БОЖЕСТВЕННЫЙ', 'DIVINE'], g: 0, pack: 1, bg: ['#fff6c8', '#e8a010'] },   // только в наборе премиума
 ];
 const avatarDef = id => AVATARS.find(a => 'a:' + a.id === id);
@@ -15173,6 +14658,20 @@ function avatarArt(id, t) {
     case 'ninja': E(16, 16, 12, 12, O); E(16, 16, 10, 10, '#1a1a24'); P(6, 12, 20, 7, '#f0c8a0'); P(10, 14, 4, 3, O); P(18, 14, 4, 3, O); P(11, 15, 1, 1, '#ffffff'); P(19, 15, 1, 1, '#ffffff'); P(6, 9, 20, 3, '#e8261a'); P(24, 9 + tw, 6, 2, '#e8261a'); P(25, 12 + tw, 4, 2, '#e8261a'); break;
     case 'planet': for (let i = 0; i < 8; i++) P(hash(i * 11) * 30, hash(i * 5) * 30, 1, 1, '#ffffff'); E(16, 16, 9, 9, O); E(16, 16, 7, 7, '#ff8ad0'); E(13, 13, 3, 2, '#ffc8ec'); ctx.strokeStyle = O; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(16, 17, 15, 4, -0.3, 0.15, Math.PI - 0.15); ctx.stroke(); ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = 2; ctx.stroke(); break;
     case 'gem': ctx.fillStyle = O; ctx.beginPath(); [[8, 6], [24, 6], [30, 13], [16, 30], [2, 13]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.fill(); ctx.fillStyle = '#7ad8ff'; ctx.beginPath(); [[9, 8], [23, 8], [27, 13], [16, 27], [5, 13]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.fill(); ctx.fillStyle = '#bff4ff'; ctx.beginPath(); [[9, 8], [16, 8], [12, 13], [5, 13]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.fill(); P(5, 13, 22, 1, '#3a9ad8'); if (tw > 0.3) { P(25, 4, 2, 2, '#ffffff'); P(24, 5, 4, 0.8, '#ffffff'); } break;
+    case 'panda': E(16, 17, 12, 11, O); E(7, 8, 5, 5, O); E(25, 8, 5, 5, O); E(7, 8, 3, 3, '#2a2a34'); E(25, 8, 3, 3, '#2a2a34'); E(16, 17, 10, 9, '#ffffff'); E(11, 16, 4, 3, '#2a2a34'); E(21, 16, 4, 3, '#2a2a34'); P(11, 15, 2, 2, tw > 0.9 ? '#2a2a34' : '#ffffff'); P(21, 15, 2, 2, tw > 0.9 ? '#2a2a34' : '#ffffff'); E(16, 21, 3, 2, O); P(14, 24, 4, 1, O); E(8, 21, 2, 1, '#ffb0c8'); E(24, 21, 2, 1, '#ffb0c8'); break;
+    case 'fox': ctx.fillStyle = O; ctx.beginPath(); [[3, 3], [12, 9], [20, 9], [29, 3], [27, 18], [16, 30], [5, 18]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.fill(); ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); [[5, 6], [12, 11], [20, 11], [27, 6], [25, 18], [16, 27], [7, 18]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); [[8, 18], [16, 19], [24, 18], [16, 27]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.fill(); P(10, 14, 3, 3, O); P(19, 14, 3, 3, O); P(15, 24, 2, 2, O); P(7, 7, 2, 4, '#ffd0a0'); P(23, 7, 2, 4, '#ffd0a0'); break;
+    case 'penguin': E(16, 17, 11, 12, O); E(16, 17, 9, 10, '#1a2a3a'); E(16, 19, 6, 8, '#ffffff'); P(11, 12, 3, 3, '#ffffff'); P(18, 12, 3, 3, '#ffffff'); P(12, 13, 2, 2, O); P(19, 13, 2, 2, O); P(14, 16, 4, 3, '#ff9a1e'); P(4, 16 + tw * 2, 4, 6, '#1a2a3a'); P(24, 16 - tw * 2, 4, 6, '#1a2a3a'); P(10, 28, 4, 2, '#ff9a1e'); P(18, 28, 4, 2, '#ff9a1e'); break;
+    case 'cupcake': P(7, 18, 18, 11, O); P(9, 18, 14, 9, '#e8a050'); for (let i = 0; i < 4; i++) P(10 + i * 4, 18, 2, 9, '#c87a2a'); E(16, 14, 11, 7, O); E(16, 13, 9, 6, '#ff9ad0'); E(16, 9, 5, 4, '#ffc0e4'); E(16, 4, 3, 3, '#e8261a'); P(16, 1, 2, 2, '#3a8a2a'); for (let i = 0; i < 5; i++) P(9 + i * 3.5, 11 + (i % 2) * 3, 2, 1, ['#ffd23a', '#3ab0ff', '#ffffff', '#3ce06a', '#ffd23a'][i]); break;
+    case 'moon': for (let i = 0; i < 9; i++) { const on = Math.sin(t * 3 + i) > 0; P(hash(i * 13) * 30, hash(i * 7 + 2) * 30, on ? 2 : 1, on ? 2 : 1, '#ffffff'); } E(17, 16, 11, 11, O); E(17, 16, 9, 9, '#fff6a0'); E(22, 13, 8, 8, '#2a1a6a'); E(12, 18, 2, 2, '#e8d070'); E(15, 11, 1.5, 1.5, '#e8d070'); P(10, 15, 2, 2, O); P(13, 20, 3, 1, O); break;
+    case 'controller': E(9, 18, 7, 7, O); E(23, 18, 7, 7, O); P(8, 12, 16, 12, O); E(9, 18, 5, 5, '#3a3a4a'); E(23, 18, 5, 5, '#3a3a4a'); P(9, 14, 14, 9, '#3a3a4a'); P(7, 17, 6, 2, '#ffffff'); P(9, 15, 2, 6, '#ffffff'); P(21, 15, 3, 3, tw > 0 ? '#e8261a' : '#ff8a7a'); P(25, 18, 3, 3, '#3ce06a'); P(21, 21, 3, 3, '#3ab0ff'); P(14, 17, 4, 1, '#8a8a9a'); break;
+    case 'shark': E(16, 18, 13, 8, O); ctx.fillStyle = O; ctx.beginPath(); ctx.moveTo(12, 11); ctx.lineTo(18, 2); ctx.lineTo(21, 12); ctx.fill(); E(16, 18, 11, 6, '#7a9ab8'); E(16, 21, 9, 3, '#e8eef8'); ctx.fillStyle = '#7a9ab8'; ctx.beginPath(); ctx.moveTo(14, 12); ctx.lineTo(18, 5); ctx.lineTo(19, 12); ctx.fill(); P(21, 15, 2, 2, O); for (let i = 0; i < 5; i++) P(11 + i * 2.5, 21, 1, 2, '#ffffff'); P(10, 21, 12, 1, O); P(2, 26 + tw, 28, 2, '#bff0ff'); break;
+    case 'robot': P(14, 2, 4, 4, O); P(15, 1, 2, 2, tw > 0 ? '#ff3a3a' : '#ffd23a'); P(5, 6, 22, 20, O); P(7, 8, 18, 16, '#c8d0e0'); P(9, 11, 5, 5, O); P(18, 11, 5, 5, O); P(10, 12, 3, 3, '#3af0ff'); P(19, 12, 3, 3, '#3af0ff'); P(10, 19, 12, 3, O); for (let i = 0; i < 3; i++) P(11 + i * 4, 20, 2, 1, '#ffd23a'); P(2, 13, 3, 6, O); P(27, 13, 3, 6, O); break;
+    case 'sword': ctx.save(); ctx.translate(16, 16); ctx.rotate(-0.78); P(-2, -15, 5, 21, O); P(-1, -14, 3, 19, '#e8eef8'); P(-1, -14, 1, 19, '#ffffff'); P(-7, 5, 15, 4, O); P(-6, 6, 13, 2, '#ffd23a'); P(-2, 8, 5, 7, O); P(-1, 9, 3, 5, '#8a4a1a'); E(0, 16, 3, 3, O); E(0, 16, 1.5, 1.5, '#e8261a'); ctx.restore(); if (tw > 0.5) { P(23, 5, 2, 2, '#ffffff'); P(22, 6, 4, 0.8, '#ffffff'); } break;
+    case 'unicorn': E(17, 19, 10, 9, O); P(9, 9, 6, 10, O); ctx.fillStyle = O; ctx.beginPath(); ctx.moveTo(18, 11); ctx.lineTo(25, 0); ctx.lineTo(23, 13); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(19, 11); ctx.lineTo(24, 3); ctx.lineTo(22, 12); ctx.fill(); E(17, 19, 8, 7, '#ffffff'); P(11, 11, 3, 8, '#ffffff'); E(23, 23, 4, 3, '#ffd8ec'); P(18, 16, 3, 3, O); for (let i = 0; i < 4; i++) P(6 + i * 2, 8 + i * 3, 4, 3, ['#ff5a8a', '#ffd23a', '#3ce06a', '#3ab0ff'][i]); break;
+    case 'tiger': E(16, 17, 12, 11, O); E(7, 7, 4, 4, O); E(25, 7, 4, 4, O); E(16, 17, 10, 9, '#ff9a2a'); E(7, 7, 2, 2, '#ffd0a0'); E(25, 7, 2, 2, '#ffd0a0'); E(16, 21, 6, 5, '#ffffff'); for (const x of [10, 16, 22]) P(x - 1, 8, 2, 4, O); P(7, 15, 4, 2, O); P(21, 15, 4, 2, O); P(11, 14, 3, 3, '#3ce06a'); P(18, 14, 3, 3, '#3ce06a'); P(12, 15, 1, 2, O); P(19, 15, 1, 2, O); P(14, 19, 4, 3, '#ff5a8a'); P(15, 23, 2, 1, O); break;
+    case 'dragon': E(16, 18, 11, 10, O); ctx.fillStyle = O; ctx.beginPath(); ctx.moveTo(6, 12); ctx.lineTo(4, 1); ctx.lineTo(12, 9); ctx.moveTo(26, 12); ctx.lineTo(28, 1); ctx.lineTo(20, 9); ctx.fill(); E(16, 18, 9, 8, '#3ab04a'); E(16, 23, 6, 4, '#a8e060'); P(9, 13, 5, 4, '#ffd23a'); P(18, 13, 5, 4, '#ffd23a'); P(11, 13, 1, 4, O); P(20, 13, 1, 4, O); P(13, 22, 2, 2, O); P(18, 22, 2, 2, O); if (tw > 0.2) { E(16, 30, 5, 2, '#ff8a1e'); E(16, 30, 3, 1, '#ffd23a'); } break;
+    case 'phoenix': { const fl = Math.sin(t * 6) * 2; for (const sd of [-1, 1]) { ctx.fillStyle = O; ctx.beginPath(); ctx.moveTo(16, 16); ctx.lineTo(16 + sd * 15, 6 - fl); ctx.lineTo(16 + sd * 12, 22); ctx.fill(); ctx.fillStyle = '#ff5a1a'; ctx.beginPath(); ctx.moveTo(16, 17); ctx.lineTo(16 + sd * 13, 8 - fl); ctx.lineTo(16 + sd * 11, 20); ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(16, 17); ctx.lineTo(16 + sd * 9, 12 - fl / 2); ctx.lineTo(16 + sd * 8, 19); ctx.fill(); } E(16, 15, 5, 7, O); E(16, 15, 3, 5, '#ff8a1e'); P(15, 11, 2, 2, '#ffffff'); P(14, 21, 4, 8, '#ff3a1a'); P(15, 26 + fl / 2, 2, 4, '#ffd23a'); break; }
+    case 'rainbow': { const cols = ['#ff3a3a', '#ffa02a', '#ffe03a', '#3ae05a', '#3ab0ff', '#a64aff']; cols.forEach((c, i) => { ctx.strokeStyle = O; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.arc(16, 24, 14 - i * 2, Math.PI, 0); ctx.stroke(); }); cols.forEach((c, i) => { ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(16, 24, 14 - i * 2, Math.PI, 0); ctx.stroke(); }); E(5, 25, 5, 3, '#ffffff'); E(27, 25, 5, 3, '#ffffff'); if (tw > 0.4) P(16, 4, 2, 2, '#ffffff'); break; }
     case 'divine': {
       ctx.save(); ctx.translate(16, 17); ctx.rotate(t * 0.8); ctx.fillStyle = '#fffbe0'; for (let i = 0; i < 8; i++) { ctx.rotate(Math.PI / 4); ctx.fillRect(-1, -16, 2, 7); } ctx.restore();   // лучи
       for (const sd of [-1, 1]) { const fl = Math.sin(t * 5) * 1.5; ctx.fillStyle = O; ctx.beginPath(); ctx.moveTo(16 + sd * 4, 17); ctx.lineTo(16 + sd * 15, 9 - fl); ctx.lineTo(16 + sd * 14, 15); ctx.lineTo(16 + sd * 13, 20); ctx.lineTo(16 + sd * 10, 24); ctx.closePath(); ctx.fill();
@@ -15399,7 +14898,7 @@ const memo = (fn, ms = 500) => { let v, at = -1e9; return () => { const n = perf
 const questReady = memo(questReady0);
 
 // ---- Wall Play Pass: сезон — календарный месяц, 30 уровней, бесплатная и платная (за кристаллы) дорожки ----
-const PASS_TIERS = 30, PASS_XP = 300, PASS_PRICE = 169;
+const PASS_TIERS = 60, PASS_XP = 300, PASS_PRICE = 169;   // 60 уровней; опыт — только за задания
 const passSeason = () => { const d = new Date(); return Math.max(1, d.getFullYear() * 12 + d.getMonth() - (2026 * 12 + 9) + 1); };   // сезон 1 — октябрь 2026
 const passDaysLeft = () => { const d = new Date(), e = new Date(d.getFullYear(), d.getMonth() + 1, 1); return Math.max(1, Math.ceil((e - d) / 864e5)); };
 function passData() {
@@ -15416,6 +14915,8 @@ const PASS_REW = (() => {
     if (i % 10 === 0) f = { k: 'chest', gold: true }; else if (i % 5 === 0) f = { k: 'chest' }; else if (i % 3 === 0) f = { k: 'gems', n: 3 + Math.floor(i / 6) }; else if (i % 4 === 0) f = { k: 'power', n: 2 }; else f = { k: 'coins', n: 100 + i * 10 };
     if (i === 30) pr = { k: 'skin', r: 3 }; else if (i === 20) pr = { k: 'frame', id: 'rainbow' }; else if (i === 25) pr = { k: 'title', id: 'pass2' }; else if (i === 10) pr = { k: 'frame', id: 'gold' }; else if (i === 15) pr = { k: 'skin', r: 2 };
     else if (i === 5) pr = { k: 'title', id: 'pass1' }; else if (i % 7 === 0) pr = { k: 'ruby', n: 1 }; else if (i % 2 === 0) pr = { k: 'gems', n: 8 + i } ; else pr = { k: 'coins', n: 300 + i * 20 };
+    if (i === 40) pr = { k: 'frame', id: 'galaxy' }; if (i === 45) pr = { k: 'ruby', n: 5 }; if (i === 50) pr = { k: 'skin', r: 3 }; if (i === 55) f = { k: 'skin', r: 2 }; if (i === 35) f = { k: 'gems', n: 25 };
+    if (i === 60) { f = { k: 'skin', r: 3 }; pr = { k: 'skin', r: 4 }; }   // финал сезона: легенда бесплатно, мифик в премиуме
     if (i === 12) f = { k: 'frame', id: 'ice' }; if (i === 8) f = { k: 'title', id: 'free1' }; if (i === 18) pr = { k: 'frame', id: 'circuit' }; if (i === 28) pr = { k: 'frame', id: 'royal' }; if (i === 22) f = { k: 'frame', id: 'fire' };   // в Pass — и рамки с узором
     L.push([f, pr]);
   }
@@ -15433,7 +14934,7 @@ function metaRunEnd() {
   if (m > troOf(id)) { META.troGain = { id, n: Math.min(99999, m) - troOf(id), t: Date.now() }; META.tro[id] = Math.min(99999, m); }   // кубки = рекорд высоты этим героем: дают только за новый рекорд
   if (m > 0) META.stat.totM = (META.stat.totM || 0) + m;
   META.stat.runs = (META.stat.runs || 0) + 1;
-  META.lastXp = Math.floor(m / 2) + 10; passXp(META.lastXp);
+  META.lastXp = 0;   // опыт Pass теперь только за задания
   questAdd('climb', m); questAdd('best', m, 'max'); questAdd('flips', flips); questAdd('coins', coinsRun); questAdd('runs', 1); questAdd('gems', gemsRun);
   metaSave(); boardPush();
 }
@@ -15911,7 +15412,7 @@ function openPass() {
     const pl = moTxt('div', 'ol', tr('ГЛАВНЫЙ ПРИЗ', 'GRAND PRIZE')); pl.style.cssText = 'font-size:9px;text-align:center;line-height:10px';
     prize.append(moEl('div', 'rays'), hv, pl, q);
     top.append(ring, info, prize); head.appendChild(top);
-    head.appendChild(Object.assign(moTxt('div', 'sm', tr('ОПЫТ: 1 XP ЗА 2 М ВВЕРХ И ЗА ЗАДАНИЯ ДНЯ', 'XP: 1 PER 2 M CLIMBED AND FROM DAILY QUESTS')), { style: 'position:relative;z-index:1;margin-top:8px' }));
+    head.appendChild(Object.assign(moTxt('div', 'sm', tr('ОПЫТ PASS — ТОЛЬКО ЗА ЗАДАНИЯ: ЗАДАНИЯ ДНЯ И ЗАДАНИЯ РЕЖИМОВ. 60 УРОВНЕЙ, В КОНЦЕ — МИФИК', 'PASS XP COMES ONLY FROM QUESTS: DAILY AND MODE QUESTS. 60 LEVELS, A MYTHIC AT THE END')), { style: 'position:relative;z-index:1;margin-top:8px' }));
     bd.appendChild(head);
     // покупка: что даёт золотая дорожка
     if (!v.prem) {
@@ -16007,11 +15508,11 @@ function openBoard(keep) {
       box.innerHTML = '';
       if (!rows.length) { box.appendChild(moTxt('div', 'card sm', tr('ПОКА НИКОГО — СЫГРАЙ И СТАНЬ ПЕРВЫМ!', 'NOBODY YET — PLAY AND BE FIRST!'))); return; }
       const myId = cloud.db ? cloud.uid : FB.uid;
-      rows = boardWithBots(rows.filter(e => e.tr || e.b || e.id === myId));   // пустые строки (бывшие гости) не показываем; боты — постоянные соперники
+      rows = boardWithBots(rows.filter(e => e.tr || e.b || e.id === myId), myId);   // пустые строки (бывшие гости) не показываем; боты — постоянные соперники
       rows.forEach((e, i) => {
         const me = e.id === myId, f = frameStyle(e.fr), r = moEl('div', 'rk' + (me ? ' glow' : ''));
         frameBg(r, f, 5);
-        const n = moEl('div', 'n ol'); n.textContent = String(i + 1); if (i < 3) n.style.color = ['#ffd23a', '#e8eef8', '#e0904a'][i];
+        const n = moEl('div', 'n ol'); n.textContent = String(e.rank || i + 1); if (i < 3) n.style.color = ['#ffd23a', '#e8eef8', '#e0904a'][i];
         const avw = moEl('div'); avw.style.cssText = 'position:relative;flex:none'; avw.appendChild(withRank(framed(avatarCnv(e.av, 40), e.fr, 2), e.b, 18));
         if (i === 0) { const cr = crownCnv(30); cr.style.cssText += ';position:absolute;left:50%;top:-16px;margin-left:-15px'; avw.appendChild(cr); }
         const nm = moEl('div'); nm.style.cssText = 'min-width:0;flex:1;background:rgba(20,10,40,.55);padding:3px 6px;border-radius:8px';
@@ -16054,7 +15555,7 @@ function openBoard(keep) {
 
 // ---- меню: профиль слева сверху, рейтинг справа, задания и эмоции над кнопками, Pass внизу слева, герой внизу справа; свайп — рейтинг/профиль ----
 // главное всегда на виду (герои, магазин, колесо, задания); остальное раскрывается стрелкой «ЕЩЁ»
-Object.assign(BTN, { prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: W - 112, y: 196, w: 100, h: 32 }, quest: { x: 222, y: 588, w: 126, h: 40 }, pass: { x: 12, y: 584, w: 132, h: 46 }, wheel: { x: 24, y: 334, w: 312, h: 40 },
+Object.assign(BTN, { prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: W - 112, y: 196, w: 100, h: 32 }, quest: { x: 152, y: 584, w: 46, h: 46 }, pass: { x: 12, y: 584, w: 132, h: 46 }, wheel: { x: 24, y: 334, w: 312, h: 40 },
   ach: { x: 24, y: 408, w: 150, h: 40 }, tent: { x: 186, y: 408, w: 150, h: 40 }, allies: { x: 24, y: 458, w: 150, h: 40 }, emo: { x: 186, y: 458, w: 150, h: 40 }, more: { x: W / 2 - 44, y: 380, w: 88, h: 22 } });
 const MORE_KEYS = ['ach', 'tent', 'allies', 'emo'];
 let menuMore = !!store.get('menuMore', false), menuMoreT = menuMore ? 1 : 0;
@@ -16069,12 +15570,21 @@ function drawPassBtn() {
   const sx = b.x + ((time * 70) % (b.w + 60)) - 30; ctx.save(); ctx.beginPath(); ctx.rect(b.x, y, b.w, b.h); ctx.clip(); ctx.globalAlpha = 0.22; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + 12, y); ctx.lineTo(sx - 4, y + b.h); ctx.lineTo(sx - 16, y + b.h); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
   const cx = b.x + 23, cy = y + 23;
   pell(ctx, cx, cy, 21, 21, OL); pell(ctx, cx, cy, 17, 17, '#e8a010'); pell(ctx, cx, cy - 2, 15, 13, '#ffd23a');
-  text(String(lv), cx, cy + 7, lv >= 10 ? 1.6 : 2, '#ffffff', 'center', OL);
+  text(String(lv), cx, cy + 7, 2, '#ffffff', 'center', OL, 30);
   if (v.prem) emoStar(cx + 14, cy - 15, 7, '#fff6a0');
-  text('PASS', b.x + 48, y + 20, 1.6, '#ffffff', 'left', OL, b.w - 52);
+  text('PASS', b.x + 48, Math.round(y) + 20, 2, '#ffffff', 'left', OL, b.w - 52);
   const inLv = lv >= PASS_TIERS ? PASS_XP : v.xp % PASS_XP, bx = b.x + 48, by = y + 28, bw = b.w - 56;
   ctx.fillStyle = OL; ctx.fillRect(bx - 2, by - 2, bw + 4, 12); ctx.fillStyle = '#2a1a4a'; ctx.fillRect(bx, by, bw, 8); ctx.fillStyle = '#ffd23a'; ctx.fillRect(bx, by, Math.round(bw * inLv / PASS_XP), 8); ctx.fillStyle = '#fff6a0'; ctx.fillRect(bx, by, Math.round(bw * inLv / PASS_XP), 2);
   if (passReady()) badge(b.x + b.w - 4, y + 2);
+}
+// задания — круглая иконка рядом с Pass: свиток с галочками
+function drawQuestIcon() {
+  const b = BTN.quest, cx = b.x + b.w / 2, bob = Math.sin(time * 3 + 2.6) * 1.5, cy = b.y + b.h / 2 + bob;
+  pell(ctx, cx, cy + 2, 25, 25, OL); pell(ctx, cx, cy, 23, 23, '#1a70c0'); pell(ctx, cx, cy - 2, 21, 20, '#3ab0ff');
+  prect(ctx, cx - 12, cy - 15, 24, 30, OL); prect(ctx, cx - 10, cy - 13, 20, 26, '#fff6dc'); prect(ctx, cx - 10, cy - 13, 20, 4, '#e8c88a');
+  for (let k = 0; k < 3; k++) { const y = cy - 6 + k * 7, done = k < 2; prect(ctx, cx - 8, y, 4, 4, done ? '#3ce06a' : '#c8b8a0'); prect(ctx, cx - 2, y + 1, 10, 2, '#8a7a6a'); }
+  prect(ctx, cx - 3, cy - 17, 6, 4, '#c8820a');
+  text(tr('ЗАДАНИЯ', 'QUESTS'), cx, b.y + b.h + 10, 1, '#ffffff', 'center', OL, 70);
 }
 function drawMenuMeta() {
   // профиль: аватарка, ник и кубки
@@ -16085,7 +15595,7 @@ function drawMenuMeta() {
   const tn = String(troTotal()); trophyIcon(b.x + 44, b.y + 25, 0.5); text(tn, b.x + 52, b.y + 30, 1, '#ffe680', 'left', OL, 50);
   const tt = titleText(META.prof.title); if (tt) text(tt, b.x + 58 + tn.length * 7, b.y + 30, 1, META.prof.title === 'divine' ? divineCol() : '#ffd23a', 'left', OL, b.w - 64 - tn.length * 7);   // титул рядом с именем
   button(BTN.rank, tr('РЕЙТИНГ', 'RANKING'), '#ffb02a', '#c06a00');
-  button(BTN.quest, tr('ЗАДАНИЯ', 'QUESTS'), '#3ab0ff', '#1a70c0');
+  drawQuestIcon();
   if (questReady()) badge(BTN.quest.x + BTN.quest.w - 4, BTN.quest.y + 2);
   drawPassBtn();
   const gn = META.troGain; if (gn && Date.now() - gn.t < 6000) { const a = (Date.now() - gn.t) / 6000; ctx.globalAlpha = 1 - a * a; text('+' + gn.n, b.x + b.w - 10, b.y + 32 + a * 14, 2, '#ffe680', 'center', OL); ctx.globalAlpha = 1; }   // новые кубки
@@ -16483,7 +15993,7 @@ const TOUR_STEPS = [
   { r: () => BTN.wheel, say: () => tr('[КОЛЕСО УДАЧИ]: КРУТИ [БЕСПЛАТНО] РАЗ В ДЕНЬ — МОНЕТЫ, КРИСТАЛЛЫ, СИЛЫ И ДАЖЕ ГЕРОИ.', '[LUCKY WHEEL]: A [FREE] SPIN EVERY DAY — COINS, GEMS, POWERS AND EVEN HEROES.') },
   { r: () => BTN.quest, say: () => tr('[ЗАДАНИЯ]: ТРИ НОВЫХ КАЖДЫЙ ДЕНЬ. ВЫПОЛНЯЙ — ПОЛУЧАЙ МОНЕТЫ И [ОПЫТ PASS]. ЗА ВСЕ ТРИ — [СУНДУК]!', '[QUESTS]: THREE NEW ONES DAILY. COMPLETE THEM FOR COINS AND [PASS XP]. ALL THREE — A [CHEST]!') },
   { r: () => ({ x: BTN.ach.x, y: BTN.more.y, w: BTN.tent.x + BTN.tent.w - BTN.ach.x, h: BTN.emo.y + BTN.emo.h - BTN.more.y }), open: true, say: () => tr('СТРЕЛКА [ЕЩЁ] ПРЯЧЕТ: ', 'THE [MORE] ARROW HIDES: ') + [T('awards'), T('tent'), T('allies'), tr('ЭМОЦИИ', 'EMOTES')].join(', ') + tr('. В [ПАЛАТКЕ] ПОКУПАЮТ СУПЕРСИЛЫ, А [СОЮЗНИКИ] ПОМОГАЮТ В ЗАБЕГЕ.', '. THE [TENT] SELLS SUPERPOWERS, [ALLIES] HELP YOU IN RUNS.') },
-  { r: () => BTN.pass, say: () => tr('[WALL PLAY PASS]: ИГРАЙ — КОПИТСЯ [ОПЫТ] (ЗА МЕТРЫ И ЗАДАНИЯ). КАЖДЫЙ УРОВЕНЬ — [НАГРАДА]: МОНЕТЫ, РАМКИ, ТИТУЛЫ. ВСЕГО [30 УРОВНЕЙ] ЗА СЕЗОН.', '[WALL PLAY PASS]: PLAY TO EARN [XP] (FOR METERS AND QUESTS). EVERY LEVEL IS A [REWARD]: COINS, FRAMES, TITLES. [30 LEVELS] PER SEASON.') },
+  { r: () => BTN.pass, say: () => tr('[WALL PLAY PASS]: ВЫПОЛНЯЙ [ЗАДАНИЯ] — КОПИТСЯ [ОПЫТ]. КАЖДЫЙ УРОВЕНЬ — [НАГРАДА]: МОНЕТЫ, РАМКИ, ТИТУЛЫ. ВСЕГО [60 УРОВНЕЙ], В КОНЦЕ — [МИФИК].', '[WALL PLAY PASS]: DO [QUESTS] TO EARN [XP]. EVERY LEVEL IS A [REWARD]: COINS, FRAMES, TITLES. [60 LEVELS], A [MYTHIC] AT THE END.') },
   { r: () => ({ x: 60, y: 520, w: W - 120, h: 60 }), say: () => trf('А ЧТОБЫ ИГРАТЬ — ПРОСТО [КОСНИСЬ ЭКРАНА]. УДАЧИ, {name}!', 'TO PLAY — JUST [TAP THE SCREEN]. GOOD LUCK, {name}!', { name: tutMy() }) },
 ];
 function tourStart() { if (state !== 'menu') return; TOUR.on = true; TOUR.i = 0; TOUR.t = 0; PK.x = W / 2; PK.y = H + 60; pkSay(TOUR_STEPS[0].say()); }
@@ -16913,11 +16423,11 @@ const AR_FIN_M = 300, AR_TIME = 180, AR_N = 10, KG_WIN = 30, KG_HEAD = 10, KG_SH
 const AR_FIN_Y = -PH / 2 - AR_FIN_M * PX_PER_M;
 const AR_MODES = [
   { id: 'race', nm: ['ЗАБЕГ', 'RACE'], sub: ['10 ИГРОКОВ · 3 МИНУТЫ', '10 PLAYERS · 3 MINUTES'], col: ['#3ab0ff', '#1a3ab0'],
-    info: [['Все 10 игроков стартуют внизу. Кто первым долезет до финиша на высоте ' + AR_FIN_M + ' м — победил!', 'Сорвался — через 3 секунды появишься чуть ниже и полезешь дальше.', 'Справа — полоска с головами: видно, кто где. Сверху — таймер 3 минуты.', 'Когда финишируют трое — раунд окончен. Финишировал раньше — смотри за остальными.', 'Награды: кубки, опыт Pass и задания режимов.'],
-      ['All 10 players start at the bottom. The first to reach the finish at ' + AR_FIN_M + ' m wins!', 'Fell? In 3 seconds you appear a bit lower and keep climbing.', 'On the right — a bar with heads: you see who is where. On top — a 3 minute timer.', 'When three players finish, the round is over. Finished early — watch the others.', 'Rewards: trophies, Pass XP and mode quests.']] },
+    info: [['Все 10 игроков стартуют внизу. Кто первым долезет до финиша на высоте ' + AR_FIN_M + ' м — победил!', 'Сорвался — через 3 секунды появишься чуть ниже и полезешь дальше.', 'Справа — полоска с головами: видно, кто где. Сверху — таймер 3 минуты.', 'Когда финишируют трое — раунд окончен. Финишировал раньше — смотри за остальными.', 'Награды: кубки, монеты и задания режимов (опыт Pass дают задания).'],
+      ['All 10 players start at the bottom. The first to reach the finish at ' + AR_FIN_M + ' m wins!', 'Fell? In 3 seconds you appear a bit lower and keep climbing.', 'On the right — a bar with heads: you see who is where. On top — a 3 minute timer.', 'When three players finish, the round is over. Finished early — watch the others.', 'Rewards: trophies, coins and mode quests (quests give Pass XP).']] },
   { id: 'king', nm: ['ЦАРЬ ГОРЫ', 'KING OF THE HILL'], sub: ['10 ИГРОКОВ · КОРОНА', '10 PLAYERS · THE CROWN'], col: ['#ffb02a', '#b04a00'],
-    info: [['Один игрок — царь, на нём корона. Ему дают 10 секунд убежать, потом все бросаются в погоню.', 'Коснись царя — корона твоя! Новому царю дают щит на 5 секунд, чтобы корону сразу не отняли.', 'У самого первого царя щита нет — у него фора.', 'Побеждает тот, кто пробудет царём ' + KG_WIN + ' секунд.', 'Награды: кубки, опыт Pass и задания режимов.'],
-      ['One player is the king and wears the crown. The king gets 10 seconds to run, then everyone gives chase.', 'Touch the king — the crown is yours! A new king gets a 5 second shield so nobody takes it back at once.', 'The very first king has no shield — he gets a head start instead.', 'The first to stay king for ' + KG_WIN + ' seconds wins.', 'Rewards: trophies, Pass XP and mode quests.']] },
+    info: [['Один игрок — царь, на нём корона. Ему дают 10 секунд убежать, потом все бросаются в погоню.', 'Коснись царя — корона твоя! Новому царю дают щит на 5 секунд, чтобы корону сразу не отняли.', 'У самого первого царя щита нет — у него фора.', 'Побеждает тот, кто пробудет царём ' + KG_WIN + ' секунд.', 'Награды: кубки, монеты и задания режимов (опыт Pass дают задания).'],
+      ['One player is the king and wears the crown. The king gets 10 seconds to run, then everyone gives chase.', 'Touch the king — the crown is yours! A new king gets a 5 second shield so nobody takes it back at once.', 'The very first king has no shield — he gets a head start instead.', 'The first to stay king for ' + KG_WIN + ' seconds wins.', 'Rewards: trophies, coins and mode quests (quests give Pass XP).']] },
 ];
 const arMode = id => AR_MODES.find(m => m.id === id) || AR_MODES[0];
 const AR = { mode: '', phase: '', t0: 0, bots: {}, chain: [], fin: {}, res: null, resT: 0, spec: '', meFin: 0, respT: 0, king: '', kt: {}, sh: 0, headDone: false, lastBs: 0, lastKt: 0, rew: null, lobby: null, seed: 0, intro: 0, introCam: 0, given: false };
@@ -16930,12 +16440,12 @@ const BOT_N = BOT_NAMES.length;
 const botName = i => { const n = BOT_NAMES[i % BOT_N]; if (i < BOT_N || n.length > 10 || /\d/.test(n)) return n; return n + (botH(i, 21) < 0.5 ? '' : '_') + (botH(i, 23) < 0.6 ? String(Math.floor(botH(i, 20) * 89) + 10) : String(2008 + Math.floor(botH(i, 22) * 8))); };
 const botH = (i, k) => { let x = Math.imul(i + 1, 0x9E3779B1) ^ Math.imul(k + 7, 0x85EBCA77); x ^= x >>> 15; x = Math.imul(x, 0x2C1B3C6D); x ^= x >>> 12; x = Math.imul(x, 0x297A2D39); x ^= x >>> 15; return (x >>> 0) / 4294967296; };   // ровный хеш: у каждого бота своё
 const botSkin = (i, maxR = 4) => { const l = SKINS.filter(k => k.r <= maxR && !k.gift); return l[Math.floor(botH(i, 1) * l.length)] || SKINS[0]; };
-const botTroBase = i => Math.floor(30 + 9400 * Math.pow(botH(i, 2), 2.4));
+const botTroBase = i => Math.floor(10400 + 48000 * Math.pow(botH(i, 2), 2.2));   // в рейтинге — от 10 000 кубков
 function botTro(i, now = Date.now()) {   // кубки бота медленно растут, а иногда и падают: проиграл пару раундов
   const hr = now / 36e5, days = (now - Date.UTC(2026, 9, 1)) / 864e5, b = botTroBase(i);
   const grow = 1 + Math.max(0, days) * (0.002 + botH(i, 11) * 0.006);
   const wave = Math.sin(hr / (17 + botH(i, 12) * 20) + i) * (25 + b * 0.04) + Math.sin(hr / (3 + botH(i, 13) * 4) + i * 2.3) * (8 + b * 0.012);
-  return Math.max(0, Math.round(b * grow + wave));
+  return Math.max(10000, Math.round(b * grow + wave));
 }
 function botRow(i) {   // строка рейтинга бота — в том же виде, что и строка живого игрока
   const tr0 = botTro(i), maxR = tr0 < 200 ? 1 : tr0 < 900 ? 2 : tr0 < 3000 ? 3 : 4, k = botSkin(i, maxR), h = q => botH(i, q);
@@ -16957,10 +16467,13 @@ function botKit(i, k, sk, b, tr0) {   // у бота как у живого: с�
   return { own, ic: own.slice(0, 6), ach, show: ach.slice(0, 3), tro };
 }
 const BOARD_BOTS = 70;
-function boardWithBots(rows) {   // живые строки + боты, по кубкам, первые 99
+function boardWithBots(rows, myId) {   // живые строки + боты, по кубкам, первые 99; своя строка — всегда, со своим местом
   const ids = new Set(rows.map(r => r.n)), l = rows.slice();
   for (let i = 0; i < BOARD_BOTS; i++) { const r = botRow(i); if (!ids.has(r.n)) l.push(r); }
-  return l.sort((a, b) => b.tr - a.tr).slice(0, 99);
+  l.sort((a, b) => b.tr - a.tr);
+  const top = l.slice(0, 99), k = l.findIndex(e => e.id === myId);
+  if (k >= 99) top.push({ ...l[k], rank: k + 1 });
+  return top;
 }
 // соперники в матче: кубки — около твоих (сильные с сильными, слабые со слабыми)
 function arMakeBots(n, myTr) {
@@ -17204,9 +16717,9 @@ function arEnd(order) {
 }
 const AR_TRO = [20, 15, 11, 8, 6, 5, 4, 3, 2, 1], AR_XP = [160, 130, 110, 90, 80, 70, 60, 50, 45, 40];
 function arReward(place) {
-  const i = clamp(place - 1, 0, 9), tro = AR_TRO[i], xp = AR_XP[i], coins = coinsRun + [120, 80, 60, 40, 30, 25, 20, 15, 10, 10][i];
+  const i = clamp(place - 1, 0, 9), tro = AR_TRO[i], xp = 0, coins = coinsRun + [120, 80, 60, 40, 30, 25, 20, 15, 10, 10][i];
   if (!quiet) {
-    META.tro._ar = Math.min(1e6, (META.tro._ar || 0) + tro); passXp(xp); bank += coins; coinsRun = 0; store.set('coins', bank);
+    META.tro._ar = Math.min(1e6, (META.tro._ar || 0) + tro); bank += coins; coinsRun = 0; store.set('coins', bank);
     try { questAdd('climb', heightM()); questAdd('flips', flips); questAdd('gems', gemsRun); } catch (e) {}
     arMq(AR.mode === 'race' ? 'race' : 'king', 1);
     if (place <= 3) arMq('top3', 1);
@@ -17675,7 +17188,6 @@ function arResultsHud() {
     ctx.fillStyle = OL; ctx.fillRect(28, y - 3, W - 56, 52); ctx.fillStyle = '#2a1a5a'; ctx.fillRect(31, y, W - 62, 46);
     text(tr('НАГРАДА', 'REWARD'), W / 2, y + 14, 1, '#c8b8f0', 'center', OL);
     trophyIcon(68, y + 34, 0.7); text('+' + AR.rew.tro, 82, y + 40, 2, '#ffd23a', 'left', OL);
-    text('+' + AR.rew.xp + ' XP', W / 2 + 10, y + 40, 2, '#c87aff', 'center', OL);
     coinIcon(W - 110, y + 32, 7); text('+' + AR.rew.coins, W - 98, y + 40, 2, '#ffffff', 'left', OL);
     ctx.globalAlpha = 1;
   }
@@ -17747,6 +17259,18 @@ function arMqToday() {
 }
 const mqDef = x => MQ_POOL.find(d => d.id === x.id) || MQ_POOL[0];
 function arMq(id, n) { if (!n) return; const q = arMqToday(); let ch = false; for (const x of q.list) if (x.id === id && !x.done) { x.prog = Math.min(mqDef(x).g[x.lv], x.prog + n); ch = true; } if (ch) store.set('mq', q); }
+function arQIcon(id, size) {   // значок режима: флаг забега, корона, пьедестал, кубок
+  const c = document.createElement('canvas'); c.width = c.height = 32; c.style.cssText = 'width:' + size + 'px;height:' + size + 'px;flex:none;image-rendering:pixelated;border:3px solid #2a1408;border-radius:9px;background:' + (id === 'race' ? '#3ab0ff' : id === 'top3' ? '#a64aff' : '#ffb02a');
+  withCtx(c, () => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
+    const P = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+    if (id === 'race') { P(7, 4, 3, 25, OL); P(8, 5, 1, 23, '#e8eef8'); for (let i = 0; i < 4; i++) for (let r = 0; r < 3; r++) P(10 + i * 4, 5 + r * 4 + (i % 2), 4, 4, (i + r) % 2 ? '#ffffff' : '#1a1a24'); }
+    else if (id === 'top3') { P(3, 18, 8, 10, '#e8eef8'); P(12, 12, 8, 16, '#ffd23a'); P(21, 21, 8, 7, '#e0904a'); P(3, 28, 26, 2, OL); P(15, 15, 2, 6, OL); P(6, 21, 2, 4, OL); P(24, 23, 2, 3, OL); }
+    else if (id === 'win') { P(9, 5, 14, 10, OL); P(10, 6, 12, 8, '#ffd23a'); P(5, 7, 4, 2, OL); P(23, 7, 4, 2, OL); P(14, 15, 4, 6, OL); P(10, 21, 12, 4, OL); P(11, 22, 10, 2, '#c8820a'); P(12, 7, 2, 5, '#fff6a0'); P(15, 8, 2, 4, OL); }
+    else { P(5, 12, 22, 12, OL); P(3, 6, 6, 9, OL); P(13, 3, 6, 9, OL); P(23, 6, 6, 9, OL); P(6, 14, 20, 8, '#ffd23a'); P(4, 8, 4, 7, '#ffd23a'); P(14, 5, 4, 7, '#ffd23a'); P(24, 8, 4, 7, '#ffd23a'); P(15, 16, 2, 2, '#ff3d7f'); P(8, 17, 2, 2, '#3ab0ff'); P(22, 17, 2, 2, '#3ab0ff'); P(7, 14, 5, 2, '#fff6a0'); }
+  });
+  return c;
+}
 function arQuestsCard() {
   const wrap = moEl('div'); wrap.style.marginTop = '14px';
   const h = moTxt('div', 'ol', tr('ЗАДАНИЯ РЕЖИМОВ', 'MODE QUESTS')); h.style.cssText = 'font-size:18px;color:#ffd23a;text-align:center;margin-bottom:6px;letter-spacing:2px'; wrap.appendChild(h);
@@ -17754,7 +17278,7 @@ function arQuestsCard() {
   const q = arMqToday();
   for (const x of q.list) {
     const d = mqDef(x), goal = d.g[x.lv], ready = !x.done && x.prog >= goal, c = moEl('div', 'card' + (ready ? ' glow' : '')); c.style.marginTop = '8px';
-    c.appendChild(moTxt('div', 'ol', tr(d.ru, d.en).replace('{n}', goal)));
+    const hd = moEl('div', 'row'); hd.append(arQIcon(x.id, 34), moTxt('div', 'ol', tr(d.ru, d.en).replace('{n}', goal))); c.appendChild(hd);
     const bar = moEl('div', 'bar'); bar.style.margin = '8px 0'; bar.innerHTML = `<i style="width:${Math.min(100, x.prog / goal * 100)}%"></i><b>${Math.min(x.prog, goal)} / ${goal}</b>`; c.appendChild(bar);
     const row = moEl('div', 'row'); row.append(iconCnv('coins', 0, 24), moTxt('span', 'ol', '+' + d.c[x.lv]), moTxt('span', 'sm', '  + ' + d.xp[x.lv] + ' XP PASS'));
     const b = moTxt('button', 'btn ' + (x.done ? 'off' : ready ? 'gold' : 'off'), x.done ? '✓' : ready ? tr('ЗАБРАТЬ', 'CLAIM') : '…'); b.style.marginLeft = 'auto';
@@ -17825,10 +17349,23 @@ function accData() {
 const accSaveMeta = a => { try { localStorage.setItem('wpAccs', JSON.stringify(a)); } catch (e) {} };
 function accSnap() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('wk3_')) o[k] = localStorage.getItem(k); } } catch (e) {} return o; }
 function accClearGame() { try { const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('wk3_')) ks.push(k); } ks.forEach(k => localStorage.removeItem(k)); } catch (e) {} for (const k in memStore) if (k.startsWith('wk3_')) delete memStore[k]; }
-function accMine(a) { const me = a.list.find(x => x.id === a.cur); if (me) { me.n = mp.nick || ''; me.av = META.prof.av; me.tr = troTotal(); me.b = best; } }
-function accSwitch(toId) {   // сохраняем текущий аккаунт, подставляем другой (или пустой — новый) и перезапускаем игру
+function accMine(a) { const me = a.list.find(x => x.id === a.cur); if (me) { me.n = mp.nick || ''; me.av = META.prof.av; me.tr = troTotal(); me.b = best; me.em = acctG() ? String((acctInfo() || {}).email || '') : ''; } }
+function accEmailOf(x) { if (x.em) return x.em; try { const sn = JSON.parse(localStorage.getItem('wpAcc_' + x.id) || '{}'), ac2 = sn && sn.wk3_acct ? JSON.parse(sn.wk3_acct) : null; return ac2 && ac2.g ? String(ac2.email || '') : ''; } catch (e) { return ''; } }
+// одна почта — один аккаунт: вошёл через Google, который уже есть в другом аккаунте на этом устройстве, — сразу переходим туда
+function accEmailCheck(email) {
+  const a = accData(), em = String(email || '').toLowerCase(); if (!em) return;
+  const other = a.list.find(x => x.id !== a.cur && accEmailOf(x).toLowerCase() === em); if (!other) return;
+  try { mpNote(tr('ЭТА ПОЧТА УЖЕ ЕСТЬ — ПЕРЕХОДИМ В ТВОЙ АККАУНТ', 'THIS EMAIL ALREADY HAS AN ACCOUNT — SWITCHING TO IT')); } catch (e) {}
+  const fresh = saveFresh();
+  setTimeout(() => accSwitch(other.id, { drop: fresh, unlink: !fresh }), 900);
+}
+function accSwitch(toId, opt = {}) {   // сохраняем текущий аккаунт, подставляем другой (или пустой — новый) и перезапускаем игру
   const a = accData(); accMine(a);
-  try { localStorage.setItem('wpAcc_' + a.cur, JSON.stringify(accSnap())); } catch (e) { mpNote(tr('НЕТ МЕСТА ДЛЯ СОХРАНЕНИЯ', 'NO SPACE TO SAVE')); return; }
+  if (opt.drop) { a.list = a.list.filter(x => x.id !== a.cur); try { localStorage.removeItem('wpAcc_' + a.cur); } catch (e) {} }   // пустой аккаунт с той же почтой не нужен
+  else {
+    const sn = accSnap(); if (opt.unlink) { delete sn.wk3_acct; delete sn.wk3_fbAuth; const me = a.list.find(x => x.id === a.cur); if (me) me.em = ''; }   // почта остаётся только у одного аккаунта
+    try { localStorage.setItem('wpAcc_' + a.cur, JSON.stringify(sn)); } catch (e) { mpNote(tr('НЕТ МЕСТА ДЛЯ СОХРАНЕНИЯ', 'NO SPACE TO SAVE')); return; }
+  }
   store.set = () => {}; store.onSet = null;   // старый аккаунт больше ничего не пишет
   accClearGame();
   if (toId) { let snap = {}; try { snap = JSON.parse(localStorage.getItem('wpAcc_' + toId) || '{}') || {}; } catch (e) {} for (const k in snap) if (k.startsWith('wk3_') && typeof snap[k] === 'string') try { localStorage.setItem(k, snap[k]); } catch (e) {} a.cur = toId; }
@@ -17836,6 +17373,7 @@ function accSwitch(toId) {   // сохраняем текущий аккаунт
   accSaveMeta(a);
   setTimeout(() => location.reload(), 150);
 }
+{ const s0 = store.set; store.set = function (k, v) { s0.call(store, k, v); if (k === 'acct' && v && v.g && v.email) setTimeout(() => accEmailCheck(v.email), 300); }; }
 function accDelete(id) { const a = accData(); if (id === a.cur) return; a.list = a.list.filter(x => x.id !== id); try { localStorage.removeItem('wpAcc_' + id); } catch (e) {} accSaveMeta(a); }
 function openAccounts() {
   moOpen(tr('АККАУНТЫ', 'ACCOUNTS'), bd => {
@@ -17847,6 +17385,7 @@ function openAccounts() {
       r.appendChild(framed(avatarCnv(x.av || 'hamster', 44), 'basic', 2));
       const col = moEl('div'); col.style.cssText = 'flex:1;min-width:0';
       col.appendChild(moTxt('div', 'ol', (x.n || tr('АККАУНТ ', 'ACCOUNT ') + (i + 1)) + (cur ? tr(' — СЕЙЧАС', ' — CURRENT') : '')));
+      if (x.em) { const em = moTxt('div', 'sm', x.em); em.style.textTransform = 'none'; col.appendChild(em); }
       const st = moEl('div', 'row'); st.style.cssText = 'gap:6px;font-size:11px;margin-top:3px'; st.append(iconCnv('trophy', 0, 14), moTxt('span', '', String(x.tr | 0)), moTxt('span', 'sm', '  ' + (x.b | 0) + T('m'))); col.appendChild(st);
       r.appendChild(col);
       if (!cur) {
@@ -17867,7 +17406,7 @@ function openAccounts() {
 reset();
 window.__game = { get FR() { return FR; }, get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; },
   // для автотестов и замеров скорости
-  get mp() { return mp; }, get AR() { return AR; }, arPlay, arInfo, mpOpen, openBoard, openPass, openQuests, openAccounts, arLobby, mpHi, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
+  get mp() { return mp; }, get AR() { return AR; }, store2(sc) { state = "shop"; shopMain = 1; storeScroll = sc; sv = null; }, arPlay, arInfo, mpOpen, openBoard, openPass, openQuests, openAccounts, accEmailCheck, arLobby, mpHi, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
   bench(n = 60) { const t0 = performance.now(); for (let i = 0; i < n; i++) { time += 1 / 60; draw(); } return (performance.now() - t0) / n; } };
 requestAnimationFrame(frame);
 // Музыка включается сразу: если браузер разрешает звук — с первой секунды, иначе от самого первого касания или клавиши
