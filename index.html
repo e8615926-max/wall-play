@@ -8463,7 +8463,7 @@ function shopClick(pt) {
     pt = { x: pt.x, y: pt.y + storeScroll };   // страница прокручена
     const deals = dailyDeals(), pd = { x: pt.x, y: pt.y - DEALS_SHIFT };
     for (let i = 0; i < deals.length; i++) if (inRect(pd, dealRect(i))) { svOpen(deals[i].k, dealPrice(deals[i].k, deals[i].off)); return; }
-    if (canClaim() && inRect(pd, CLAIM_BTN)) { claimDaily(); return; }
+    if (canClaim() && inRect(pd, CLAIM_BTN)) { const rw = DAILY[nextStreak() - 1]; claimDaily(); if (rw.c) coinFly(pt.x, pt.y - storeScroll, rw.c, 'c'); if (rw.g) coinFly(pt.x, pt.y - storeScroll, rw.g, 'g'); return; }
     if (inRect(pd, COSM_BANNER)) { sfx.click(); openCosmetics(); return; }
     pt = { x: pt.x, y: pt.y - PREM_TR };
     if (GOLD.some((G2, i) => inRect(pt, goldRect(i)))) buyGold(GOLD.findIndex((G2, i) => inRect(pt, goldRect(i))));
@@ -8478,7 +8478,7 @@ const MODAL_PANEL = { x: 20, y: 150, w: W - 40, h: 340 };
 const MODAL_OK = { x: W / 2 - 70, y: 430, w: 140, h: 38 };
 function modalClick(pt) {
   if (modal.kind === 'daily') {
-    if (canClaim() && inRect(pt, MODAL_OK)) { claimDaily(); modal = null; return; }
+    if (canClaim() && inRect(pt, MODAL_OK)) { const rw = DAILY[nextStreak() - 1]; claimDaily(); modal = null; if (rw.c) coinFly(pt.x, pt.y, rw.c, 'c'); if (rw.g) coinFly(pt.x, pt.y, rw.g, 'g'); return; }
     if (!inRect(pt, MODAL_PANEL) || inRect(pt, MODAL_OK)) modal = null;
     return;
   }
@@ -10833,6 +10833,58 @@ function drawHand(x, y) {   // перчатка жмёт: палец опуск�
   prect(ctx, x - 14, y + 60, 52, 10, '#ff7a2a'); prect(ctx, x - 14, y + 60, 52, 3, '#ffb07a'); prect(ctx, x - 14, y + 68, 52, 2, '#c04a00');   // манжета
   if (down) for (let k = 0; k < 3; k++) prect(ctx, x - 12 + k * 13, y - 16 - (k === 1 ? 6 : 0), 4, 8, '#ffffff');
 }
+
+// ---------- полёт монет: из места награды — к счётчику; сумма на счётчике догоняет, как в играх ----------
+const FLY = [], flyPend = { c: 0, g: 0 };
+let flyChipT = 0, flyLast = 0;
+const flyShown = k => (k === 'g' ? gems : bank) - flyPend[k];
+function flyTarget(k) {   // где сумма: в магазине — плашки сверху справа, в меню — слева над кнопками; иначе — своя плашка сверху справа
+  if (state === 'shop') return k === 'g' ? { x: 247, y: 34 } : { x: 247, y: 13 };
+  if (state === 'menu' && !screenCovered()) return k === 'g' ? { x: 116, y: 250 } : { x: 24, y: 250 };
+  return { x: W - 82, y: 24, chip: 1 };
+}
+function coinFly(x, y, amount, k = 'c') {
+  amount = Math.floor(amount); if (!(amount > 0)) return;
+  const n = clamp(Math.round(amount / 20), 6, 14); flyPend[k] += amount;
+  for (let i = 0; i < n; i++) { const share = i === n - 1 ? amount - Math.floor(amount / n) * (n - 1) : Math.floor(amount / n); FLY.push({ k, x0: x + rand(-14, 14), y0: y + rand(-8, 8), t: -i * 0.06, sp: rand(0.85, 1.1), side: rand(-60, 60), share }); }
+  try { noise(0.08, 0.05, 3000); } catch (e) {}
+}
+function drawCoinFly() {
+  const now = performance.now(), dt = Math.min(0.05, (now - (flyLast || now)) / 1000); flyLast = now;
+  if (!FLY.length && flyChipT <= 0) return;
+  for (let i = FLY.length - 1; i >= 0; i--) {
+    const f = FLY[i]; f.t += dt * 1.6 * f.sp; if (f.t < 0) continue;
+    const T = flyTarget(f.k), q = Math.min(1, f.t), e = q * q * (3 - 2 * q);
+    const x = f.x0 + (T.x - f.x0) * e + Math.sin(q * Math.PI) * f.side, y = f.y0 + (T.y - f.y0) * e - Math.sin(q * Math.PI) * 50;
+    if (f.k === 'g') gemIcon(x, y, 0.5 + (1 - q) * 0.2); else coinIcon(x, y, 6, Math.abs(Math.cos(f.t * 9)));
+    if (q >= 1) { FLY.splice(i, 1); flyPend[f.k] = Math.max(0, flyPend[f.k] - f.share); try { tone(f.k === 'g' ? 2093 : 1568 + Math.random() * 200, f.k === 'g' ? 2637 : 2093, 0.07, 'square', 0.03); } catch (e) {} for (let s2 = 0; s2 < 4; s2++) burst(T.x, T.y, 1, f.k === 'g' ? '#bff4ff' : '#fff6a0', 120, 0.3, 3, 0, 'star'); flyChipT = 1.2; }
+  }
+  if (FLY.some(f => flyTarget(f.k).chip) || (flyChipT > 0 && flyTarget('c').chip)) {   // своей плашки на экране нет — появляется на время
+    flyChipT -= dt; const a = clamp(flyChipT / 0.3, 0, 1) || (FLY.length ? 1 : 0), x = W - 108, y = 10;
+    ctx.globalAlpha = FLY.length ? 1 : a;
+    ctx.fillStyle = OL; ctx.fillRect(x - 2, y - 2, 102, 26); ctx.fillStyle = '#3a2a5a'; ctx.fillRect(x, y, 98, 22); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x, y, 98, 5);
+    coinIcon(x + 14, y + 11, 7); text(String(flyShown('c')), x + 28, y + 18, 2, '#ffffff', 'left', null, 66);
+    ctx.globalAlpha = 1;
+  } else if (!FLY.length) flyChipT = 0;
+}
+// в окнах (Pass, задания) — монеты летят к плашке, которая появляется сверху справа
+function domCoinFly(from, amount, k = 'c') {
+  amount = Math.floor(amount); if (!(amount > 0) || !from || !from.getBoundingClientRect) return;
+  let chip = document.getElementById('flyChip'); const cur = (k === 'g' ? gems : bank);
+  if (!chip) { chip = document.createElement('div'); chip.id = 'flyChip'; chip.style.cssText = 'position:fixed;z-index:150;right:12px;top:calc(max(10px,env(safe-area-inset-top)) + 4px);display:flex;align-items:center;gap:6px;padding:5px 12px 5px 6px;border:3px solid #2a1408;border-radius:12px;background:linear-gradient(#4a3a7a,#24184a);box-shadow:0 4px 0 #120a24;color:#fff;font:900 18px Montserrat,sans-serif;text-shadow:0 2px 0 #2a1408;transition:transform .15s;pointer-events:none'; document.body.appendChild(chip); }
+  chip.innerHTML = ''; chip.append(iconCnv(k === 'g' ? 'gems' : 'coins', 0, 26)); const num = document.createElement('span'); chip.appendChild(num);
+  let shown = cur - amount; num.textContent = String(shown); clearTimeout(chip.hideT); chip.style.opacity = '1';
+  const a = from.getBoundingClientRect(), n = clamp(Math.round(amount / 20), 6, 12);
+  for (let i = 0; i < n; i++) {
+    const o = iconCnv(k === 'g' ? 'gems' : 'coins', 0, 24); o.style.cssText += `;position:fixed;z-index:149;left:${a.left + a.width / 2 - 12 + rand(-12, 12)}px;top:${a.top + a.height / 2 - 12 + rand(-6, 6)}px;pointer-events:none;transition:transform .75s cubic-bezier(.45,-0.35,.6,1);transition-delay:${i * 55}ms`;
+    document.body.appendChild(o);
+    const t = chip.getBoundingClientRect(), dx = t.left + 18 - (a.left + a.width / 2), dy = t.top + t.height / 2 - (a.top + a.height / 2);
+    requestAnimationFrame(() => requestAnimationFrame(() => { o.style.transform = `translate(${dx}px,${dy}px) scale(.8) rotate(${rand(-200, 200)}deg)`; }));
+    const share = i === n - 1 ? amount - Math.floor(amount / n) * (n - 1) : Math.floor(amount / n);
+    setTimeout(() => { o.remove(); shown += share; num.textContent = String(shown); chip.style.transform = 'scale(1.15)'; setTimeout(() => { chip.style.transform = ''; }, 90); try { tone(1568 + i * 40, 2093, 0.07, 'square', 0.03); } catch (e) {} }, 780 + i * 55);
+  }
+  chip.hideT = setTimeout(() => { chip.style.opacity = '0'; chip.style.transition = 'opacity .4s'; setTimeout(() => chip.remove(), 450); }, 1700 + n * 55);
+}
 function drawToast() {   // достижение: выезжает с отскоком, золотая рамка с бликом, лучи за кубком и искры
   if (!toasts.length) return;
   const tt = toasts[0], a = tt.a, t = tt.t;
@@ -10982,8 +11034,8 @@ function priceDraw(cx, y, pr, k = 1, col = OL) {
 }
 function drawMenu() {
   drawLogo(92);
-  coinIcon(24, 250); text(String(bank), 36, 260, 2, '#ffffff', 'left', OL, 70);
-  gemIcon(116, 250, 0.8); text(String(gems), 130, 260, 2, '#bfeaff', 'left', OL, 56);
+  coinIcon(24, 250); text(String(flyShown('c')), 36, 260, 2, '#ffffff', 'left', OL, 70);
+  gemIcon(116, 250, 0.8); text(String(flyShown('g')), 130, 260, 2, '#bfeaff', 'left', OL, 56);
   rubyIcon(196, 250, 0.7); text(String(rubies), 210, 260, 2, '#ffc0c8', 'left', OL, 50);
   trophyIcon(270, 250); text(best + T('m'), 284, 260, 2, '#ffffff', 'left', OL, 72);
   button(BTN.shop, T('heroes'), '#ff3d7f', '#c01f5a');
@@ -10992,7 +11044,7 @@ function drawMenu() {
   if (freeSpin()) freeTag(BTN.store.x + BTN.store.w / 2, BTN.store.y - 2);   // бесплатное колесо — в магазине
   button(BTN.mp, tr('СЕТЬ', 'ONLINE'), '#14b8b8', '#0a7a7a');
   drawTopIcons();
-  if (state === 'menu' && p && p.state !== 'dead') drawStreak(p.x + 22, p.y - 40, heroStk(skinId), 1);   // страйк героя — рядом с ним
+  if (state === 'menu' && p && p.state !== 'dead') drawStreak(p.x + 24, p.y - camR - 44, heroStk(skinId), 1);   // страйк героя — рядом с ним
   // спрятанные кнопки выезжают вниз из-под стрелки
   menuMoreT = clamp(menuMoreT + (menuMore ? 1 : -1) * dtMenu() * 6, 0, 1);
   if (menuMoreT > 0) {
@@ -13694,6 +13746,7 @@ function moneyPlates(x, y0, w = 118) {
     const y = y0 + i * 20;
     ctx.fillStyle = OL; ctx.fillRect(x, y, w, 19); ctx.fillStyle = bg; ctx.fillRect(x + 2, y + 2, w - 4, 15); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x + 2, y + 2, w - 4, 4);
     if (i === 0) coinIcon(x + 13, y + 9.5, 5.5); else if (i === 1) gemIcon(x + 13, y + 10, 0.55); else rubyIcon(x + 13, y + 9.5, 0.5);
+    if (i < 2) v -= flyPend[i ? 'g' : 'c'];
     text(String(v), x + 25, y + 16, 2, col, 'left', null, w - 30);
   });
 }
@@ -13752,15 +13805,31 @@ function giftIcon(x, y, s = 1) {   // подарок с лентой и бант
 function dailyBox(rw, i, r, done, now) {
   const day = i + 1;
   ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
-  ctx.fillStyle = done ? '#5a4a7a' : now ? '#ffd23a' : day === 7 ? '#e0b0ff' : '#ffffff'; ctx.fillRect(r.x, r.y, r.w, r.h);
-  if (now) { ctx.fillStyle = '#fff6a0'; ctx.fillRect(r.x, r.y, r.w, 4); ctx.fillStyle = '#e8a820'; ctx.fillRect(r.x, r.y + r.h - 4, r.w, 4); }
-  text(String(day), r.x + r.w / 2, r.y + 14, 1, done ? '#c8b8e0' : OL, 'center', null);
-  if (rw.c) coinIcon(r.x + 20, r.y + 32, 6);
-  else if (rw.g) gemIcon(r.x + 20, r.y + 32, 0.6);
+  { const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); const c = done ? ['#8a7aa8', '#5a4a7a'] : now ? ['#fff6a0', '#ffb02a'] : day === 7 ? ['#f4d0ff', '#c07aff'] : ['#ffffff', '#e0d8f0']; g.addColorStop(0, c[0]); g.addColorStop(1, c[1]); ctx.fillStyle = g; ctx.fillRect(r.x, r.y, r.w, r.h); }
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(r.x, r.y, r.w, 3); ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(r.x, r.y + r.h - 3, r.w, 3);
+  ctx.fillStyle = done ? '#4a3a6a' : OL; ctx.fillRect(r.x, r.y, r.w, 15); text(String(day), r.x + r.w / 2, r.y + 12, 1, done ? '#c8b8e0' : '#ffd23a', 'center', null);   // номер дня — на тёмной плашке
+  if (rw.c) coinGem(r.x + 20, r.y + 35, 0.78, done);
+  else if (rw.g) gemIcon(r.x + 20, r.y + 35, 0.78);
   else if (rw.roll) rouletteIcon(r.x + r.w / 2, r.y + 38, done ? 0 : time, done);
   else { const bb = done ? 0 : Math.abs(Math.sin(time * 4)) * 3; if (!done) { ctx.globalAlpha = 0.35 + Math.sin(time * 5) * 0.15; pell(ctx, r.x + 20, r.y + 36, 16, 16, '#fff6a0'); ctx.globalAlpha = 1; } giftIcon(r.x + 20, r.y + 40 - bb, 0.9); }
-  if (rw.c || rw.g) text(String(rw.c || rw.g), r.x + r.w / 2, r.y + 58, 1, done ? '#c8b8e0' : OL, 'center', null);
-  if (done) { prect(ctx, r.x + 10, r.y + 30, 4, 4, '#3ce06a'); prect(ctx, r.x + 14, r.y + 34, 4, 4, '#3ce06a'); prect(ctx, r.x + 18, r.y + 30, 4, 4, '#3ce06a'); prect(ctx, r.x + 22, r.y + 26, 4, 4, '#3ce06a'); prect(ctx, r.x + 26, r.y + 22, 4, 4, '#3ce06a'); }
+  if (rw.c || rw.g) text(String(rw.c || rw.g), r.x + r.w / 2, r.y + 60, 1, done ? '#e8e0ff' : OL, 'center', done ? OL : null);
+  if (done) {   // получено: зелёный значок с галочкой поверх затемнённой коробки
+    ctx.globalAlpha = 0.35; ctx.fillStyle = '#1a0a30'; ctx.fillRect(r.x, r.y + 15, r.w, r.h - 15); ctx.globalAlpha = 1;
+    const cx = r.x + r.w / 2, cy = r.y + 38; pell(ctx, cx, cy + 1, 14, 14, OL); pell(ctx, cx, cy, 12, 12, '#1a9a3a'); pell(ctx, cx, cy - 1, 10, 10, '#3ce06a'); pell(ctx, cx - 4, cy - 5, 3, 2, '#b8ffc8');
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx - 1, cy + 5); ctx.lineTo(cx + 7, cy - 5); ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke(); ctx.lineCap = 'butt';
+  }
+}
+// монета в стиле кристалла: толстый контур, грани, блик — как значок алмаза рядом с ней
+function coinGem(x, y, s = 1, dull) {
+  const R = 11 * s;
+  ctx.lineWidth = Math.max(2, 3.2 * s); ctx.strokeStyle = OL;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fillStyle = dull ? '#a08a50' : '#e8a010'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, R * 0.78, 0, Math.PI * 2); ctx.fillStyle = dull ? '#c8b070' : '#ffd23a'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x, y - R * 0.78); ctx.arc(x, y, R * 0.78, -Math.PI / 2, Math.PI / 2); ctx.closePath(); ctx.fillStyle = dull ? '#b89a60' : '#f0b820'; ctx.fill();   // тень на правой половине
+  ctx.fillStyle = dull ? '#8a7440' : '#c8820a'; ctx.fillRect(x - 1.5 * s, y - 5 * s, 3 * s, 10 * s); ctx.fillRect(x - 4 * s, y - 3 * s, 8 * s, 2 * s); ctx.fillRect(x - 4 * s, y + 1 * s, 8 * s, 2 * s);   // знак на монете
+  ctx.beginPath(); ctx.arc(x - R * 0.35, y - R * 0.35, R * 0.22, 0, Math.PI * 2); ctx.fillStyle = '#fffbe0'; ctx.fill();
+  if (!dull && Math.sin(time * 3 + x) > 0.85) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + R * 0.4, y - R * 0.9, 2, 6); ctx.fillRect(x + R * 0.4 - 2, y - R * 0.9 + 2, 6, 2); }
 }
 // значок рулетки 7-го дня: крутящийся круг с секторами редкостей и стрелкой
 function rouletteIcon(cx, cy, t, done) {
@@ -13780,8 +13849,9 @@ function redDot(x, y, s = 1) {
 function dailyPlate(y) {
   const x0 = 18, w = W - 36, h = 86, cur = nextStreak() - (canClaim() ? 1 : 0);
   ctx.fillStyle = OL; ctx.fillRect(x0 - 3, y - 12, w + 6, h + 6);
-  const g = ctx.createLinearGradient(0, y - 9, 0, y + h - 9); g.addColorStop(0, '#4a2a7a'); g.addColorStop(1, '#1a0a3a'); ctx.fillStyle = g; ctx.fillRect(x0, y - 9, w, h);
-  ctx.fillStyle = '#ffd23a'; ctx.fillRect(x0, y - 9, w, 2); ctx.fillRect(x0, y + h - 11, w, 2);
+  const g = ctx.createLinearGradient(0, y - 9, 0, y + h - 9); g.addColorStop(0, '#ffe27a'); g.addColorStop(0.45, '#e8a010'); g.addColorStop(1, '#8a4a00'); ctx.fillStyle = g; ctx.fillRect(x0, y - 9, w, h);   // золотая плашка
+  { const sh = ((time * 90) % (w + 80)) - 40; ctx.save(); ctx.beginPath(); ctx.rect(x0, y - 9, w, h); ctx.clip(); ctx.globalAlpha = 0.3; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(x0 + sh, y - 9); ctx.lineTo(x0 + sh + 18, y - 9); ctx.lineTo(x0 + sh - 8, y + h - 9); ctx.lineTo(x0 + sh - 26, y + h - 9); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1; }
+  ctx.fillStyle = '#fff6c0'; ctx.fillRect(x0, y - 9, w, 2); ctx.fillStyle = '#5a2a00'; ctx.fillRect(x0, y + h - 11, w, 2);
   for (const cx of [x0 + 4, x0 + w - 4]) { pell(ctx, cx, y - 7, 3, 3, '#ffd23a'); pell(ctx, cx, y + h - 11, 3, 3, '#ffd23a'); }
   const a = dayBox(0, y), b = dayBox(6, y), ty = y + a.h / 2, fill = clamp(cur / 6, 0, 1);
   ctx.fillStyle = OL; ctx.fillRect(a.x + 10, ty - 3, b.x - a.x, 6); ctx.fillStyle = '#3a2a5a'; ctx.fillRect(a.x + 10, ty - 2, b.x - a.x, 4);
@@ -14596,6 +14666,7 @@ function draw() {
   if (modal) drawModal();
   if (chest) drawChest();
   drawToast();
+  drawCoinFly();
   if (fadeT > 0) { ctx.globalAlpha = clamp(fadeT / 0.6, 0, 1); ctx.fillStyle = '#fff6d8'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
 }
 
@@ -15567,7 +15638,7 @@ function openQuests() {
       const bar = moEl('div', 'bar'); bar.style.margin = '8px 0'; bar.innerHTML = `<i style="width:${Math.min(100, x.prog / goal * 100)}%"></i><b>${Math.min(x.prog, goal)} / ${goal}</b>`; c.appendChild(bar);
       const row = moEl('div', 'row'); row.append(iconCnv('coins', 0, 24), moTxt('span', 'ol', '+' + d.c[x.lv]), moTxt('span', 'sm', '  + ' + d.xp[x.lv] + ' XP PASS'));
       const b = moTxt('button', 'btn ' + (x.done ? 'off' : ready ? 'gold' : 'off'), x.done ? '✓' : ready ? tr('ЗАБРАТЬ', 'CLAIM') : '…'); b.style.marginLeft = 'auto';
-      if (ready) b.onclick = () => { if (b.disabled) return; b.disabled = true; x.done = true; store.set('quests', q); bank += d.c[x.lv]; saveMoney(); xpFly(b, d.xp[x.lv], () => { moRefresh(); moReward(tr('ЗАДАНИЕ ВЫПОЛНЕНО!', 'QUEST DONE!'), iconCnv('coins', 0, 80), '+' + d.c[x.lv] + '  •  +' + d.xp[x.lv] + ' XP'); }); };
+      if (ready) b.onclick = () => { if (b.disabled) return; b.disabled = true; x.done = true; store.set('quests', q); bank += d.c[x.lv]; saveMoney(); domCoinFly(b, d.c[x.lv], 'c'); xpFly(b, d.xp[x.lv], () => { moRefresh(); moReward(tr('ЗАДАНИЕ ВЫПОЛНЕНО!', 'QUEST DONE!'), iconCnv('coins', 0, 80), '+' + d.c[x.lv] + '  •  +' + d.xp[x.lv] + ' XP'); }); };
       row.appendChild(b); c.appendChild(row); bd.appendChild(c);
     }
     const all = q.list.every(x => x.done), c = moEl('div', 'card' + (all && !q.bonus ? ' glow' : ''));
@@ -15652,7 +15723,7 @@ function openPass() {
         c.appendChild(passRewNode(rw, 40));
         if (got) c.appendChild(moTxt('div', 'ck', '✓'));
         else if (!open) { const l = moTxt('div', 'lk', prem && !v.prem ? '👑' : '🔒'); c.appendChild(l); }
-        if (can) c.onclick = () => { passSfx(prem); if (prem) v.cp = t; else v.cf = t; store.set('pass', v); const stay = passGive(rw); if (stay) { moRefresh(); moReward(tr('НАГРАДА PASS!', 'PASS REWARD!'), passRewNode(rw, 80)); } };
+        if (can) c.onclick = () => { passSfx(prem); if (prem) v.cp = t; else v.cf = t; store.set('pass', v); const stay = passGive(rw); if (rw.k === 'coins' || rw.k === 'gems') domCoinFly(c, rw.n, rw.k === 'gems' ? 'g' : 'c'); if (stay) { moRefresh(); moReward(tr('НАГРАДА PASS!', 'PASS REWARD!'), passRewNode(rw, 80)); } };
         return c;
       };
       const num = moTxt('div', 'num ol', String(t));
@@ -16549,6 +16620,21 @@ setInterval(() => {
 }, 1000);
 
 // карточка «код друга» для профиля: свой код и поле, куда вписать код друга
+// игру открыли по ссылке друга (?f=КОД): спрашиваем один раз и отправляем заявку
+const FR_LINK = (() => { try { const v = new URLSearchParams(location.search).get('f'); return v && /^[A-Za-z0-9]{7}$/.test(v) ? v : ''; } catch (e) { return ''; } })();
+function frLinkOffer() {
+  if (!FR_LINK || frLinkOffer.done || !fbOn()) return; frLinkOffer.done = true;
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  moOpen(tr('ДРУГ ЗОВЁТ!', 'A FRIEND INVITES YOU!'), bd => {
+    const c = moEl('div', 'card'); c.style.textAlign = 'center';
+    c.append(moTxt('div', 'ol', tr('ДОБАВИТЬ В ДРУЗЬЯ ИГРОКА С КОДОМ', 'ADD THE PLAYER WITH CODE')), moTxt('div', 'ol big', FR_LINK));
+    const msg = moTxt('div', 'sm', ''); msg.style.marginTop = '8px';
+    const b = moTxt('button', 'btn gold', tr('ДОБАВИТЬ', 'ADD')); b.style.cssText += ';width:100%;margin-top:12px';
+    b.onclick = async () => { sfx.click(); b.disabled = true; const er = await frAdd(FR_LINK); msg.textContent = er || tr('ЗАЯВКА ОТПРАВЛЕНА!', 'REQUEST SENT!'); msg.style.color = er ? '#ff8a8a' : '#3ce06a'; b.disabled = !er; };
+    c.append(b, msg); bd.appendChild(c);
+  });
+}
+setInterval(() => { if (FR_LINK && !frLinkOffer.done && state === 'menu' && !obOpen() && store.get('ob', 0)) frLinkOffer(); }, 1500);
 function frCodeCard() {
   const c = moEl('div', 'card');
   c.appendChild(moTxt('div', 'ol', tr('ДРУЗЬЯ', 'FRIENDS'))); c.lastChild.style.cssText = 'color:#ffd23a;margin-bottom:8px';
@@ -16559,13 +16645,23 @@ function frCodeCard() {
   const cp = moTxt('button', 'btn blue', tr('КОПИРОВАТЬ', 'COPY')); cp.style.fontSize = '11px';
   cp.onclick = () => { sfx.click(); const okc = () => pxiSet(cp, tr('ГОТОВО ✓', 'COPIED ✓')); try { navigator.clipboard.writeText(FR.code).then(okc, () => {}); } catch (e) {} };
   cr.appendChild(cp); c.appendChild(cr);
+  if (FR.code) {   // поделиться ссылкой: друг откроет её — и заявка уйдёт в одно нажатие
+    const sh = moTxt('button', 'btn gold', tr('ПОДЕЛИТЬСЯ ССЫЛКОЙ', 'SHARE A LINK')); sh.style.cssText += ';width:100%;margin:8px 0 4px';
+    sh.onclick = async () => { sfx.click(); const url = location.origin + location.pathname + '?f=' + encodeURIComponent(FR.code), txt = tr('Добавь меня в друзья в Wall Play!', 'Add me as a friend in Wall Play!');
+      try { if (navigator.share) { await navigator.share({ title: 'Wall Play', text: txt, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.clipboard.writeText(txt + ' ' + url); pxiSet(sh, tr('ССЫЛКА СКОПИРОВАНА ✓', 'LINK COPIED ✓')); } catch (e) {} };
+    c.appendChild(sh);
+  }
   c.appendChild(moTxt('div', 'sm', tr('ДАЙ ЭТОТ КОД ДРУГУ — ЕМУ НУЖНО ВПИСАТЬ ЕГО У СЕБЯ В ПРОФИЛЕ. БОЛЬШИЕ И МАЛЕНЬКИЕ БУКВЫ ВАЖНЫ.', 'GIVE THIS CODE TO A FRIEND — THEY ENTER IT IN THEIR PROFILE. UPPER AND LOWER CASE MATTER.'))); c.lastChild.style.margin = '6px 0 10px';
   const ar = moEl('div', 'row');
   const inp = document.createElement('input'); inp.maxLength = 7; inp.placeholder = tr('КОД ДРУГА', 'FRIEND CODE'); inp.autocapitalize = 'off'; inp.autocomplete = 'off'; inp.spellcheck = false;
   inp.style.cssText = 'flex:1;min-width:0;font:inherit;font-family:monospace;font-size:20px;letter-spacing:3px;text-transform:none;padding:9px;border:3px solid #2a1408;border-radius:10px;background:#fff;color:#2a1408';
+  const ps = moTxt('button', 'btn blue', tr('ВСТАВИТЬ', 'PASTE')); ps.style.fontSize = '11px';
+  ps.onclick = async () => { sfx.click(); try { const t = await navigator.clipboard.readText(); const m = String(t).match(/(?:[?&]f=)?([A-Za-z0-9]{7})(?![A-Za-z0-9])/); if (m) inp.value = m[1]; } catch (e) { inp.focus(); } };   // из буфера: код или целая ссылка
+  inp.addEventListener('input', () => { const v = inp.value.replace(/[^A-Za-z0-9]/g, ''); if (v !== inp.value) inp.value = v; });   // пробелы и лишние знаки — сразу убираем
   const ab = moTxt('button', 'btn', tr('ДОБАВИТЬ', 'ADD'));
   ab.onclick = async () => { sfx.click(); ab.disabled = true; const er = await frAdd(inp.value); ab.disabled = false; FR.err = er || ''; FR.note = er ? '' : tr('ЗАЯВКА ОТПРАВЛЕНА! ДРУГ УВИДИТ ЕЁ В «ДРУЗЬЯХ»', 'REQUEST SENT! YOUR FRIEND WILL SEE IT IN «FRIENDS»'); moRefresh(); };
-  ar.append(inp, ab); c.appendChild(ar);
+  ar.append(inp, ps, ab); c.appendChild(ar);
   if (FR.err) { const e = moTxt('div', 'sm', FR.err); e.style.cssText = 'color:#ff8a8a;margin-top:6px'; c.appendChild(e); }
   else if (FR.note) { const e = moTxt('div', 'sm', FR.note); e.style.cssText = 'color:#3ce06a;margin-top:6px'; c.appendChild(e); }
   return c;
@@ -16574,6 +16670,12 @@ function frCodeCard() {
 // ---------- экран «ДРУЗЬЯ»: письма и таблица друзей ----------
 // ---------- Новости: что нового в игре (кнопка-газета вверху меню; «!» — пока не прочитано) ----------
 const NEWS = [
+  { v: 6, d: '04.11.2026', hero: 'hamster', items: [
+    ['МЕНЮ WALL PLAY (КНОПКА ПОД ЗВУКОМ): ПОВТОРЫ РАУНДОВ ЗА 5 ДНЕЙ, КОНСТРУКТОР КАРТ И КАРТЫ НЕДЕЛИ.', 'THE WALL PLAY MENU (BUTTON UNDER SOUND): ROUND REPLAYS FROM 5 DAYS, A MAP MAKER AND MAPS OF THE WEEK.'],
+    ['СТРАЙК: ПОБЕДЫ ПОДРЯД В «СЕТИ» — ОГОНЁК В РЕЙТИНГЕ, ПРОФИЛЕ И НА КАЖДОМ ГЕРОЕ.', 'STREAK: WINS IN A ROW ONLINE — A FLAME IN THE RANKING, PROFILE AND ON EVERY HERO.'],
+    ['ЗОЛОТАЯ НАГРАДА ЗА ВХОД, А МОНЕТЫ ЛЕТЯТ ПРЯМО В КОШЕЛЁК.', 'A GOLDEN LOGIN REWARD, AND COINS FLY STRAIGHT INTO YOUR WALLET.'],
+    ['ДРУЗЕЙ ЛЕГКО ДОБАВИТЬ: ВСТАВИТЬ КОД ИЛИ ПОДЕЛИТЬСЯ ССЫЛКОЙ.', 'ADDING FRIENDS IS EASY: PASTE A CODE OR SHARE A LINK.'],
+  ] },
   { v: 5, d: '02.11.2026', hero: 'king', items: [
     ['В «СЕТИ» — РЕЖИМЫ! ЛИСТАЙ КАРТОЧКИ: ЗАБЕГ И ЦАРЬ ГОРЫ. 10 ИГРОКОВ, ПОДБОР ПО КУБКАМ.', 'MODES IN «ONLINE»! SWIPE THE CARDS: RACE AND KING OF THE HILL. 10 PLAYERS, MATCHED BY TROPHIES.'],
     ['ЗАБЕГ: КТО ПЕРВЫМ ДОЛЕЗЕТ ДО ФИНИША НА 300 М. ТРИ ФИНИША — И ПЬЕДЕСТАЛ С КОРОНОЙ.', 'RACE: FIRST TO THE FINISH AT 300 M. THREE FINISHERS — AND A PODIUM WITH A CROWN.'],
@@ -16963,7 +17065,7 @@ function arFinishLine() {
 // ---------- начало раунда ----------
 const arIntroLen = () => AR.mode === 'race' ? 8600 : 8400;
 function arBegin(o) {   // o: { mode, seed, bots:[{id,n,s,tr,sk}], king, delay, rtt }
-  AR.mode = o.mode; mp.mode = o.mode; AR.phase = 'intro'; AR.fin = {}; AR.res = null; AR.resT = 0; AR.spec = ''; AR.meFin = 0; AR.respT = 0; AR.kt = {}; AR.sh = 0; AR.king = ''; AR.kgFx = null; AR.given = false; AR.rew = null; AR.bots = {}; AR.takes = 0;
+  AR.mode = o.mode; mp.mode = o.mode; AR.phase = 'intro'; AR.fin = {}; AR.res = null; AR.resT = 0; AR.spec = ''; AR.meFin = 0; AR.respT = 0; AR.kt = {}; AR.sh = 0; AR.king = ''; AR.kgFx = null; AR.given = false; AR.rew = null; AR.bots = {}; AR.takes = 0; AR.flew = 0;
   for (const e of o.bots || []) mp.pl[e.id] = { nick: nickSan(e.n) || e.n, skin: skinById(e.s) ? e.s : 'hamster', bot: true, tro: e.tr | 0, ready: false, r: null, g: null, gone: 0 };
   mpBegin(o.seed, o.delay || arIntroLen(), o.rtt || 0);
   AR.t0 = Date.now() - (o.rtt || 0) / 2; AR.introLen = o.delay || arIntroLen();
@@ -17470,6 +17572,7 @@ function arResultsHud() {
     const d = clamp((t - 1.1 - i * 0.08) / 0.3, 0, 1), col = i % 2, row = Math.floor(i / 2), e = by(id);
     ctx.globalAlpha = d; arPlate(16 + col * 170, 272 + row * 40, 158, 30, e, i + 4, { extra: AR.mode === 'king' ? Math.floor(AR.kt[id] || 0) + tr('С', 'S') : AR.fin[id] != null ? arClock(AR.fin[id]) : arHeight(id) + tr('М', 'M') }); ctx.globalAlpha = 1;
   });
+  if (AR.rew && t > 1.6 && !AR.flew) { AR.flew = 1; coinFly(W - 90, 480, AR.rew.coins, 'c'); }
   if (AR.rew && t > 1.6) {
     const y = 448, d = clamp((t - 1.6) / 0.4, 0, 1); ctx.globalAlpha = d;
     ctx.fillStyle = OL; ctx.fillRect(28, y - 3, W - 56, 52); ctx.fillStyle = '#2a1a5a'; ctx.fillRect(31, y, W - 62, 46);
@@ -17573,7 +17676,7 @@ function arQuestsCard() {
     const bar = moEl('div', 'bar'); bar.style.margin = '8px 0'; bar.innerHTML = `<i style="width:${Math.min(100, x.prog / goal * 100)}%"></i><b>${Math.min(x.prog, goal)} / ${goal}</b>`; c.appendChild(bar);
     const row = moEl('div', 'row'); row.append(iconCnv('coins', 0, 24), moTxt('span', 'ol', '+' + d.c[x.lv]), moTxt('span', 'sm', '  + ' + d.xp[x.lv] + ' XP PASS'));
     const b = moTxt('button', 'btn ' + (x.done ? 'off' : ready ? 'gold' : 'off'), x.done ? '✓' : ready ? tr('ЗАБРАТЬ', 'CLAIM') : '…'); b.style.marginLeft = 'auto';
-    if (ready) b.onclick = () => { if (b.disabled) return; b.disabled = true; x.done = true; store.set('mq', q); bank += d.c[x.lv]; saveMoney(); xpFly(b, d.xp[x.lv], () => { moRefresh(); moReward(tr('ЗАДАНИЕ ВЫПОЛНЕНО!', 'QUEST DONE!'), iconCnv('coins', 0, 80), '+' + d.c[x.lv] + '  •  +' + d.xp[x.lv] + ' XP'); }); };
+    if (ready) b.onclick = () => { if (b.disabled) return; b.disabled = true; x.done = true; store.set('mq', q); bank += d.c[x.lv]; saveMoney(); domCoinFly(b, d.c[x.lv], 'c'); xpFly(b, d.xp[x.lv], () => { moRefresh(); moReward(tr('ЗАДАНИЕ ВЫПОЛНЕНО!', 'QUEST DONE!'), iconCnv('coins', 0, 80), '+' + d.c[x.lv] + '  •  +' + d.xp[x.lv] + ' XP'); }); };
     row.appendChild(b); c.appendChild(row); wrap.appendChild(c);
   }
   return wrap;
