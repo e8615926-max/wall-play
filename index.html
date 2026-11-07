@@ -8098,7 +8098,9 @@ cv.addEventListener('pointermove', e => { if (aim) { const q = toGame(e); aim.x 
 window.addEventListener('pointerup', () => { if (aim) pieFire(); });
 window.addEventListener('blur', release);
 window.addEventListener('keydown', e => {
-  if (mp.open) return;
+  if (mp.open || askPass.open || obOpen()) return;
+  // открыто окно поверх игры: клавиши не трогают игру под ним (раньше пробел из паузы → настройки → аккаунты запускал раунд под окном); Esc — назад
+  if (moUi && moUi.style.display !== 'none' && moStack.length) { if (e.code === 'Escape') moBack(); return; }
   idleT = 0; idleOnce = {};
   if (['Space', 'ArrowUp', 'KeyW', 'Enter'].includes(e.code)) {
     e.preventDefault();
@@ -9317,6 +9319,7 @@ function drawGround0() {
 }
 
 function drawHeightMarks() {
+  if (state === 'menu') return;   // в меню метки высоты и линия рекорда ложились на кнопки и кошелёк
   const step = 10 * PX_PER_M;
   const first = Math.floor((-(camY + H)) / step);
   for (let k = Math.max(1, first); k < first + 5; k++) {
@@ -14518,7 +14521,7 @@ function drawOver() {
   ctx.restore();
   if (overDone) {
     ctx.globalAlpha = a * (0.55 + Math.sin(time * 5) * 0.45);
-    text(T('again'), W / 2, H - 150, 2, '#ffffff');
+    text(T('again'), W / 2, H - 150, 2, '#ffffff', 'center', OL);
   }
   ctx.globalAlpha = 1;
   for (let i = overFx.length - 1; i >= 0; i--) {   // искры этапов
@@ -15390,18 +15393,20 @@ function openHero(id) {
       2000: { j: 1, nm: tr('ТИТУЛ', 'TITLE'), node: () => { const d = moTxt('div', 'ol', '«' + heroTitle(k.id) + '»'); d.style.cssText = 'color:#ffe680;font-size:12px;max-width:140px'; return d; }, give: () => { if (!META.titles.includes(k.id)) META.titles.push(k.id); } },
       3000: { j: 2, nm: tr('РАМКА', 'FRAME'), node: () => { const b = moEl('div'); b.style.cssText = 'width:130px;height:26px;border-radius:8px'; return framed(b, 'h:' + k.id, 4); }, give: () => { if (!META.frames.includes('h:' + k.id)) META.frames.push('h:' + k.id); } },
     };
-    let scrollTo = null;
+    let scrollTo = null, claimAt = null;   // окно открывается на награде, которую можно забрать, иначе — на следующем ранге
     RANKS.forEach(([need], ri) => {
       const rw = REW[need], reached = tro >= need, got = rw && (META.road[k.id] >> rw.j & 1), can = rw && reached && !got;
       const line = moEl('div', 'row' + (can ? ' glow' : ''));
       line.style.cssText += `;padding:8px;border:3px solid #2a1408;border-radius:12px;margin-top:8px;background:${can ? 'linear-gradient(90deg,#7a5a00,#3a2a6a)' : reached ? 'linear-gradient(90deg,#2a5a3a,#2a1a4a)' : '#2a1a4a'};opacity:${reached || can ? 1 : 0.75}`;
       const left = moEl('div'); left.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:64px;flex:none';
-      left.append(rankCnv(ri, 34), moTxt('div', 'sm', rankName(ri)));
+      const rn = moTxt('div', 'sm', rankName(ri)); if (rankName(ri).length > 9) rn.style.cssText += ';font-size:8px;letter-spacing:0';   // «ГРАНДМАСТЕР» не влезал в колонку
+      left.append(rankCnv(ri, 34), rn);
       const info = moEl('div'); info.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:0';
       const nr = moEl('div', 'row'); nr.style.gap = '4px'; nr.append(iconCnv('trophy', 0, 20), moTxt('span', 'ol', String(need))); info.appendChild(nr);
       if (!reached) { const bar = moEl('div', 'bar'); bar.style.width = '100%'; const prev = ri ? RANKS[ri - 1][0] : 0; bar.innerHTML = `<i style="width:${Math.max(0, Math.min(100, (tro - prev) / (need - prev) * 100))}%"></i><b>${tro} / ${need}</b>`; info.appendChild(bar); if (scrollTo === null) scrollTo = line; }
       if (rw) info.append(moTxt('div', 'sm', rw.nm), rw.node());
       line.append(left, info);
+      if (can && claimAt === null) claimAt = line;
       if (rw) {
         const b = moTxt('button', 'btn ' + (can ? 'gold' : 'off'), got ? '✓' : can ? tr('ЗАБРАТЬ', 'CLAIM') : '🔒');
         if (can) b.onclick = () => { META.road[k.id] = (META.road[k.id] || 0) | (1 << rw.j); rw.give(); metaSave(); boardPush(); moRefresh(); moReward(tr('НОВАЯ НАГРАДА!', 'NEW REWARD!'), rw.node(), rw.nm + ' — ' + skinName(k)); };
@@ -15410,7 +15415,8 @@ function openHero(id) {
       road.appendChild(line);
     });
     bd.appendChild(road);
-    if (scrollTo) setTimeout(() => { const b2 = moUi.querySelector('.bd'); if (b2 && b2.scrollTop === 0) b2.scrollTop = Math.max(0, scrollTo.offsetTop - 160); }, 0);
+    if (claimAt) scrollTo = claimAt;
+    if (scrollTo) setTimeout(() => { const b2 = moUi.querySelector('.bd'); if (b2 && b2.scrollTop === 0 && scrollTo.offsetTop + scrollTo.offsetHeight > b2.clientHeight) b2.scrollTop = Math.max(0, scrollTo.offsetTop - 160); }, 0);
     if (META.titles.includes(k.id)) {
       const c2 = moEl('div', 'card'), on = META.prof.title === k.id;
       c2.append(moTxt('div', 'sm', tr('ТИТУЛ ГЕРОЯ', 'HERO TITLE')), moTxt('div', 'ol', '«' + heroTitle(k.id) + '»'));
