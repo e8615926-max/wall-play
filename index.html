@@ -1405,13 +1405,19 @@ const memStore = {};
 // несколько ключей меню спрашивает каждый кадр (Pass, колесо, палатка, награда за вход, новости) — их разобранное
 // значение живёт секунду и сбрасывается при записи
 const STORE_RC = new Set(['pass', 'daily', 'wheelDay', 'tentDay', 'newsSeen']), storeRC = new Map();
+// место в браузере кончилось: прогресс важнее повторов раундов — выбрасываем их и пробуем снова; не вышло — предупреждаем
+function storeFull(key, val) {
+  try { localStorage.removeItem('wpReps'); localStorage.setItem(key, val); return; } catch (e) {}
+  if (storeFull.warned) return; storeFull.warned = true;
+  setTimeout(() => { try { mpNote(tr('В БРАУЗЕРЕ КОНЧИЛОСЬ МЕСТО — ПРОГРЕСС МОЖЕТ НЕ СОХРАНИТЬСЯ. УДАЛИ ЛИШНИЕ АККАУНТЫ ИЛИ СОХРАНИ КОД ПЕРЕНОСА', 'THE BROWSER IS OUT OF SPACE — PROGRESS MAY NOT BE SAVED. DELETE SPARE ACCOUNTS OR SAVE A TRANSFER CODE')); } catch (e) {} }, 0);
+}
 const store = {
   get(k, d) {
     if (STORE_RC.has(k)) { const c = storeRC.get(k), n = performance.now(); if (c && n - c.at < 1000) return c.v === undefined ? d : c.v; const v = store.get0(k, undefined); storeRC.set(k, { v, at: n }); return v === undefined ? d : v; }
     return store.get0(k, d);
   },
   get0(k, d) { let v = null; try { v = localStorage.getItem('wk3_' + k); } catch (e) {} if (v === null && ('wk3_' + k) in memStore) v = memStore['wk3_' + k]; try { return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { storeRC.delete(k); const s = JSON.stringify(v); memStore['wk3_' + k] = s; try { localStorage.setItem('wk3_' + k, s); } catch (e) {} if (store.onSet) store.onSet(); },
+  set(k, v) { storeRC.delete(k); const s = JSON.stringify(v); memStore['wk3_' + k] = s; try { localStorage.setItem('wk3_' + k, s); } catch (e) { storeFull('wk3_' + k, s); } if (store.onSet) store.onSet(); },
   onSet: null,
 };
 // ---------- Подпись сохранения: правка руками в обход игры ломает её (такой игрок не попадает в рейтинг) ----------
@@ -1595,7 +1601,7 @@ function FirePeer(id) {
       try {
         await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp });
         await pc.setLocalDescription(await pc.createAnswer()); await fbGather(pc);
-        await fbReq('POST', 'sig/' + m.from, { from: FB.uid, type: 'answer', sdp: pc.localDescription.sdp });
+        await fbReq('PUT', 'sig/' + m.from + '/' + FB.uid, { from: FB.uid, type: 'answer', sdp: pc.localDescription.sdp });   // одно место на отправителя: заспамить чужой ящик нельзя
       } catch (e) { c.close(); }
     } else if (m.type === 'answer' && pend[m.from]) {
       const pc = pend[m.from]; delete pend[m.from];
@@ -1611,7 +1617,7 @@ function FirePeer(id) {
         if (!room || typeof room.host !== 'string' || Date.now() - (+room.t || 0) > 2 * 36e5) { err('peer-unavailable'); return; }
         pend[room.host] = pc;
         await pc.setLocalDescription(await pc.createOffer()); await fbGather(pc);
-        await fbReq('POST', 'sig/' + room.host, { from: FB.uid, type: 'offer', sdp: pc.localDescription.sdp });
+        await fbReq('PUT', 'sig/' + room.host + '/' + FB.uid, { from: FB.uid, type: 'offer', sdp: pc.localDescription.sdp });
       } catch (e) { err('fb-down'); }
     })();
     return c;
@@ -5826,7 +5832,9 @@ const mpPeerLib = (n = 0) => new Promise((ok, no) => {
   const src = ['https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js', 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'][n];
   if (!src) return no();
   let done = false; const next = () => { if (done) return; done = true; if (window.Peer) ok(window.Peer); else mpPeerLib(n + 1).then(ok, no); };
-  const s = document.createElement('script'); s.src = src; s.onload = next; s.onerror = next; document.head.appendChild(s); setTimeout(next, 6000);
+  const s = document.createElement('script'); s.src = src; s.crossOrigin = 'anonymous';
+  s.integrity = 'sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR';   // подменённый на CDN файл браузер не запустит
+  s.onload = next; s.onerror = next; document.head.appendChild(s); setTimeout(next, 6000);
 });
 function mpStart(role, code) {
   mpLeave(); mp.role = role; mp.code = code || mpCode(); const my = mp.role + mp.code, same = () => mp.role + mp.code === my;
@@ -8639,8 +8647,10 @@ function setClick(pt) {
     if (k === 'inf' && !SET.inf && !askPass.ok) { sfx.click(); askPass(ok => { if (ok) { askPass.ok = true; setClick(pt); askPass.ok = false; } }); return; }   // включить — только по паролю
     SET[k] = !SET[k];
     if (k === 'inf') {   // бесконечно всё: монеты, кристаллы, рубины и силы; выключил — вернулось, что было
-      if (SET.inf) { store.set('preInf', { c: bank, g: gems, r: rubies, pw: { ...pw } }); infFill(); }
-      else { const pre = store.get('preInf', null) || {}; bank = nat(pre.c); gems = nat(pre.g); rubies = nat(pre.r); if (pre.pw) for (const id in pw) pw[id] = nat(pre.pw[id]); savePw(); }
+      if (SET.inf) { store.set('preInf', { c: bank, g: gems, r: rubies, pw: { ...pw }, own: owned.slice() }); infFill(); }
+      else { const pre = store.get('preInf', null) || {};
+        if (Array.isArray(pre.own)) { const was = new Set(pre.own), bad = new Set(strList(store.get('infHeroes', [])) || []); for (const id of owned) if (!was.has(id)) bad.add(id); store.set('infHeroes', [...bad]); }   // герои за бесконечные деньги остаются у игрока, но не в рейтинге
+        bank = nat(pre.c); gems = nat(pre.g); rubies = nat(pre.r); if (pre.pw) for (const id in pw) pw[id] = nat(pre.pw[id]); savePw(); }
       saveMoney();
     }
     store.set('set', SET);
@@ -14881,6 +14891,13 @@ const roadReady = id => TRO_ROAD.some((need, i) => troOf(id) >= need && !(META.r
 // 2) деньги, рекорд, кубки и герои подписаны: правка сохранения руками ломает подпись — такой игрок не попадает в рейтинг;
 // 3) в рейтинг уходят «честные» деньги: при бесконечных деньгах — те, что были до их включения.
 const legitM = m => Math.min(m, Math.floor(META.runT * 60) + 30);
+// герои, полученные с бесконечными деньгами, в рейтинг не идут (а то кубки и «героев» там можно накрутить)
+const legitOwned = () => {
+  const bad = new Set(strList(store.get('infHeroes', [])) || []);
+  let base = owned;
+  if (SET.inf) { const p0 = store.get('preInf', null) || {}; if (Array.isArray(p0.own)) { const was = new Set(p0.own); base = owned.filter(id => was.has(id)); } }
+  return base.filter(id => !bad.has(id));
+};
 const legitMoney = () => { if (SET.inf) { const p0 = store.get('preInf', null) || {}; return { c: nat(p0.c), g: nat(p0.g), r: nat(p0.r) }; } return { c: bank, g: gems, r: rubies }; };
 
 // ---- аватарки-картинки (не герои): 'a:<id>'; часть бесплатна, остальные — за кристаллы в «Рамках и аватарках» ----
@@ -15578,8 +15595,8 @@ function profStats(e) {   // e — данные игрока (свои или и
 }
 function myEntry() {
   const m = legitMoney();
-  return { n: nickOut(), av: META.prof.av, fr: (frameHave(META.prof.frame) || META.prof.frame.startsWith('h:') ? META.prof.frame : 'basic') + '~' + myNc() + '~' + stkData().m, ti: META.prof.title, c: m.c, g: m.g, r: m.r, b: best, tr: Math.min(troTotal(), best * Math.max(1, owned.length)), sk: owned.length, pl: passLevel(),
-    own: owned.slice(0, 600), ic: META.icons.slice(0, 120), ach: achieved.slice(0, 200), show: META.prof.show.slice(0, 3), tro: Object.entries(META.tro).filter(q => q[0] !== '_ar').sort((a, b) => b[1] - a[1]).slice(0, 12) };
+  return { n: nickOut(), av: META.prof.av, fr: (frameHave(META.prof.frame) || META.prof.frame.startsWith('h:') ? META.prof.frame : 'basic') + '~' + myNc() + '~' + stkData().m, ti: META.prof.title, c: m.c, g: m.g, r: m.r, b: best, tr: Math.min(troTotal(), best * Math.max(1, legitOwned().length)), sk: legitOwned().length, pl: passLevel(),
+    own: legitOwned().slice(0, 600), ic: META.icons.slice(0, 120), ach: achieved.slice(0, 200), show: META.prof.show.slice(0, 3), tro: Object.entries(META.tro).filter(q => q[0] !== '_ar').sort((a, b) => b[1] - a[1]).slice(0, 12) };
 }
 function profHead(e, me) {
   const card = moEl('div', 'card'); card.style.cssText += 'position:relative;overflow:hidden';
@@ -16723,7 +16740,7 @@ async function frPresence() {   // «я в игре» + карточка для 
   if (!frLive()) return;
   try {
     const m = legitMoney();
-    const r = await fbReq('PUT', 'pres/' + (await fbAuth(), FB.uid), { n: frNick(), av: frAv(), fr: frClean(META.prof.frame, 44), ti: frClean(META.prof.title, 44), b: best | 0, tr: troTotal() | 0, sk: owned.length, c: m.c | 0, g: m.g | 0, st: state === 'play' ? 'play' : 'menu', t: FB_NOW });
+    const r = await fbReq('PUT', 'pres/' + (await fbAuth(), FB.uid), { n: frNick(), av: frAv(), fr: frClean(META.prof.frame, 44), ti: frClean(META.prof.title, 44), b: best | 0, tr: Math.min(troTotal(), best * Math.max(1, legitOwned().length)) | 0, sk: legitOwned().length, c: m.c | 0, g: m.g | 0, st: state === 'play' ? 'play' : 'menu', t: FB_NOW });
     if (r && typeof r.t === 'number') FR.skew = r.t - Date.now();
   } catch (e) {}
 }
@@ -16761,11 +16778,14 @@ async function frPoll() {   // письма: заявки в друзья и о�
       if (!q || typeof q !== 'object') continue;
       const e = { u, n: frClean(q.n, 16) || '?', av: frClean(q.av, 44), c: frClean(q.c, 7) };
       const f = FR.list.find(x => x.u === u);
-      if (q.ok || (f && f.st === 'out')) {   // нас приняли (или мы позвали друг друга одновременно)
+      // нас приняли (или мы позвали друг друга одновременно). Пометке «принято» верим, только если мы сами звали этого игрока:
+      // иначе любой мог записать себе «ok» и без спроса оказаться у нас в друзьях
+      if (f && f.st === 'out') {
         if (f) Object.assign(f, { n: e.n, av: e.av, st: 'ok' }); else FR.list.push({ ...e, st: 'ok' });
         if (!q.ok) frAccept(e); else fbReq('DELETE', 'freq/' + FB.uid + '/' + u).catch(() => {});
         frSave();
-      } else FR.inbox.push(e);
+      } else if (q.ok) fbReq('DELETE', 'freq/' + FB.uid + '/' + u).catch(() => {});   // «принято» без нашего приглашения — подделка, убираем
+      else FR.inbox.push(e);
     }
     if (frOpenNow()) moRefresh();
   } catch (e) {}
@@ -18001,6 +18021,7 @@ function accSwitch(toId, opt = {}) {   // сохраняем текущий ак
     try { localStorage.setItem('wpAcc_' + a.cur, JSON.stringify(sn)); } catch (e) { mpNote(tr('НЕТ МЕСТА ДЛЯ СОХРАНЕНИЯ', 'NO SPACE TO SAVE')); return; }
   }
   store.set = () => {}; store.onSet = null;   // старый аккаунт больше ничего не пишет
+  quiet = true; clearTimeout(fbSave.timer); clearTimeout(cloud.timer); fbSave.ready = false; cloud.db = null;   // и в облако тоже: иначе отложенная отправка унесла бы чужой прогресс в облако старого аккаунта
   accClearGame();
   if (toId) { let snap = {}; try { snap = JSON.parse(localStorage.getItem('wpAcc_' + toId) || '{}') || {}; } catch (e) {} for (const k in snap) if (k.startsWith('wk3_') && typeof snap[k] === 'string') try { localStorage.setItem(k, snap[k]); } catch (e) {} a.cur = toId; }
   else { const id = 'a' + (Date.now() % 1e8).toString(36); a.list.push({ id }); a.cur = id; }

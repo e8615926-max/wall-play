@@ -82,7 +82,7 @@
       "$to": {
         ".read": "auth != null && auth.uid === $to",
         "$msg": {
-          ".write": "auth != null && (auth.uid === $to || !data.exists())",
+          ".write": "auth != null && (auth.uid === $to || auth.uid === $msg)",
           ".validate": "newData.hasChildren(['from', 'type', 'sdp']) && newData.child('from').val() === auth.uid && (newData.child('type').val() === 'offer' || newData.child('type').val() === 'answer') && newData.child('sdp').isString() && newData.child('sdp').val().length <= 20000",
           "$other": {
             ".validate": "$other === 'from' || $other === 'type' || $other === 'sdp'"
