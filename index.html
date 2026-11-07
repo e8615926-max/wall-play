@@ -1690,12 +1690,50 @@ function fbSdkMods() {
 const saveFresh = () => best === 0 && owned.length <= 1 && troTotal() === 0;
 // вход Google панелью поверх игры (Google One Tap): токен Google сразу меняем на аккаунт Firebase через REST
 const gisLoad = () => gisLoad.p || (gisLoad.p = new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = ok; sc.onerror = () => { gisLoad.p = null; no({ code: 'gis/load' }); }; document.head.appendChild(sc); }));
+// окно игры с официальной кнопкой Google (если панель One Tap не показалась). Нажал — выбрал аккаунт — вернулся в игру.
+// Ответ приходит в тот же fbGoogleTap.cb, поэтому дальше всё как раньше: никакой регистрации, тот же аккаунт Firebase.
+let gisBtnHost = null, gisBtnTimer = 0;
+function gisBtnClose() {
+  clearInterval(gisBtnTimer); gisBtnTimer = 0;
+  const h = gisBtnHost; gisBtnHost = null;
+  if (h && h.isConnected) moBack();
+}
+function gisBtnOpen(why) {
+  return new Promise((ok, no) => {
+    moOpen(tr('ВХОД ЧЕРЕЗ GOOGLE', 'SIGN IN WITH GOOGLE'), bd => {
+      bd.appendChild(moTxt('div', 'sm', tr('НАЖМИ КНОПКУ GOOGLE И ВЫБЕРИ АККАУНТ — ИГРА СРАЗУ ПРОДОЛЖИТСЯ', 'TAP THE GOOGLE BUTTON AND PICK AN ACCOUNT — THE GAME GOES ON RIGHT AWAY')));
+      const host = moEl('div'); host.style.cssText = 'display:flex;justify-content:center;align-items:center;min-height:52px;margin:18px 0 14px';
+      bd.appendChild(host); gisBtnHost = host;
+      try {
+        google.accounts.id.renderButton(host, { type: 'standard', theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill', logo_alignment: 'left', width: 280, locale: lang });
+      } catch (e) { setTimeout(() => no({ code: 'gis/not-shown' }), 0); return; }
+      const alt = moTxt('button', 'btn', tr('ДРУГОЙ СПОСОБ ВХОДА', 'ANOTHER WAY TO SIGN IN')); alt.style.cssText += ';width:100%;margin-top:6px;background:#4a3a6a;font-size:13px';   // запасной путь — неприметно
+      alt.onclick = () => { sfx.click(); const h = gisBtnHost; gisBtnHost = null; clearInterval(gisBtnTimer); if (h && h.isConnected) moBack(); no({ code: 'gis/not-shown' }); };   // старое окно Google
+      bd.appendChild(alt);
+      if (why) { const w = moTxt('div', 'sm', 'GOOGLE: ' + why.replace(/_/g, ' ')); w.style.cssText += ';opacity:.55;margin-top:10px;text-transform:none'; bd.appendChild(w); }   // почему не было панели — для разбора
+    }, true);
+    // закрыли окно (стрелка «назад») — вход отменён, тихо
+    clearInterval(gisBtnTimer);
+    gisBtnTimer = setInterval(() => { if (gisBtnHost && !gisBtnHost.isConnected && !(moUi && moUi.querySelector('.bd') && moUi.style.display === 'flex' && moStack.length && moStack[moStack.length - 1].title === tr('ВХОД ЧЕРЕЗ GOOGLE', 'SIGN IN WITH GOOGLE'))) { clearInterval(gisBtnTimer); gisBtnHost = null; no({ code: 'auth/popup-closed-by-user' }); } }, 400);
+  });
+}
 async function fbGoogleTap() {
   await gisLoad();
   const idTok = await new Promise((ok, no) => {
-    fbGoogleTap.cb = r => r && r.credential ? ok(r.credential) : no({ code: 'auth/popup-closed-by-user' });   // initialize — только один раз, повторный вызов GIS не любит
-    if (!fbGoogleTap.init) { google.accounts.id.initialize({ client_id: FIREBASE.googleClientId, callback: r => fbGoogleTap.cb && fbGoogleTap.cb(r), cancel_on_tap_outside: false, context: 'signin', use_fedcm_for_prompt: true, itp_support: true }); fbGoogleTap.init = true; }
-    google.accounts.id.prompt(n => { if ((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment())) no({ code: 'gis/not-shown' }); });
+    let done = false;
+    const fin = (f, v) => { if (done) return; done = true; gisBtnClose(); f(v); };
+    fbGoogleTap.cb = r => r && r.credential ? fin(ok, r.credential) : fin(no, { code: 'auth/popup-closed-by-user' });   // initialize — только один раз, повторный вызов GIS не любит
+    if (!fbGoogleTap.init) { google.accounts.id.initialize({ client_id: FIREBASE.googleClientId, callback: r => fbGoogleTap.cb && fbGoogleTap.cb(r), cancel_on_tap_outside: false, context: 'signin', use_fedcm_for_prompt: true, use_fedcm_for_button: true, itp_support: true }); fbGoogleTap.init = true; }
+    google.accounts.id.prompt(n => {
+      if (done || !((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment()))) return;
+      // Google не показал панель (не вошёл в Google в браузере, панель на паузе после закрытия, браузер не даёт и т.п.).
+      // Раньше тут сразу открывалось отдельное окно Google с вводом почты. Теперь — окно игры с кнопкой Google:
+      // в Chrome она открывает выбор аккаунта поверх игры, и у неё нет пауз, как у панели
+      const why = String((n.getNotDisplayedReason && n.getNotDisplayedReason()) || (n.getSkippedReason && n.getSkippedReason()) || '');
+      fbGoogleTap.why = why;
+      if (/unregistered_origin|invalid_client|missing_client_id|secure_http_required/.test(why)) { fin(no, { code: 'gis/not-shown' }); return; }   // кнопка тоже не заработает — сразу обычный вход
+      gisBtnOpen(why).catch(e => fin(no, e));
+    });
   });
   const fresh = saveFresh();
   if (!fresh) await fbAuth().catch(() => { throw { code: 'auth/network-request-failed' }; });
