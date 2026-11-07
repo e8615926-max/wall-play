@@ -9011,8 +9011,8 @@ const BTN = {
   mute:  { x: W - 46, y: 12, w: 34, h: 34 },
   gear:  { x: 12, y: 12, w: 34, h: 34 },
   pause: { x: W - 46, y: 12, w: 34, h: 34 },
-  shop:  { x: 24, y: 282, w: 150, h: 40 },
-  store: { x: 186, y: 282, w: 150, h: 40 },
+  shop:  { x: 24, y: 186, w: 150, h: 40 },
+  store: { x: 186, y: 186, w: 150, h: 40 },
   wheel: { x: 24, y: 334, w: 150, h: 40 },
   ach:   { x: 186, y: 334, w: 150, h: 40 },
   tent:  { x: 24, y: 386, w: 150, h: 40 },
@@ -11735,7 +11735,7 @@ let flyChipT = 0, flyLast = 0;
 const flyShown = k => (k === 'g' ? gems : bank) - flyPend[k];
 function flyTarget(k) {   // где сумма: в магазине — плашки сверху справа, в меню — слева над кнопками; иначе — своя плашка сверху справа
   if (state === 'shop') return k === 'g' ? { x: 247, y: 34 } : { x: 247, y: 13 };
-  if (state === 'menu' && !screenCovered()) return k === 'g' ? { x: 116, y: 250 } : { x: 24, y: 250 };
+  if (state === 'menu' && !screenCovered()) return k === 'g' ? { x: 116, y: 154 } : { x: 24, y: 154 };
   return { x: W - 82, y: 24, chip: 1 };
 }
 function coinFly(x, y, amount, k = 'c') {
@@ -11929,10 +11929,10 @@ function priceDraw(cx, y, pr, k = 1, col = OL) {
   text(str, x0 + 12 * k, y, k, col, 'left', null);
 }
 function drawMenu() {
-  coinIcon(24, 250); text(String(flyShown('c')), 36, 260, 2, '#ffffff', 'left', OL, 70);
-  gemIcon(116, 250, 0.8); text(String(flyShown('g')), 130, 260, 2, '#bfeaff', 'left', OL, 56);
-  rubyIcon(196, 250, 0.7); text(String(rubies), 210, 260, 2, '#ffc0c8', 'left', OL, 50);
-  trophyIcon(270, 250); text(best + T('m'), 284, 260, 2, '#ffffff', 'left', OL, 72);
+  coinIcon(24, 154); text(String(flyShown('c')), 36, 164, 2, '#ffffff', 'left', OL, 70);
+  gemIcon(116, 154, 0.8); text(String(flyShown('g')), 130, 164, 2, '#bfeaff', 'left', OL, 56);
+  rubyIcon(196, 154, 0.7); text(String(rubies), 210, 164, 2, '#ffc0c8', 'left', OL, 50);
+  trophyIcon(270, 154); text(best + T('m'), 284, 164, 2, '#ffffff', 'left', OL, 72);
   button(BTN.shop, T('heroes'), '#ff3d7f', '#c01f5a');
   button(BTN.store, T('shop'), '#ffb02a', '#c06a00');
   if (canClaim() || freeSpin()) badge(BTN.store.x + BTN.store.w - 4, BTN.store.y + 2);
@@ -15602,7 +15602,17 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pageshow', e => { if (e.persisted) gfxReset(); });
 cv.addEventListener('contextrestored', () => gfxReset());
+// кадр игры под защитой: если в кадре случилась ошибка, игра не замирает навсегда, а продолжает со следующего кадра
+let frameErrs = 0;
 function frame(now) {
+  try { frame0(now); }
+  catch (e) {
+    if (frameErrs++ < 5) try { console.error('Wall Play: ошибка в кадре', e); } catch (x) {}
+    try { ctx.globalAlpha = 1; const K = cv.width / W; ctx.setTransform(K, 0, 0, K, 0, 0); ctx.imageSmoothingEnabled = false; } catch (x) {}
+    last = performance.now(); requestAnimationFrame(frame);
+  }
+}
+function frame0(now) {
   // экраны 90–144 Гц (в Chrome на телефоне они включены, во встроенных окнах обычно нет): рисуем не чаще ~60 раз в секунду —
   // работы меньше, телефон не греется и не сбрасывает частоту
   const step = now - last;
@@ -16810,10 +16820,10 @@ function openBoard(keep) {
 
 // ---- меню: профиль слева сверху, рейтинг справа, задания и эмоции над кнопками, Pass внизу слева, герой внизу справа; свайп — рейтинг/профиль ----
 // главное всегда на виду (герои, магазин, колесо, задания); остальное раскрывается стрелкой «ЕЩЁ»
-Object.assign(BTN, { prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: 172, y: 196, w: 132, h: 32 }, mp: { x: 12, y: 196, w: 150, h: 32 }, friends: { x: W - 46, y: 195, w: 34, h: 34 },
+Object.assign(BTN, { prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: 172, y: 100, w: 132, h: 32 }, mp: { x: 12, y: 100, w: 150, h: 32 }, friends: { x: W - 46, y: 99, w: 34, h: 34 },
   quest: { x: 152, y: 584, w: 46, h: 46 }, pass: { x: 12, y: 584, w: 132, h: 46 }, wheel: { x: -999, y: -999, w: 0, h: 0 },   // колесо — во вкладке магазина
   ach: { x: W - 130, y: 12, w: 34, h: 34 }, menuB: { x: W - 46, y: 54, w: 34, h: 34 },   // награды — круглой иконкой у новостей, под звуком — меню
-  tent: { x: 24, y: 358, w: 150, h: 40 }, allies: { x: 186, y: 358, w: 150, h: 40 }, emo: { x: 105, y: 408, w: 150, h: 36 }, more: { x: W / 2 - 44, y: 332, w: 88, h: 22 } });
+  tent: { x: 24, y: 262, w: 150, h: 40 }, allies: { x: 186, y: 262, w: 150, h: 40 }, emo: { x: 105, y: 312, w: 150, h: 36 }, more: { x: W / 2 - 44, y: 236, w: 88, h: 22 } });   // надписи WALL PLAY больше нет — всё поднято
 const MORE_KEYS = ['tent', 'allies', 'emo'];
 // круглые иконки меню: награды (у новостей), меню (под звуком), друзья (справа от рейтинга)
 function drawTopIcons() {
