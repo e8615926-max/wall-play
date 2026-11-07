@@ -1430,6 +1430,8 @@ try { if (localStorage.getItem('wk3_sig') === null) store.set('sig', sigOf()); }
 // В claude.ai прогресс игрока хранится в его личном приватном документе (без email: аккаунт определяется сам).
 // Без облака (например, на GitHub Pages) всё сохраняется на устройстве.
 try { localStorage.removeItem('wk3_nick'); } catch (e) {}
+// просим браузер не стирать сохранение сам (Safari чистит данные сайтов, которые долго не открывали)
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
 const cloud = { db: null, uid: null, status: 'off', busy: false, again: false, timer: 0 };
 const cloudPath = () => 'data/users/' + cloud.uid + '/save';
 function markDirty() {
@@ -1518,6 +1520,12 @@ async function fbAuth() {
     if (saved && typeof saved.rt === 'string') {
       r = await fetch(fbTokBase() + '/v1/token?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(saved.rt) }).catch(() => null);
       if (r && r.ok) { j = await r.json(); FB.tok = j.id_token; FB.uid = j.user_id; FB.exp = Date.now() + (+j.expires_in || 3600) * 1000; store.set('fbAuth', { rt: j.refresh_token, uid: j.user_id }); return FB.tok; }
+      // нет сети или сбой Google — это не повод заводить новый аккаунт: ждём и пробуем снова.
+      // Раньше тут молча создавался новый гость, и вход Google (а с ним облачный прогресс) терялся.
+      if (!r) throw { step: 'auth', net: true };
+      if (r.status !== 400) throw { step: 'auth', status: r.status, msg: '' };
+      // ключ входа действительно недействителен: аккаунт Google не подменяем гостем — пусть игрок войдёт заново
+      if (acctG()) throw { step: 'auth', status: 400, msg: 'TOKEN_EXPIRED' };
     }
     r = await fbFetch('auth', fbAuthBase() + '/v1/accounts:signUp?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"returnSecureToken":true}' });
     j = await r.json(); FB.tok = j.idToken; FB.uid = j.localId; FB.exp = Date.now() + (+j.expiresIn || 3600) * 1000;
@@ -1763,6 +1771,86 @@ function fbCloudApply(c) {
     localStorage.setItem('wk3__savedAt', String(c.s)); sessionStorage.setItem('wk3_fbCloudT', String(c.s));
   } catch (e) {}
   location.reload();
+}
+// ---- код переноса: весь прогресс текущего аккаунта одной строкой — без входа, паролей и ключей ----
+// Браузер хранит прогресс отдельно для каждого адреса сайта, поэтому на новом адресе игра начинается заново.
+// Скопировал код в «Аккаунтах» — вставил на новом адресе, в другом браузере или на другом телефоне.
+const b64u = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const u8b64 = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
+async function zipBytes(u8, de) {
+  const cs = de ? new DecompressionStream('gzip') : new CompressionStream('gzip');
+  return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(cs)).arrayBuffer());
+}
+async function xferMake() {
+  const raw = new TextEncoder().encode(JSON.stringify(fbSaveData()));   // fbSaveData: без ключей входа — код можно спокойно показать
+  if (typeof CompressionStream === 'function') { try { return 'WP2.' + b64u(await zipBytes(raw)); } catch (e) {} }
+  return 'WP1.' + b64u(raw);
+}
+async function xferRead(code) {
+  code = String(code || '').replace(/\s+/g, '');
+  const m = code.match(/^WP([12])\.([A-Za-z0-9+/=]+)$/);
+  if (!m) return null;
+  try {
+    let u8 = u8b64(m[2]);
+    if (m[1] === '2') { if (typeof DecompressionStream !== 'function') return null; u8 = await zipBytes(u8, true); }
+    const d = JSON.parse(new TextDecoder().decode(u8));
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
+    const out = {};
+    for (const k of Object.keys(d)) if (/^wk3_[A-Za-z0-9]\w{0,39}$/.test(k) && !ACCT_KEYS.includes(k) && typeof d[k] === 'string' && d[k].length < 2e5) { try { JSON.parse(d[k]); out[k] = d[k]; } catch (e) {} }
+    return Object.keys(out).length ? out : null;
+  } catch (e) { return null; }
+}
+function xferApply(d) {   // как загрузка из облака, но код свежее всего: аккаунт Google сразу получит его в облако
+  try {
+    const keep = {}; for (const k of ACCT_KEYS) { const v = localStorage.getItem(k); if (v !== null) keep[k] = v; }
+    for (const k of Object.keys(localStorage)) if (k.startsWith('wk3_')) localStorage.removeItem(k);
+    for (const k in d) localStorage.setItem(k, d[k]);
+    if (!('wk3_sig' in d)) localStorage.removeItem('wk3_sig');
+    for (const k in keep) localStorage.setItem(k, keep[k]);
+    localStorage.setItem('wk3__savedAt', String(Date.now())); sessionStorage.removeItem('wk3_fbCloudT');
+  } catch (e) { return false; }
+  location.reload(); return true;
+}
+function openXfer() {
+  moOpen(tr('ПЕРЕНОС ПРОГРЕССА', 'MOVE PROGRESS'), bd => {
+    const ta = (ro) => { const t = document.createElement('textarea'); t.readOnly = ro; t.spellcheck = false; t.autocomplete = 'off'; t.style.cssText = 'width:100%;height:84px;font:12px monospace;padding:8px;border:3px solid #2a1408;border-radius:10px;background:#fff6d8;color:#2a1408;resize:none;word-break:break-all;text-transform:none;margin-top:8px'; return t; };
+    bd.appendChild(moTxt('div', 'sm', tr('ИГРА ХРАНИТ ПРОГРЕСС В БРАУЗЕРЕ, ОТДЕЛЬНО ДЛЯ КАЖДОГО АДРЕСА САЙТА. ЧТОБЫ ПЕРЕНЕСТИ ЕГО НА ДРУГОЙ АДРЕС, БРАУЗЕР ИЛИ ТЕЛЕФОН — СКОПИРУЙ КОД И ВСТАВЬ ЕГО ТАМ', 'THE GAME KEEPS PROGRESS IN THE BROWSER, SEPARATELY FOR EACH SITE ADDRESS. TO MOVE IT TO ANOTHER ADDRESS, BROWSER OR PHONE — COPY THE CODE AND PASTE IT THERE')));
+    const c1 = moEl('div', 'card'); c1.style.marginTop = '10px';
+    c1.appendChild(moTxt('div', 'ol', tr('МОЙ КОД', 'MY CODE')));
+    const out = ta(true); out.value = '…'; c1.appendChild(out);
+    const msg1 = moTxt('div', 'sm', ' ');
+    const cp = moTxt('button', 'btn blue', tr('СКОПИРОВАТЬ', 'COPY')); cp.style.cssText += ';width:100%;margin-top:8px';
+    xferMake().then(code => { out.value = code; }, () => { out.value = ''; });
+    cp.onclick = async () => {
+      sfx.click(); out.focus(); out.select();
+      let ok = false;
+      try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(out.value); ok = true; } } catch (e) {}
+      if (!ok) { try { ok = document.execCommand('copy'); } catch (e) {} }
+      pxiSet(msg1, ok ? tr('КОД СКОПИРОВАН!', 'CODE COPIED!') : tr('ВЫДЕЛИ КОД И СКОПИРУЙ ВРУЧНУЮ', 'SELECT THE CODE AND COPY IT BY HAND'));
+    };
+    c1.append(cp, msg1); bd.appendChild(c1);
+    const c2 = moEl('div', 'card'); c2.style.marginTop = '10px';
+    c2.appendChild(moTxt('div', 'ol', tr('ВВЕСТИ КОД', 'ENTER CODE')));
+    c2.appendChild(moTxt('div', 'sm', tr('ПРОГРЕСС ЭТОГО АККАУНТА ЗАМЕНИТСЯ ПРОГРЕССОМ ИЗ КОДА', 'THIS ACCOUNT\'S PROGRESS WILL BE REPLACED BY THE ONE FROM THE CODE')));
+    const inp = ta(false); inp.placeholder = 'WP2.…'; c2.appendChild(inp);
+    for (const ev of ['keydown', 'keyup', 'keypress']) inp.addEventListener(ev, e => e.stopPropagation());   // буквы кода — не управление игрой
+    const msg2 = moTxt('div', 'sm', ' ');
+    const go = moTxt('button', 'btn gold', tr('ЗАГРУЗИТЬ', 'LOAD')); go.style.cssText += ';width:100%;margin-top:8px';
+    go.onclick = async () => {
+      sfx.click();
+      const d = await xferRead(inp.value);
+      if (!d) { pxiSet(msg2, tr('НЕВЕРНЫЙ КОД', 'WRONG CODE')); try { sfx.warn(); } catch (e) {} delete go.dataset.arm; return; }
+      if (!go.dataset.arm) {   // второе нажатие — подтверждение
+        const sm = saveSummary(d); go.dataset.arm = 1;
+        pxiSet(go, tr('ТОЧНО? НАЖМИ ЕЩЁ', 'SURE? TAP AGAIN'));
+        pxiSet(msg2, trf('В КОДЕ: РЕКОРД {b}, ГЕРОЕВ {k}, КУБКОВ {t}', 'IN THE CODE: BEST {b}, HEROES {k}, TROPHIES {t}', { b: sm.b + T('m'), k: sm.sk, t: sm.tr }));
+        return;
+      }
+      go.disabled = true;
+      if (!xferApply(d)) { go.disabled = false; pxiSet(msg2, tr('НЕ ПОЛУЧИЛОСЬ СОХРАНИТЬ', 'COULD NOT SAVE')); }
+    };
+    c2.append(go, msg2); bd.appendChild(c2);
+  });
 }
 // коротко о сохранении: для выбора «какой прогресс оставить»
 function saveSummary(d) {
@@ -17946,6 +18034,10 @@ function openAccounts() {
     add.style.cssText += ';width:100%;margin-top:12px';
     if (a.list.length < ACC_MAX) add.onclick = () => { sfx.click(); add.disabled = true; accSwitch(null); };
     bd.appendChild(add);
+    const xf = moTxt('button', 'btn blue', tr('ПЕРЕНОС ПРОГРЕССА (КОД)', 'MOVE PROGRESS (CODE)'));
+    xf.style.cssText += ';width:100%;margin-top:10px';
+    xf.onclick = () => { sfx.click(); openXfer(); };
+    bd.appendChild(xf);
   });
 }
 
