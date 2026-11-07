@@ -10,8 +10,7 @@
       ".firebaserc",
       "**/*.md",
       "**/.*",
-      "**/node_modules/**",
-      "**/*.png"
+      "**/node_modules/**"
     ]
   },
   "emulators": {

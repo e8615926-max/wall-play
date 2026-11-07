@@ -27,7 +27,10 @@ const r = await minify(src, {
 if (!r.code || r.code.length < src.length * 0.3) throw new Error('minified code looks wrong');
 new Function(r.code);   // синтаксис проверен ещё раз: сломанная сборка не уйдёт на сайт
 
-const ver = createHash('sha1').update(r.code).digest('hex').slice(0, 10);
+// версия — по всему, что уходит на сайт: поменялся код, страница, иконки или sw.js — новый ключ кэша
+const vh = createHash('sha1').update(r.code).update(html).update(readFileSync(join(srcDir, 'sw.js')));
+for (const f of ['manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'og.png']) vh.update(readFileSync(join(srcDir, f)));
+const ver = vh.digest('hex').slice(0, 10);
 writeFileSync(join(outDir, 'game.js'), r.code);
 
 let page = html.slice(0, scripts[0].index) + '<script src="game.js?v=' + ver + '"></script>' + html.slice(scripts[0].index + scripts[0][0].length);
@@ -41,5 +44,5 @@ sw = sw.replace(cacheRe, (m, c) => "const CACHE = '" + c + '-' + ver + "';")
        .replace(filesRe, (m, f) => 'const FILES = [' + f + ", './game.js'];");
 writeFileSync(join(outDir, 'sw.js'), sw);
 
-for (const f of ['manifest.webmanifest', 'icon.svg']) copyFileSync(join(srcDir, f), join(outDir, f));
+for (const f of ['manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'og.png']) copyFileSync(join(srcDir, f), join(outDir, f));   // иконки и картинка для превью ссылки
 console.log('built', { version: ver, 'index.html': page.length, 'game.js': r.code.length, source: html.length });
