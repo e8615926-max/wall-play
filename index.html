@@ -2051,6 +2051,8 @@ let muted = store.get('muted', false) === true;
 let tutDone = store.get('tut', false) === true;
 let achieved = strList(store.get('ach', [])) || [];
 const SET = { music: true, sfx: true, shake: true, fx: true, vibe: true, hints: true };
+// бесконечные деньги — инструмент разработчика: переключатель есть только когда игра открыта с этого компьютера (localhost)
+const DEV_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 { const sv = store.get('set', {}); if (sv && typeof sv === 'object') for (const k of [...Object.keys(SET), 'inf']) if (typeof sv[k] === 'boolean') SET[k] = sv[k]; }
 function guessLang() {   // язык устройства, а если его нет в игре — по стране (часовому поясу)
   const near = { be: 'ru', ky: 'ru', tg: 'ru', uz: 'ru', tk: 'ru', hy: 'ru', ka: 'ru', az: 'tr', gl: 'es', ca: 'es', eu: 'es', ro: 'it', mo: 'ru', rue: 'uk', lb: 'de', gsw: 'de' };
@@ -8603,7 +8605,7 @@ function modalClick(pt) {
 }
 
 // Настройки
-const SET_KEYS = ['music', 'sfx', 'shake', 'fx', 'vibe', 'hints', 'inf'];
+const SET_KEYS = ['music', 'sfx', 'shake', 'fx', 'vibe', 'hints'].concat(DEV_HOST ? ['inf'] : []);
 const setRow = i => ({ x: 20, y: 78 + i * 36, w: W - 40, h: 31 });   // 7 строк — последняя не налезает на заголовок «язык»
 const langRect = i => ({ x: 20 + (i % 2) * 164, y: 360 + Math.floor(i / 2) * 32, w: 156, h: 28 });   // 11 языков — 6 рядов, ряды чуть плотнее
 const RESET_BTN = { x: 40, y: 562, w: W - 80, h: 34 };
@@ -8648,9 +8650,7 @@ function setClick(pt) {
     SET[k] = !SET[k];
     if (k === 'inf') {   // бесконечно всё: монеты, кристаллы, рубины и силы; выключил — вернулось, что было
       if (SET.inf) { store.set('preInf', { c: bank, g: gems, r: rubies, pw: { ...pw }, own: owned.slice() }); infFill(); }
-      else { const pre = store.get('preInf', null) || {};
-        if (Array.isArray(pre.own)) { const was = new Set(pre.own), bad = new Set(strList(store.get('infHeroes', [])) || []); for (const id of owned) if (!was.has(id)) bad.add(id); store.set('infHeroes', [...bad]); }   // герои за бесконечные деньги остаются у игрока, но не в рейтинге
-        bank = nat(pre.c); gems = nat(pre.g); rubies = nat(pre.r); if (pre.pw) for (const id in pw) pw[id] = nat(pre.pw[id]); savePw(); }
+      else infRestore();
       saveMoney();
     }
     store.set('set', SET);
@@ -12453,6 +12453,14 @@ let swapT = 0, swapK = 'cloneSwap', pw = (o => { const r = {}; if (o && typeof o
 const INF = 999999;   // бесконечные деньги: пока включены, всего до краёв
 function infFill() { bank = gems = rubies = INF; for (const P of POWERS) if ((pw[P.id] || 0) < 99) pw[P.id] = 99; }
 const savePw = () => { store.set('pw', pw); store.set('pwSel', pwSel); };
+// бесконечные деньги выключены: вернуть то, что было до них; герои, полученные с ними, остаются у игрока, но не идут в рейтинг
+function infRestore() {
+  const pre = store.get('preInf', null) || {};
+  if (Array.isArray(pre.own)) { const was = new Set(pre.own), bad = new Set(strList(store.get('infHeroes', [])) || []); for (const id of owned) if (!was.has(id)) bad.add(id); store.set('infHeroes', [...bad]); }
+  bank = nat(pre.c); gems = nat(pre.g); rubies = nat(pre.r); if (pre.pw) for (const id in pw) pw[id] = nat(pre.pw[id]); savePw();
+}
+// на сайте переключателя нет: если игрок включил бесконечные деньги раньше, выключаем их и возвращаем его честные деньги
+if (SET.inf && !DEV_HOST) { SET.inf = false; infRestore(); saveMoney(); store.set('set', SET); }
 const PW_BTN = { x: W - 66, y: H - 196, w: 52, h: 52 }, PW_ADD = { x: W - 30, y: H - 206, w: 24, h: 24 };
 const PM_PANEL = { x: 18, y: 96, w: W - 36, h: 470 }, PM_CLOSE = { x: W - 62, y: 104, w: 36, h: 36 };
 const pmRow = i => ({ x: 24 + (i % 5) * 63, y: 146 + Math.floor(i / 5) * 78, w: 58, h: 72 });
