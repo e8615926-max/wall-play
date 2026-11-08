@@ -2246,49 +2246,15 @@ function fbSdkMods() {
 const saveFresh = () => best === 0 && owned.length <= 1 && troTotal() === 0;
 // вход Google панелью поверх игры (Google One Tap): токен Google сразу меняем на аккаунт Firebase через REST
 const gisLoad = () => gisLoad.p || (gisLoad.p = new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = ok; sc.onerror = () => { gisLoad.p = null; no({ code: 'gis/load' }); }; document.head.appendChild(sc); }));
-// окно игры с официальной кнопкой Google (если панель One Tap не показалась). Нажал — выбрал аккаунт — вернулся в игру.
-// Ответ приходит в тот же fbGoogleTap.cb, поэтому дальше всё как раньше: никакой регистрации, тот же аккаунт Firebase.
-let gisBtnHost = null, gisBtnTimer = 0;
-function gisBtnClose() {
-  clearInterval(gisBtnTimer); gisBtnTimer = 0;
-  const h = gisBtnHost; gisBtnHost = null;
-  if (h && h.isConnected) moBack();
-}
-function gisBtnOpen(why) {
-  return new Promise((ok, no) => {
-    moOpen(tr('ВХОД ЧЕРЕЗ GOOGLE', 'SIGN IN WITH GOOGLE'), bd => {
-      bd.appendChild(moTxt('div', 'sm', tr('НАЖМИ КНОПКУ GOOGLE И ВЫБЕРИ АККАУНТ — ИГРА СРАЗУ ПРОДОЛЖИТСЯ', 'TAP THE GOOGLE BUTTON AND PICK AN ACCOUNT — THE GAME GOES ON RIGHT AWAY')));
-      const host = moEl('div'); host.style.cssText = 'display:flex;justify-content:center;align-items:center;min-height:52px;margin:18px 0 14px';
-      bd.appendChild(host); gisBtnHost = host;
-      try {
-        google.accounts.id.renderButton(host, { type: 'standard', theme: 'filled_blue', size: 'large', text: 'continue_with', shape: 'pill', logo_alignment: 'left', width: 280, locale: lang });
-      } catch (e) { setTimeout(() => no({ code: 'gis/not-shown' }), 0); return; }
-      const alt = moTxt('button', 'btn', tr('ДРУГОЙ СПОСОБ ВХОДА', 'ANOTHER WAY TO SIGN IN')); alt.style.cssText += ';width:100%;margin-top:6px;background:#4a3a6a;font-size:13px';   // запасной путь — неприметно
-      alt.onclick = () => { sfx.click(); const h = gisBtnHost; gisBtnHost = null; clearInterval(gisBtnTimer); if (h && h.isConnected) moBack(); no({ code: 'gis/not-shown' }); };   // старое окно Google
-      bd.appendChild(alt);
-      if (why) { const w = moTxt('div', 'sm', 'GOOGLE: ' + why.replace(/_/g, ' ')); w.style.cssText += ';opacity:.55;margin-top:10px;text-transform:none'; bd.appendChild(w); }   // почему не было панели — для разбора
-    }, true);
-    // закрыли окно (стрелка «назад») — вход отменён, тихо
-    clearInterval(gisBtnTimer);
-    gisBtnTimer = setInterval(() => { if (gisBtnHost && !gisBtnHost.isConnected && !(moUi && moUi.querySelector('.bd') && moUi.style.display === 'flex' && moStack.length && moStack[moStack.length - 1].title === tr('ВХОД ЧЕРЕЗ GOOGLE', 'SIGN IN WITH GOOGLE'))) { clearInterval(gisBtnTimer); gisBtnHost = null; no({ code: 'auth/popup-closed-by-user' }); } }, 400);
-  });
-}
 async function fbGoogleTap() {
   await gisLoad();
   const idTok = await new Promise((ok, no) => {
     let done = false;
-    const fin = (f, v) => { if (done) return; done = true; gisBtnClose(); f(v); };
+    const fin = (f, v) => { if (done) return; done = true; f(v); };
     fbGoogleTap.cb = r => r && r.credential ? fin(ok, r.credential) : fin(no, { code: 'auth/popup-closed-by-user' });   // initialize — только один раз, повторный вызов GIS не любит
-    if (!fbGoogleTap.init) { google.accounts.id.initialize({ client_id: FIREBASE.googleClientId, callback: r => fbGoogleTap.cb && fbGoogleTap.cb(r), cancel_on_tap_outside: false, context: 'signin', use_fedcm_for_prompt: true, use_fedcm_for_button: true, itp_support: true }); fbGoogleTap.init = true; }
-    google.accounts.id.prompt(n => {
-      if (done || !((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment()))) return;
-      // Google не показал панель (не вошёл в Google в браузере, панель на паузе после закрытия, браузер не даёт и т.п.).
-      // Раньше тут сразу открывалось отдельное окно Google с вводом почты. Теперь — окно игры с кнопкой Google:
-      // в Chrome она открывает выбор аккаунта поверх игры, и у неё нет пауз, как у панели
-      const why = String((n.getNotDisplayedReason && n.getNotDisplayedReason()) || (n.getSkippedReason && n.getSkippedReason()) || '');
-      fbGoogleTap.why = why;
-      if (/unregistered_origin|invalid_client|missing_client_id|secure_http_required/.test(why)) { fin(no, { code: 'gis/not-shown' }); return; }   // кнопка тоже не заработает — сразу обычный вход
-      gisBtnOpen(why).catch(e => fin(no, e));
+    if (!fbGoogleTap.init) { google.accounts.id.initialize({ client_id: FIREBASE.googleClientId, callback: r => fbGoogleTap.cb && fbGoogleTap.cb(r), cancel_on_tap_outside: false, context: 'signin', use_fedcm_for_prompt: true, itp_support: true }); fbGoogleTap.init = true; }
+    google.accounts.id.prompt(n => {   // панель не показалась (адрес не зарегистрирован у клиента Google, пауза после закрытия, нет входа в Google) — обычное окно Google
+      if (!done && ((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment()))) fin(no, { code: 'gis/not-shown' });
     });
   });
   const fresh = saveFresh();
@@ -2512,6 +2478,10 @@ async function acctGoogle(msg) {
   try {
     const prev = { auth: store.get('fbAuth', null), acct: localStorage.getItem('wk3_acct'), uid: FB.uid, tok: FB.tok, exp: FB.exp };
     const r = await fbGoogle(); fbSave.ready = true;
+    // эта почта уже есть в другом аккаунте на устройстве — сразу открываем его (раньше сюда сначала грузилась копия из облака,
+    // и получались два аккаунта с одной почтой: переключение по таймеру не успевало до перезагрузки)
+    const ai = acctInfo(), here = ai && ai.email ? accByEmail(emailNorm(ai.email)) : null;
+    if (here) { accEmailCheck.done = true; fbSave.ready = false; say(tr('ЭТА ПОЧТА УЖЕ ЕСТЬ НА УСТРОЙСТВЕ — ОТКРЫВАЮ ЕЁ АККАУНТ', 'THIS EMAIL IS ALREADY ON THIS DEVICE — OPENING ITS ACCOUNT')); const fr = saveFresh(); setTimeout(() => accSwitch(here.id, { drop: fr, unlink: !fr }), 500); return; }
     if (r.same) {   // гость стал аккаунтом Google — прогресс тот же, просто кладём его в облако
       await fbCloudPush().catch(() => {}); boardPush();
       moOpen(tr('АККАУНТ', 'ACCOUNT'), bd => acctDone(bd, tr('GOOGLE ПРИВЯЗАН! ПРОГРЕСС СОХРАНЁН В ОБЛАКЕ', 'GOOGLE LINKED! PROGRESS SAVED TO THE CLOUD')));
@@ -2531,6 +2501,151 @@ async function acctGoogle(msg) {
   } catch (e) { if (!acctQuiet(e)) say(acctErrText(e), true); else say(''); }
   finally { acctGoogle.busy = false; }
 }
+// =====================================================================================
+// ---- вход по почте: игрок пишет email, получает письмо со ссылкой — и он в аккаунте (без пароля и регистрации) ----
+// Ссылка из письма нужна, чтобы чужой аккаунт нельзя было открыть, просто написав чужую почту.
+// Почта новая — к ней привязывается текущий прогресс. Почта уже есть — открывается тот аккаунт
+// (на этом устройстве — сразу, без письма; из облака — отдельной строкой в «Аккаунтах», гость остаётся).
+// В Firebase должен быть включён способ «Email/Password» с галочкой «Email link (passwordless sign-in)».
+// =====================================================================================
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@.]{2,}$/;
+const emailNorm = v => String(v || '').trim().toLowerCase();
+const emailPending = () => { try { const p = JSON.parse(localStorage.getItem('wpEmailFor') || 'null'); return p && typeof p.email === 'string' && Date.now() - (+p.at || 0) < 3 * 864e5 ? p : null; } catch (e) { return null; } };
+function emailErrText(code) {
+  if (/OPERATION_NOT_ALLOWED|ADMIN_ONLY/.test(code)) return tr('ВХОД ПО ПОЧТЕ ВЫКЛЮЧЕН В FIREBASE (AUTHENTICATION → SIGN-IN METHOD → EMAIL/PASSWORD → EMAIL LINK)', 'EMAIL SIGN-IN IS OFF IN FIREBASE (AUTHENTICATION → SIGN-IN METHOD → EMAIL/PASSWORD → EMAIL LINK)');
+  if (/INVALID_EMAIL|MISSING_EMAIL/.test(code)) return tr('ПРОВЕРЬ ПОЧТУ — В НЕЙ ОШИБКА', 'CHECK THE EMAIL — IT HAS A TYPO');
+  if (/EXPIRED_OOB_CODE|INVALID_OOB_CODE|INVALID_ACTION_CODE/.test(code)) return tr('ССЫЛКА УЖЕ НЕ ДЕЙСТВУЕТ. ЗАПРОСИ НОВОЕ ПИСЬМО', 'THE LINK NO LONGER WORKS. ASK FOR A NEW EMAIL');
+  if (/UNAUTHORIZED_DOMAIN|INVALID_CONTINUE_URI|UNAUTHORIZED_CONTINUE_URI/.test(code)) return tr('САЙТ ' + location.hostname + ' НЕ РАЗРЕШЁН В FIREBASE (AUTHENTICATION → SETTINGS → AUTHORIZED DOMAINS)', 'THE SITE ' + location.hostname + ' IS NOT ALLOWED IN FIREBASE (AUTHENTICATION → SETTINGS → AUTHORIZED DOMAINS)');
+  if (/QUOTA|TOO_MANY/.test(code)) return tr('СЛИШКОМ МНОГО ПИСЕМ. ПОПРОБУЙ ПОЗЖЕ', 'TOO MANY EMAILS. TRY LATER');
+  if (/net/.test(code)) return tr('НЕТ СВЯЗИ. ПРОВЕРЬ ИНТЕРНЕТ', 'NO CONNECTION. CHECK THE INTERNET');
+  return tr('НЕ ПОЛУЧИЛОСЬ', 'SOMETHING WENT WRONG') + (code ? ' (' + String(code).slice(0, 40) + ')' : '');
+}
+async function emailCall(method, body) {
+  const r = await fetch(fbAuthBase() + '/v1/accounts:' + method + '?key=' + encodeURIComponent(FIREBASE.apiKey), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Firebase-Locale': lang }, body: JSON.stringify(body) }).catch(() => null);
+  if (!r) throw { code: 'net' };
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw { code: String((j.error && j.error.message) || r.status) };
+  return j;
+}
+// аккаунт с этой почтой уже есть на устройстве?
+const accByEmail = em => { const a = accData(); return a.list.find(x => x.id !== a.cur && emailNorm(accEmailOf(x)) === em) || null; };
+// шаг 1: письмо со ссылкой
+async function emailSend(email) {
+  await emailCall('sendOobCode', { requestType: 'EMAIL_SIGNIN', email, continueUrl: location.origin + location.pathname, canHandleCodeInApp: true });
+  try { localStorage.setItem('wpEmailFor', JSON.stringify({ email, at: Date.now(), acc: accData().cur })); } catch (e) {}
+}
+// шаг 2: игрок открыл ссылку — входим. Возвращает, что сделали: 'linked' | 'opened' | 'applied' | 'picked'
+async function emailFinish(email, oobCode, say) {
+  const fresh = saveFresh();
+  let old = { uid: FB.uid, tok: FB.tok };
+  if (!fresh && store.get('fbAuth', null)) { try { await fbAuth(); old = { uid: FB.uid, tok: FB.tok }; } catch (e) {} }
+  const prev = { auth: store.get('fbAuth', null), acct: localStorage.getItem('wk3_acct') };
+  const j = await emailCall('signInWithEmailLink', { email, oobCode, returnSecureToken: true });
+  try { localStorage.removeItem('wpEmailFor'); } catch (e) {}
+  const auth = { rt: j.refreshToken, uid: j.localId }, acct = { g: 1, p: 'email', email: String(j.email || email).slice(0, 80), name: '' };
+  FB.uid = j.localId; FB.tok = j.idToken; FB.exp = Date.now() + (+j.expiresIn || 3600) * 1000;
+  if (old.uid === FB.uid && acctG()) return 'same';   // уже в этом аккаунте
+  const c = j.isNewUser ? null : await fbCloudGet().catch(() => null);
+  if (!c) {   // новая почта (или в облаке пусто): текущий прогресс становится этим аккаунтом
+    store.set('fbAuth', auth); store.set('acct', acct); fbSave.ready = true;
+    if (old.uid && old.uid !== FB.uid) fbBoardBlank(old);
+    await fbCloudPush().catch(() => {}); boardPush();
+    return 'linked';
+  }
+  if (fresh) { store.set('fbAuth', auth); store.set('acct', acct); fbCloudApply(c); return 'applied'; }   // на устройстве пусто — просто загружаем аккаунт
+  // на устройстве свой прогресс, а у почты — свой: открываем почту отдельным аккаунтом, гость остаётся в списке
+  const a = accData();
+  if (a.list.length < ACC_MAX) { accOpenCloud(c, auth, acct); return 'opened'; }
+  // мест нет — спрашиваем, какой прогресс оставить (как при входе через Google)
+  store.set('fbAuth', auth); store.set('acct', acct); fbSave.ready = false;
+  acctPick(c, () => { if (old.uid && old.uid !== FB.uid) fbBoardBlank(old); }, () => {
+    if (prev.auth) store.set('fbAuth', prev.auth);
+    try { if (prev.acct === null) { localStorage.removeItem('wk3_acct'); delete memStore.wk3_acct; } else localStorage.setItem('wk3_acct', prev.acct); } catch (e) {}
+    FB.uid = old.uid; FB.tok = old.tok; FB.exp = 0;
+  });
+  return 'picked';
+}
+// новый аккаунт на устройстве сразу с прогрессом из облака (текущий остаётся в списке как был)
+function accOpenCloud(c, auth, acct) {
+  const a = accData(); accMine(a);
+  const sn = accSnap(); try { localStorage.setItem('wpAcc_' + a.cur, JSON.stringify(sn)); } catch (e) { mpNote(tr('НЕТ МЕСТА ДЛЯ СОХРАНЕНИЯ', 'NO SPACE TO SAVE')); return; }
+  store.set = () => {}; store.onSet = null;
+  quiet = true; clearTimeout(fbSave.timer); clearTimeout(cloud.timer); fbSave.ready = false; cloud.db = null;
+  accClearGame();
+  try {
+    for (const k of Object.keys(c.d)) if (/^wk3_[A-Za-z0-9]\w{0,39}$/.test(k) && !ACCT_KEYS.includes(k) && typeof c.d[k] === 'string' && c.d[k].length < 2e5) localStorage.setItem(k, c.d[k]);
+    if (!('wk3_sig' in c.d)) localStorage.removeItem('wk3_sig');
+    localStorage.setItem('wk3_fbAuth', JSON.stringify(auth)); localStorage.setItem('wk3_acct', JSON.stringify(acct));
+    localStorage.setItem('wk3_authAsk', '1'); localStorage.setItem('wk3_ob', '1');
+    localStorage.setItem('wk3__savedAt', String(c.s)); sessionStorage.setItem('wk3_fbCloudT', String(c.s));
+  } catch (e) {}
+  const id = 'a' + (Date.now() % 1e8).toString(36); a.list.push({ id, em: acct.email }); a.cur = id; accSaveMeta(a);
+  setTimeout(() => location.reload(), 150);
+}
+// открыли ссылку из письма: в адресе mode=signIn и oobCode
+function emailLinkCheck() {
+  let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
+  if (q.get('mode') !== 'signIn' || !q.get('oobCode') || !fbOn()) return;
+  const code = q.get('oobCode');
+  try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}   // ссылка одноразовая — убираем её из адреса
+  emailLinkCheck.code = code;
+  const wait = setInterval(() => {   // ждём, пока игра готова и ничего не открыто поверх
+    if (window.__introOn || state === 'load' || obOpen() || (moStack.length && moStack[moStack.length - 1].title !== tr('АККАУНТ', 'ACCOUNT'))) return;
+    clearInterval(wait); emailLinkOpen(code);
+  }, 400);
+}
+function emailLinkOpen(code) {
+  const p = emailPending();
+  moOpen(tr('ВХОД ПО ПОЧТЕ', 'EMAIL SIGN-IN'), bd => {
+    const c = moEl('div', 'card');
+    const msg = moTxt('div', 'sm', ''); msg.style.marginTop = '8px';
+    const go = async email => {
+      pxiSet(msg, tr('ВХОЖУ…', 'SIGNING IN…')); msg.style.color = '#d8d0ff';
+      try {
+        const r = await emailFinish(email, code);
+        if (r === 'linked' || r === 'same') { moOpen(tr('АККАУНТ', 'ACCOUNT'), bd2 => acctDone(bd2, tr('ГОТОВО! ПРОГРЕСС СОХРАНЁН В АККАУНТЕ', 'DONE! PROGRESS SAVED TO THE ACCOUNT'))); if (r === 'linked') giftCharodey(); }
+        else if (r === 'opened' || r === 'applied') pxiSet(msg, tr('ОТКРЫВАЮ АККАУНТ…', 'OPENING THE ACCOUNT…'));
+      } catch (e) { msg.style.color = '#ff8a7a'; pxiSet(msg, emailErrText(e && e.code)); }
+    };
+    if (p) { c.append(moTxt('div', 'ol', p.email)); bd.appendChild(c); c.appendChild(msg); go(p.email); return; }
+    // ссылку открыли не там, где просили письмо (другой браузер): подтверждаем почту
+    c.appendChild(moTxt('div', 'sm', tr('НАПИШИ ПОЧТУ, НА КОТОРУЮ ПРИШЛО ПИСЬМО', 'TYPE THE EMAIL THE LETTER WAS SENT TO')));
+    const inp = emailInput(); c.appendChild(inp);
+    const b = moTxt('button', 'btn gold', tr('ВОЙТИ', 'SIGN IN')); b.style.cssText += ';width:100%;margin-top:8px';
+    b.onclick = () => { const v = emailNorm(inp.value); if (!EMAIL_RE.test(v)) { msg.style.color = '#ff8a7a'; pxiSet(msg, emailErrText('INVALID_EMAIL')); return; } sfx.click(); go(v); };
+    c.append(b, msg); bd.appendChild(c);
+  });
+}
+function emailInput() {
+  const inp = document.createElement('input'); inp.type = 'email'; inp.autocomplete = 'email'; inp.inputMode = 'email'; inp.spellcheck = false; inp.placeholder = 'name@gmail.com';
+  inp.style.cssText = 'text-transform:none;margin-top:8px';
+  for (const ev of ['keydown', 'keyup', 'keypress']) inp.addEventListener(ev, e => e.stopPropagation());
+  return inp;
+}
+// блок «войти по почте» для карточки аккаунта
+function emailBlock() {
+  const w = moEl('div'); w.style.marginTop = '8px';
+  const msg = moTxt('div', 'sm', ''); msg.style.marginTop = '6px';
+  const p = emailPending();
+  const inp = emailInput(); if (p) inp.value = p.email;
+  const b = moTxt('button', 'btn gold', tr('ВОЙТИ ПО ПОЧТЕ', 'SIGN IN WITH EMAIL')); b.style.cssText += ';width:100%;margin-top:8px';
+  const paste = emailInput(); paste.type = 'url'; paste.inputMode = 'url'; paste.placeholder = tr('ИЛИ ВСТАВЬ ССЫЛКУ ИЗ ПИСЬМА', 'OR PASTE THE LINK FROM THE EMAIL'); paste.style.display = p ? '' : 'none';
+  paste.addEventListener('change', () => { let code = ''; try { const u = new URL(paste.value.trim()); code = u.searchParams.get('oobCode') || new URLSearchParams(new URL(u.searchParams.get('link') || u.searchParams.get('continueUrl') || 'x:', location.href).search).get('oobCode') || ''; } catch (e) {} if (code) emailLinkOpen(code); else { msg.style.color = '#ff8a7a'; pxiSet(msg, tr('ЭТО НЕ ССЫЛКА ИЗ ПИСЬМА', 'THIS IS NOT THE LINK FROM THE EMAIL')); } });
+  if (p) pxiSet(msg, trf('ПИСЬМО ОТПРАВЛЕНО НА {e}. ОТКРОЙ ССЫЛКУ ИЗ НЕГО', 'EMAIL SENT TO {e}. OPEN THE LINK IN IT', { e: p.email }));
+  b.onclick = async () => {
+    const v = emailNorm(inp.value); msg.style.color = '#d8d0ff';
+    if (!EMAIL_RE.test(v)) { msg.style.color = '#ff8a7a'; pxiSet(msg, emailErrText('INVALID_EMAIL')); return; }
+    sfx.click();
+    const here = accByEmail(v);
+    if (here) { pxiSet(msg, tr('ЭТА ПОЧТА УЖЕ ЕСТЬ НА УСТРОЙСТВЕ — ОТКРЫВАЮ ЕЁ АККАУНТ', 'THIS EMAIL IS ALREADY ON THIS DEVICE — OPENING ITS ACCOUNT')); b.disabled = true; setTimeout(() => accSwitch(here.id), 600); return; }
+    b.disabled = true; pxiSet(msg, tr('ОТПРАВЛЯЮ ПИСЬМО…', 'SENDING THE EMAIL…'));
+    try { await emailSend(v); pxiSet(msg, trf('ПИСЬМО ОТПРАВЛЕНО НА {e}. ОТКРОЙ ССЫЛКУ ИЗ НЕГО — ИГРА ОТКРОЕТСЯ УЖЕ С АККАУНТОМ. НЕТ ПИСЬМА — ПРОВЕРЬ «СПАМ»', 'EMAIL SENT TO {e}. OPEN THE LINK IN IT — THE GAME OPENS SIGNED IN. NO EMAIL? CHECK SPAM', { e: v })); paste.style.display = ''; }
+    catch (e) { msg.style.color = '#ff8a7a'; pxiSet(msg, emailErrText(e && e.code)); }
+    b.disabled = false;
+  };
+  w.append(inp, b, msg, paste);
+  return w;
+}
 function acctDone(bd, text) {
   const c = moEl('div', 'card'); c.style.textAlign = 'center';
   c.append(moTxt('div', 'ol big', '✓'), moTxt('div', 'ol', text)); const a = acctInfo(); if (a && a.email) c.appendChild(moTxt('div', 'sm', a.email));
@@ -2543,7 +2658,7 @@ function acctPick(c, onPick, onCancel) {
   const iv = setInterval(() => { if (chosen) clearInterval(iv); else if (seen && !seen.isConnected) { clearInterval(iv); chosen = true; onCancel(); } }, 300);
   moOpen(tr('КАКОЙ ПРОГРЕСС ОСТАВИТЬ?', 'WHICH PROGRESS TO KEEP?'), bd => {
     seen = bd;
-    bd.appendChild(moTxt('div', 'sm', tr('В ЭТОМ АККАУНТЕ GOOGLE УЖЕ ЕСТЬ ПРОГРЕСС. ВЫБЕРИ, КАКОЙ ОСТАВИТЬ — ДРУГОЙ ЗАМЕНИТСЯ', 'THIS GOOGLE ACCOUNT ALREADY HAS PROGRESS. PICK ONE TO KEEP — THE OTHER IS REPLACED')));
+    bd.appendChild(moTxt('div', 'sm', tr('В ЭТОМ АККАУНТЕ УЖЕ ЕСТЬ ПРОГРЕСС. ВЫБЕРИ, КАКОЙ ОСТАВИТЬ — ДРУГОЙ ЗАМЕНИТСЯ', 'THIS ACCOUNT ALREADY HAS PROGRESS. PICK ONE TO KEEP — THE OTHER IS REPLACED')));
     const card = (title, s, cls, fn) => {
       const k = moEl('div', 'card');
       k.appendChild(moTxt('div', 'ol', title));
@@ -2552,7 +2667,7 @@ function acctPick(c, onPick, onCancel) {
       const b = moTxt('button', 'btn ' + cls, tr('ОСТАВИТЬ ЭТОТ', 'KEEP THIS')); b.style.width = '100%'; b.onclick = () => { if (chosen) return; chosen = true; fbSave.ready = true; onPick(); sfx.click(); fn(); };
       k.append(g, b); bd.appendChild(k);
     };
-    card(tr('ИЗ АККАУНТА GOOGLE', 'FROM THE GOOGLE ACCOUNT'), cl, 'blue', () => fbCloudApply(c));
+    card(tr('ИЗ АККАУНТА', 'FROM THE ACCOUNT'), cl, 'blue', () => fbCloudApply(c));
     card(tr('С ЭТОГО УСТРОЙСТВА', 'FROM THIS DEVICE'), me, 'gold', async () => { await fbCloudPush().catch(() => {}); boardPush(); moOpen(tr('АККАУНТ', 'ACCOUNT'), bd2 => acctDone(bd2, tr('ПРОГРЕСС С УСТРОЙСТВА СОХРАНЁН В АККАУНТЕ GOOGLE', 'DEVICE PROGRESS SAVED TO THE GOOGLE ACCOUNT'))); if (!obOpen()) giftCharodey(); });
   });
 }
@@ -2560,7 +2675,7 @@ function acctPick(c, onPick, onCancel) {
 function acctLogout() {
   moOpen(tr('ВЫЙТИ?', 'SIGN OUT?'), bd => {
     const c = moEl('div', 'card'); c.style.textAlign = 'center';
-    c.appendChild(moTxt('div', 'ol', tr('ПРОГРЕСС ОСТАНЕТСЯ В АККАУНТЕ GOOGLE, А С ЭТОГО УСТРОЙСТВА БУДЕТ УДАЛЁН. ВОЙДИ СНОВА — И ОН ВЕРНЁТСЯ', 'YOUR PROGRESS STAYS IN THE GOOGLE ACCOUNT AND IS REMOVED FROM THIS DEVICE. SIGN IN AGAIN TO GET IT BACK')));
+    c.appendChild(moTxt('div', 'ol', tr('ПРОГРЕСС ОСТАНЕТСЯ В АККАУНТЕ, А С ЭТОГО УСТРОЙСТВА БУДЕТ УДАЛЁН. ВОЙДИ СНОВА — И ОН ВЕРНЁТСЯ', 'YOUR PROGRESS STAYS IN THE ACCOUNT AND IS REMOVED FROM THIS DEVICE. SIGN IN AGAIN TO GET IT BACK')));
     const msg = moTxt('div', 'sm', ''); msg.style.marginTop = '8px';
     const row = moEl('div', 'row'); row.style.cssText = 'margin-top:12px;gap:8px';
     const no = moTxt('button', 'btn blue', tr('ОТМЕНА', 'CANCEL')), yes = moTxt('button', 'btn red', tr('ВЫЙТИ', 'SIGN OUT')); no.style.flex = yes.style.flex = '1';
@@ -2583,7 +2698,7 @@ function acctCard() {
   const c = moEl('div', 'card'), a = acctInfo();
   if (acctG()) {
     const top = moEl('div', 'row'); top.style.gap = '8px';
-    top.append(moTxt('div', 'ol', 'GOOGLE'), moTxt('div', 'sm', a.email || a.name || '')); c.appendChild(top);
+    top.append(moTxt('div', 'ol', a.p === 'email' ? tr('ПОЧТА', 'EMAIL') : 'GOOGLE'), moTxt('div', 'sm', a.email || a.name || '')); top.lastChild.style.textTransform = 'none'; c.appendChild(top);
     const st = moTxt('div', 'sm', ''), paint = () => {
       const t = fbSave.at ? new Date(fbSave.at).toTimeString().slice(0, 5) : '';
       pxiSet(st, fbSave.st === 'saving' ? tr('СОХРАНЯЮ В ОБЛАКО…', 'SAVING TO THE CLOUD…') : fbSave.st === 'on' ? '☁ ' + tr('СОХРАНЕНО В ОБЛАКЕ ', 'SAVED TO THE CLOUD ') + t
@@ -2593,18 +2708,19 @@ function acctCard() {
     const out = moTxt('button', 'btn red', tr('ВЫЙТИ ИЗ АККАУНТА', 'SIGN OUT')); out.style.cssText += ';margin-top:8px;width:100%'; out.onclick = () => { sfx.click(); acctLogout(); };
     c.append(st, out);
   } else {
-    c.append(moTxt('div', 'ol', tr('ГОСТЬ', 'GUEST')), moTxt('div', 'sm', tr('ПРОГРЕСС ХРАНИТСЯ ТОЛЬКО НА ЭТОМ УСТРОЙСТВЕ. ПРИВЯЖИ GOOGLE — ОН СОХРАНИТСЯ В ОБЛАКЕ И НИЧЕГО НЕ ПОТЕРЯЕТСЯ', 'PROGRESS IS ONLY ON THIS DEVICE. LINK GOOGLE TO SAVE IT IN THE CLOUD WITHOUT LOSING ANYTHING')));
-    const msg = moTxt('div', 'sm', ''), b = googleBtn(tr('ПРИВЯЗАТЬ GOOGLE', 'LINK GOOGLE'), () => { sfx.click(); acctGoogle(msg); }); b.style.marginTop = '8px';
+    c.append(moTxt('div', 'ol', tr('ГОСТЬ', 'GUEST')), moTxt('div', 'sm', tr('ПРОГРЕСС ХРАНИТСЯ ТОЛЬКО НА ЭТОМ УСТРОЙСТВЕ. ВОЙДИ ПО ПОЧТЕ — ОН СОХРАНИТСЯ В ОБЛАКЕ, И ЕГО МОЖНО ОТКРЫТЬ НА ЛЮБОМ УСТРОЙСТВЕ', 'PROGRESS IS ONLY ON THIS DEVICE. SIGN IN WITH EMAIL TO SAVE IT IN THE CLOUD AND OPEN IT ON ANY DEVICE')));
+    const msg = moTxt('div', 'sm', ''), b = googleBtn(tr('ИЛИ ЧЕРЕЗ GOOGLE', 'OR WITH GOOGLE'), () => { sfx.click(); acctGoogle(msg); }); b.style.marginTop = '10px';
     const gift = moEl('div', 'row'); gift.style.cssText = 'gap:8px;margin-top:8px;background:#1a5a2a88;border:2px solid #3ce06a;border-radius:10px;padding:6px';
-    gift.append(heroCnv(skinById('charodey'), 44, { anim: true, pose: 'idle' }), moTxt('div', 'ol', tr('ПОДАРОК ЗА ПРИВЯЗКУ: ГЕРОЙ «ЧАРОДЕЙ»', 'GIFT FOR LINKING: HERO "ENCHANTER"')));
+    gift.append(heroCnv(skinById('charodey'), 44, { anim: true, pose: 'idle' }), moTxt('div', 'ol', tr('ПОДАРОК ЗА ВХОД В АККАУНТ: ГЕРОЙ «ЧАРОДЕЙ»', 'GIFT FOR SIGNING IN: HERO "ENCHANTER"')));
     gift.lastChild.style.cssText = 'color:#9aff9a;font-size:12px';
-    c.append(gift, b, msg); fbSdkMods().catch(() => {}); fbAuth().catch(() => {});   // заранее, чтобы окно Google открылось сразу по нажатию
+    c.append(gift, emailBlock(), b, msg); fbSdkMods().catch(() => {}); fbAuth().catch(() => {});   // заранее, чтобы окно Google открылось сразу по нажатию
   }
   return c;
 }
 if (fbOn()) {
   store.onSet = markDirty;
   fbCloudSync();
+  emailLinkCheck();   // открыли ссылку из письма «войти по почте»
   document.addEventListener('visibilitychange', () => { if (document.hidden && acctG()) { clearTimeout(fbSave.timer); fbSave.first = 0; fbCloudPush().catch(() => {}); } });
   // подарок за привязку Google (если привязали, пока игра была закрыта или после загрузки облака) — в меню
   setInterval(() => { if (acctG() && !owned.includes('charodey') && state === 'menu' && !moStack.length && !quiet && !obOpen() && !TUT.on && !TOUR.on) giftCharodey(); }, 1000);
@@ -2618,11 +2734,11 @@ function giftCharodey(silent) {
   moOpen(tr('ПОДАРОК', 'GIFT'), bd => {
     const c = moEl('div', 'card'); c.style.textAlign = 'center';
     const hv = heroCnv(k, 160, { anim: true, pose: 'idle' }); hv.style.margin = '0 auto'; c.appendChild(hv);
-    c.append(moTxt('div', 'ol big', skinName(k)), moTxt('div', 'sm', tr('СПАСИБО, ЧТО ПРИВЯЗАЛ GOOGLE! ЭТОТ ГЕРОЙ НЕ ПРОДАЁТСЯ', 'THANKS FOR LINKING GOOGLE! THIS HERO IS NOT FOR SALE')));
+    c.append(moTxt('div', 'ol big', skinName(k)), moTxt('div', 'sm', tr('СПАСИБО, ЧТО ВОШЁЛ В АККАУНТ! ЭТОТ ГЕРОЙ НЕ ПРОДАЁТСЯ', 'THANKS FOR SIGNING IN! THIS HERO IS NOT FOR SALE')));
     const b = moTxt('button', 'btn gold', tr('НАДЕТЬ', 'EQUIP')); b.style.cssText += ';width:100%;margin-top:10px'; b.onclick = () => { selectSkin(k); sfx.click(); moBack(); };
     c.appendChild(b); bd.appendChild(c);
   }, true);
-  moReward(tr('ПОДАРОК ЗА GOOGLE!', 'GIFT FOR GOOGLE!'), heroCnv(k, 150, { anim: true, pose: 'idle' }), tr('ГЕРОЙ «ЧАРОДЕЙ» — ТОЛЬКО ДЛЯ ТЕХ, КТО ПРИВЯЗАЛ АККАУНТ', 'HERO "ENCHANTER" — ONLY FOR LINKED ACCOUNTS'));
+  moReward(tr('ПОДАРОК ЗА АККАУНТ!', 'GIFT FOR SIGNING IN!'), heroCnv(k, 150, { anim: true, pose: 'idle' }), tr('ГЕРОЙ «ЧАРОДЕЙ» — ТОЛЬКО ДЛЯ ТЕХ, КТО ПРИВЯЗАЛ АККАУНТ', 'HERO "ENCHANTER" — ONLY FOR LINKED ACCOUNTS'));
   return true;
 }
 // всё, что читается из сохранения, проверяется: повреждённые или подделанные данные не ломают игру
@@ -15159,7 +15275,7 @@ function drawSettings() {
     ctx.fillStyle = on ? '#ffd23a' : '#ffffff'; ctx.fillRect(r.x, r.y, r.w, r.h);
     text(L[code].name, r.x + r.w / 2, r.y + r.h - 8, 2, OL, 'center', null, r.w - 8);
   });
-  button(RESET_BTN, tr('СМЕНИТЬ АККАУНТ', 'SWITCH ACCOUNT'), '#3ab0ff', '#1a70c0');   // вместо «удалить данные»: до 5 аккаунтов на устройстве
+  button(RESET_BTN, tr('АККАУНТ И ВХОД', 'ACCOUNT & SIGN-IN'), '#3ab0ff', '#1a70c0');   // вместо «удалить данные»: до 5 аккаунтов на устройстве
   text(T('backMiss'), W / 2, H - 10, 1, '#ffffff', 'center', null);
 }
 
@@ -17247,12 +17363,12 @@ function obStart(step) {
   };
   const btn = (label, cls, fn) => { const b = document.createElement('button'); if (cls) b.className = cls; pxiSet(b, label); b.onclick = () => { try { audio(); sfx.click(); } catch (e) {} fn(b); }; return b; };
   const show = (...els) => { panel.innerHTML = ''; panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = ''; panel.append(...els); };
-  const go = st => { store.set('obStep', st); (({ lang: stLang, login: stLogin, gift: stGift, name: stName, tut: stTut })[st] || stLang)(); };
+  const go = st => { if (st === 'login') st = 'name'; store.set('obStep', st); (({ lang: stLang, gift: stGift, name: stName, tut: stTut })[st] || stLang)(); };   // «login» остался у тех, кто был на этом шаге
   function stLang() {
     talk(tr('ПРИВЕТ! Я — [МИСТЕР ПИКЛС]! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ [ЯЗЫК].', "HI! I'M [MR. PICKLES]! 👋 FIRST, PICK A [LANGUAGE]."));
     const g = document.createElement('div'); g.className = 'grid2';
     const okTxt = () => tr('ПОДТВЕРДИТЬ', 'CONFIRM') + ' ✓';
-    const ok = btn(okTxt(), 'green', () => { store.set('lang', lang); go(fbOn() ? 'login' : 'name'); });
+    const ok = btn(okTxt(), 'green', () => { store.set('lang', lang); store.set('authAsk', 1); go('name'); });   // без выбора входа: играем гостем, войти можно в настройках
     for (const code of LANGS) g.appendChild(btn(LANG_NAMES[code] || code.toUpperCase(), code === lang ? 'on' : '', b => {   // выбор — подсветкой, переход — по кнопке подтверждения
       const was = lang; lang = code; for (const x of g.children) x.classList.toggle('on', x === b); pxiSet(ok, okTxt());
       if (was !== code) talk(tr('ПРИВЕТ! Я — [МИСТЕР ПИКЛС]! 👋 ДЛЯ НАЧАЛА ВЫБЕРИ [ЯЗЫК].', "HI! I'M [MR. PICKLES]! 👋 FIRST, PICK A [LANGUAGE]."));
@@ -17260,19 +17376,6 @@ function obStart(step) {
     show(g, ok);
   }
   const afterLogin = () => !owned.includes('charodey') ? 'gift' : store.get('nickSet', 0) && mp.nick ? 'tut' : 'name';
-  function stLogin() {
-    if (acctG()) { go(afterLogin()); return; }   // уже вошли (например, после загрузки прогресса из облака)
-    talk(tr('КАК БУДЕМ ИГРАТЬ? С [GOOGLE] ТВОЙ ПРОГРЕСС НЕ ПОТЕРЯЕТСЯ — И ЕЩЁ Я ДАМ [ПОДАРОК]!', "HOW DO WE PLAY? WITH GOOGLE YOUR PROGRESS IS SAFE — AND YOU GET A GIFT!"), 'point');
-    const msg = document.createElement('div'); msg.className = 'sm';
-    const g = btn(tr('ВОЙТИ ЧЕРЕЗ GOOGLE', 'SIGN IN WITH GOOGLE'), 'white', () => {
-      acctGoogle(msg);
-      clearInterval(OB.wait); OB.wait = setInterval(() => { if (!obOpen()) return clearInterval(OB.wait); if (acctG() && !moStack.length) { clearInterval(OB.wait); store.set('authAsk', 1); go(afterLogin()); } }, 300);
-    });
-    g.insertAdjacentHTML('afterbegin', '<svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>');
-    const gs = btn(tr('ИГРАТЬ КАК ГОСТЬ', 'PLAY AS GUEST'), '', () => { store.set('authAsk', 1); go('name'); });
-    show(g, gs, msg, Object.assign(document.createElement('div'), { className: 'sm', textContent: tr('ЗА ПРИВЯЗКУ GOOGLE — ГЕРОЙ «ЧАРОДЕЙ». ГОСТЯ МОЖНО ПРИВЯЗАТЬ ПОТОМ В ПРОФИЛЕ', 'LINK GOOGLE TO GET THE HERO "ENCHANTER". A GUEST CAN LINK LATER IN THE PROFILE') }));
-    fbSdkMods().catch(() => {}); fbAuth().catch(() => {});
-  }
   function stGift() {   // Пиклс вручает «Чародея»
     talk(tr('ДЕРЖИ [ПОДАРОК] ЗА GOOGLE — ГЕРОЙ [ЧАРОДЕЙ]! 🎁', 'HERE IS YOUR [GIFT] FOR GOOGLE — THE HERO [ENCHANTER]! 🎁'), 'thumb');
     const k = skinById('charodey'), hv = heroCnv(k, 150, { anim: true, pose: 'idle' }); OB.hero = moAnim.pop();
@@ -18624,6 +18727,7 @@ function accMine(a) { const me = a.list.find(x => x.id === a.cur); if (me) { me.
 function accEmailOf(x) { if (x.em) return x.em; try { const sn = JSON.parse(localStorage.getItem('wpAcc_' + x.id) || '{}'), ac2 = sn && sn.wk3_acct ? JSON.parse(sn.wk3_acct) : null; return ac2 && ac2.g ? String(ac2.email || '') : ''; } catch (e) { return ''; } }
 // одна почта — один аккаунт: вошёл через Google, который уже есть в другом аккаунте на этом устройстве, — сразу переходим туда
 function accEmailCheck(email) {
+  if (accEmailCheck.done) return;   // уже переключаемся (вход сам нашёл аккаунт с этой почтой)
   const a = accData(), em = String(email || '').toLowerCase(); if (!em) return;
   const other = a.list.find(x => x.id !== a.cur && accEmailOf(x).toLowerCase() === em); if (!other) return;
   try { mpNote(tr('ЭТА ПОЧТА УЖЕ ЕСТЬ — ПЕРЕХОДИМ В ТВОЙ АККАУНТ', 'THIS EMAIL ALREADY HAS AN ACCOUNT — SWITCHING TO IT')); } catch (e) {}
@@ -18650,6 +18754,7 @@ function accDelete(id) { const a = accData(); if (id === a.cur) return; a.list =
 function openAccounts() {
   moOpen(tr('АККАУНТЫ', 'ACCOUNTS'), bd => {
     const a = accData(); accMine(a); accSaveMeta(a);
+    if (fbOn()) bd.appendChild(acctCard());   // вход по почте (или Google) — для текущего аккаунта
     bd.appendChild(moTxt('div', 'sm', trf('НА ЭТОМ УСТРОЙСТВЕ МОЖНО ДЕРЖАТЬ ДО {n} АККАУНТОВ — У КАЖДОГО СВОИ ГЕРОИ, МОНЕТЫ И КУБКИ', 'UP TO {n} ACCOUNTS ON THIS DEVICE — EACH WITH ITS OWN HEROES, COINS AND TROPHIES', { n: ACC_MAX })));
     a.list.forEach((x, i) => {
       const cur = x.id === a.cur, c = moEl('div', 'card' + (cur ? ' glow' : '')); c.style.marginTop = '10px';
