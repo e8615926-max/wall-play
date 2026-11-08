@@ -34,6 +34,13 @@ const ver = vh.digest('hex').slice(0, 10);
 writeFileSync(join(outDir, 'game.js'), r.code);
 
 let page = html.slice(0, scripts[0].index) + '<script src="game.js?v=' + ver + '"></script>' + html.slice(scripts[0].index + scripts[0][0].length);
+// запасная библиотека мультиплеера (PeerJS) нужна редко: в сборке она не встроена в страницу, а лежит рядом и грузится по требованию
+const peer = page.match(/<script type="text\/plain" id="peerjs-lib">([\s\S]*?)<\/script>\s*/);
+if (!peer) throw new Error('peerjs-lib block not found');
+writeFileSync(join(outDir, 'peerjs.js'), peer[1].trim() + '\n');
+page = page.replace(peer[0], '');
+// браузер начинает качать игру сразу, ещё не дочитав страницу
+page = page.replace('</head>', '<link rel="preload" href="game.js?v=' + ver + '" as="script">\n</head>');
 page = page.replace(/<!--(?!\[)[\s\S]*?-->/g, '');   // HTML-комментарии посетителю не нужны
 writeFileSync(join(outDir, 'index.html'), page);
 
@@ -41,8 +48,8 @@ let sw = readFileSync(join(srcDir, 'sw.js'), 'utf8');
 const cacheRe = /const CACHE = '([^']+)';/, filesRe = /const FILES = \[([^\]]*)\];/;
 if (!cacheRe.test(sw) || !filesRe.test(sw)) throw new Error('sw.js: CACHE or FILES not found');
 sw = sw.replace(cacheRe, (m, c) => "const CACHE = '" + c + '-' + ver + "';")
-       .replace(filesRe, (m, f) => 'const FILES = [' + f + ", './game.js'];");
+       .replace(filesRe, (m, f) => 'const FILES = [' + f + ", './game.js?v=" + ver + "'];");   // с версией: у game.js долгий кэш, адрес меняется с каждой выкладкой
 writeFileSync(join(outDir, 'sw.js'), sw);
 
 for (const f of ['manifest.webmanifest', 'icon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'og.png']) copyFileSync(join(srcDir, f), join(outDir, f));   // иконки и картинка для превью ссылки
-console.log('built', { version: ver, 'index.html': page.length, 'game.js': r.code.length, source: html.length });
+console.log('built', { version: ver, 'index.html': page.length, 'game.js': r.code.length, 'peerjs.js': peer[1].length, source: html.length });
