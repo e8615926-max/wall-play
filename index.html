@@ -111,6 +111,12 @@
   }
   #intro .flip { display: inline-block; transform: scaleY(-1); }
 
+  #intro .snd { position: fixed; left: 0; right: 0; bottom: max(9vh, calc(env(safe-area-inset-bottom, 0px) + 40px)); text-align: center;
+    font-weight: 500; font-size: 12px; letter-spacing: .28em; text-transform: uppercase; color: var(--steel);
+    opacity: 0; animation: sndIn .8s 1.4s ease-out both, sndPulse 2.4s 2.2s ease-in-out infinite; transition: opacity .4s; pointer-events: none; }
+  #intro .snd.off { animation: none; opacity: 0; }
+  @keyframes sndIn { to { opacity: .85; } }
+  @keyframes sndPulse { 0%, 100% { opacity: .85; } 50% { opacity: .4; } }
   #intro .sub { display: flex; align-items: center; gap: clamp(12px, 2.4vmin, 24px); }
   #intro .line { height: 3px; width: clamp(46px, 15vmin, 150px); transform: scaleX(0); }
   #intro .line.l { transform-origin: right center; clip-path: polygon(0 45%, 100% 0, 100% 100%, 0 55%);
@@ -253,6 +259,7 @@
       <span class="ch metal" style="--i:4">R</span>
     </div>
 
+    <div class="snd" id="introSnd"></div>
     <div class="sub">
       <span class="line l"></span>
       <span class="studios">STUDIOS</span>
@@ -533,7 +540,7 @@
 
   /* ================= Timeline ================= */
   // заставка идёт сразу при запуске. Браузер не даёт сайту звучать до первого касания:
-  // если звук ещё нельзя — первое касание запускает заставку заново с самого начала, уже со звуком
+  // звук включается по первому разрешённому жесту и сразу подхватывается с текущего места заставки (без перезапуска)
   let t0 = performance.now(), timers = [];
   const elapsed = () => (performance.now() - t0) / 1000;
   const SOUNDS = [
@@ -543,8 +550,15 @@
     [3.75, t => whoosh(t, .6, 2400, 500, 0, 0, .12)], [3.55, t => riser(t, .95)], [4.5, t => impact(t, 1.1)], [4.5, t => pad(t)], [4.6, t => shimmer(t, 1.8, 24)],
   ];
   let soundStarted = false;
+  const sndHint = document.getElementById('introSnd');
+  if (sndHint) {   // язык подсказки — как в игре (или как на телефоне)
+    let lg = ''; try { lg = JSON.parse(localStorage.getItem('wk3_lang') || '""'); } catch (e) {}
+    lg = String(lg || navigator.language || 'en').slice(0, 2).toLowerCase();
+    sndHint.textContent = { ru: '🔊 Нажми, чтобы включить звук', uk: '🔊 Торкнись, щоб увімкнути звук', kk: '🔊 Дыбысты қосу үшін бас' }[lg] || '🔊 Tap to turn on sound';
+  }
   function playSounds() {
     soundStarted = true;
+    if (sndHint) sndHint.classList.add('off');
     const now = ac.currentTime + .03, e = elapsed();
     for (const [s, fn] of SOUNDS) if (s >= e - .05) fn(now + Math.max(0, s - e));
   }
@@ -561,18 +575,20 @@
     at(10.6, () => { document.getElementById('intro').remove(); try { ac && ac.close(); } catch (e) {} });
   }
   runTimeline();
-  try { initAudio(); ac.resume().then(() => { if (ac.state === 'running' && !soundStarted && elapsed() < 1) playSounds(); }, () => {}); } catch (e) {}
-  // iPhone разрешает звук только при отпускании пальца (touchend/click), поэтому слушаем и эти события,
-  // а в самом жесте проигрываем тихий звук — так iOS окончательно «открывает» звук для страницы
+  // звук пошёл (контекст реально «running») — играем оставшиеся звуки заставки ровно с текущего места
+  const tryStart = () => { if (!soundStarted && window.__introOn && ac && ac.state === 'running' && elapsed() < 7.5) playSounds(); };
+  try { initAudio(); const r = ac.resume(); if (r && r.then) r.then(tryStart, () => {}); } catch (e) {}
+  // Телефоны дают звук только при ОТПУСКАНИИ пальца (touchend/pointerup/click), а не при касании (touchstart/pointerdown).
+  // Раньше первое же касание помечало звук «запущенным» и перезапускало заставку, а настоящий жест уже ничего не делал — звука не было.
+  // Теперь пробуем на каждом жесте, пока звук действительно не пошёл; тихий звук внутри жеста окончательно «открывает» звук на iPhone
   const onGesture = () => {
     if (!window.__introOn || soundStarted) return;
     try {
       if (!ac) initAudio();
-      ac.resume();
       const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination); src.start(0);
+      const r = ac.resume(); if (r && r.then) r.then(tryStart, () => {});
     } catch (e) { return; }
-    if (elapsed() > 0.4 && elapsed() < 7.5) runTimeline();   // заново с начала — теперь со звуком
-    if (elapsed() < 7.5) playSounds();
+    tryStart();
   };
   for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown']) addEventListener(ev, onGesture, { capture: true, passive: true });
 })();
@@ -8818,6 +8834,7 @@ cv.addEventListener('pointermove', e => { if (aim) { const q = toGame(e); aim.x 
 window.addEventListener('pointerup', () => { if (aim) pieFire(); });
 window.addEventListener('blur', release);
 window.addEventListener('keydown', e => {
+  if (window.__introOn) return;   // идёт заставка ELDAR STUDIOS: клавиши только включают её звук, игру под ней не трогают
   if (mp.open || askPass.open || obOpen()) return;
   // открыто окно поверх игры: клавиши не трогают игру под ним (раньше пробел из паузы → настройки → аккаунты запускал раунд под окном); Esc — назад
   if (moUi && moUi.style.display !== 'none' && moStack.length) { if (e.code === 'Escape') moBack(); return; }
@@ -9789,7 +9806,8 @@ function finishLoad() {
 const LOAD_MIN = 2.4;
 const loadProgress = () => Math.min(loadStep / LOAD_STEPS.length, loadT / LOAD_MIN);
 function updateLoad(dt) {
-  if (window.__introOn) return;   // загрузка начинается после заставки ELDAR STUDIOS
+  // загрузка идёт одновременно с заставкой ELDAR STUDIOS (касания до игры не доходят — заставка сверху),
+  // поэтому, когда заставка растает, игра уже готова: сразу «нажми, чтобы играть»
   loadT += dt;
 
   const t0 = performance.now();   // за шаг — не дольше 3 мс, чтобы загрузка не дёргалась
