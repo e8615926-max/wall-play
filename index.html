@@ -7992,7 +7992,11 @@ function bushTile(z, T, k, lazy) {
     bushTile.made = true;
     tc = document.createElement('canvas'); tc.width = Math.round(W * k); tc.height = Math.round(BUSH_TILE * k);
     const g = tc.getContext('2d'); g.imageSmoothingEnabled = false; g.scale(k, k); bushColumn(g, z.bush, z.bushD, z.bushL, T * BUSH_TILE, BUSH_TILE);   // без сглаживания овалы берутся готовыми из кэша
-    set.set(T, tc); if (set.size > 6) for (const q of set.keys()) if (q < -1) { set.delete(q); break; }   // на экране 3–4 плитки; нижние две (старт забега и меню) не выбрасываем — после проигрыша не рисуем их заново
+    set.set(T, tc);
+    // выбрасываем плитку ДАЛЬШЕ ВСЕХ от нужной сейчас (а не самую старую): раньше при 4 плитках на экране + 1 про запас
+    // кэш на 6 выкидывал видимую плитку, она тут же рисовалась заново, вытесняла соседнюю — и так по кругу (лаг, особенно при смене карты).
+    // Нижние плитки (старт забега и меню) по-прежнему не трогаем
+    if (set.size > 8) { let far = null, fd = -1; for (const q of set.keys()) { if (q >= -1) continue; const d = Math.abs(q - T); if (d > fd) { fd = d; far = q; } } if (far !== null) set.delete(far); }
   }
   return tc;
 }
@@ -8009,6 +8013,30 @@ function drawBushColumn(b) {
   // смена карты: крона новой карты плавно проявляется поверх старой (те же плитки, без перерисовки)
   if (b.t > 0 && b.n !== b.z && (b.n.bush !== b.z.bush || b.n.bushD !== b.z.bushD || b.n.bushL !== b.z.bushL)) layer(b.n, b.t, true);
   ctx.globalAlpha = 1;
+  warmNextZone(b, off, k);
+}
+// Следующую карту готовим заранее, в паузах между кадрами, ещё ДО начала перехода: все плитки кроны, которые будут
+// на экране во время перехода, и надпись с названием карты. Раньше крона новой карты рисовалась прямо во время перехода
+// (по плитке за кадр, 5–25 мс каждая на слабом телефоне), а в момент входа в карту — все недостающие сразу: смена карты дёргалась
+function warmNextZone(b, off, k) {
+  if (b.t > 0 || (state !== 'play' && state !== 'replay' && state !== 'menu')) return;   // в меню — первая смена карты, до старта забега
+  const nz = ZONES[b.i + 1]; if (!nz) return;
+  const m = state === 'menu' ? 0 : heightM(), toBlend = (nz.m - 30) - m;   // метров до начала перехода
+  if (toBlend <= 0 || toBlend > 90) return;
+  const name = zoneName(nz);
+  if (!textCache.has(name + '|2|#ffffff|' + OL)) idleWarm('zname' + nz.nid, () => { try { textCanvas(name, 2, '#ffffff', OL); } catch (e) {} });
+  if (nz.bush === b.z.bush && nz.bushD === b.z.bushD && nz.bushL === b.z.bushL) return;   // крона та же — готовить нечего
+  const key = nz.bush + nz.bushD + nz.bushL + k, set = bushSets.get(key);
+  // камера поднимается — смещение кроны уменьшается: от начала перехода (через toBlend м) до его конца (ещё +30 м) и чуть дальше
+  const offStart = off - toBlend * PX_PER_M * 0.85, offEnd = off - (toBlend + 36) * PX_PER_M * 0.85;
+  for (let T = Math.floor((offStart + H) / BUSH_TILE); T >= Math.floor(offEnd / BUSH_TILE); T--) {
+    if (set && set.has(T)) continue;
+    idleWarm('bushN' + T + key, () => {
+      if (Math.abs(cv.width / W - k) > 1e-6 || ZONES[zoneBlend().i + 1] !== nz) return;   // экран изменился или карта уже другая
+      const made = bushTile.made; bushTile.made = false; bushTile(nz, T, k, false); bushTile.made = made;
+    });
+    return;   // по одной плитке за раз — следующая в следующей паузе
+  }
 }
 function bushColumn(c, bush, bushD, bushL, off, hh) {
   const step = 14, first = Math.floor((off - 40) / step), lastK = Math.ceil((off + hh + 40) / step);
@@ -10084,17 +10112,52 @@ function drawPoleBody(pl) {
   }
 }
 
+// оттенки столба (объём цилиндра, волокна, кольца) — считаются один раз на цвет
+const poleShadeCache = new Map();
+function poleShades(base, dk, lt) {
+  const key = base + dk + lt; let s = poleShadeCache.get(key);
+  if (!s) { s = { rim: mix(base, dk, 0.45), mid: mix(base, dk, 0.5), deep: mix(dk, OL, 0.35), hi: mix(base, lt, 0.55), grain: mix(base, dk, 0.72), ring: mix(base, lt, 0.3) }; poleShadeCache.set(key, s); }
+  return s;
+}
 function poleBodyInner(pl, base, dk, lt, h, cx, x0) {
+  const S = poleShades(base, dk, lt), z = ZONES[pl.zone] || ZONES[0];
+  const wood = (pl.kind === 'log' || pl.kind === 'honey' || pl.kind === 'thorn' || pl.kind === 'crumble') && z.poleStyle !== 'candy';
+  // мягкая тень на фон справа — столб «стоит» перед кроной, а не нарисован на ней
+  ctx.globalAlpha *= 0.3; prect(ctx, x0 + 16, pl.y0 + 6, 4, h - 4, OL); ctx.globalAlpha /= 0.3;
+  // цилиндр: контур, тёмный край слева, блик, основной тон, полутень и глубокая тень справа
   prect(ctx, x0 - 2, pl.y0, 18, h, OL);
   prect(ctx, x0, pl.y0, 14, h, base);
-  prect(ctx, x0 + 10, pl.y0, 4, h, dk);
+  prect(ctx, x0, pl.y0, 1, h, S.rim);
   prect(ctx, x0 + 2, pl.y0, 2, h, lt);
-  for (let y = pl.y0 + 8; y < pl.y1 - 8; y += 14) {
+  prect(ctx, x0 + 4, pl.y0, 1, h, S.hi);
+  prect(ctx, x0 + 9, pl.y0, 1, h, S.mid);
+  prect(ctx, x0 + 10, pl.y0, 4, h, dk);
+  prect(ctx, x0 + 12, pl.y0, 2, h, S.deep);
+  for (let y = pl.y0 + 8; y < pl.y1 - 8; y += 10) {
     const hv = hash2(y + pl.seed, 3);
-    if (hv < 0.55) prect(ctx, x0 + 4 + (hv > 0.3 ? 2 : 0), y, 2, 6, dk);
-    if (hv > 0.9 && (pl.kind === 'log' || pl.kind === 'honey') && !pl.thorn) { // сучок
+    // волокна коры разной длины — вырезанные: тёмная бороздка и светлый край рядом
+    if (hv < 0.62) { const gx = x0 + 5 + (hv > 0.31 ? 2 : 0), gl = 5 + Math.floor(hv * 10); prect(ctx, gx, y, 2, gl, dk); prect(ctx, gx - 1, y + 1, 1, gl - 2, S.hi); }
+    if (hv > 0.2 && hv < 0.42) prect(ctx, x0 + 11, y + 3, 1, 6, S.deep);
+    if (!wood) continue;
+    // кольцо-надрез со светлым краем
+    if (hv > 0.86 && hv <= 0.93 && y < pl.y1 - 14) { prect(ctx, x0, y, 14, 2, dk); prect(ctx, x0 + 10, y, 4, 2, S.deep); prect(ctx, x0 + 1, y + 2, 8, 1, lt); }
+    if (hv > 0.93 && !pl.thorn) { // сучок с подсветкой
       const s = hash2(y, pl.seed) > 0.5 ? 1 : -1, tx = s > 0 ? pl.x1 : x0 - 6;
-      prect(ctx, tx, y, 6, 2, dk); prect(ctx, tx + (s > 0 ? 4 : 0), y - 2, 2, 2, dk);
+      prect(ctx, tx, y, 6, 3, OL); prect(ctx, tx + (s > 0 ? 0 : 1), y + 1, 5, 1, dk); prect(ctx, tx + (s > 0 ? 4 : 0), y - 2, 2, 2, OL);
+      prect(ctx, x0 + (s > 0 ? 9 : 2), y, 3, 3, S.grain); prect(ctx, x0 + (s > 0 ? 10 : 3), y + 1, 1, 1, S.ring);
+    }
+  }
+  // мох цвета кроны этой карты — пятнами прямо на стволе (на дереве он заметен, на фоне кроны — нет)
+  if (wood && z.bush && hash2(pl.seed, 77) < 0.6) {
+    const n = 1 + Math.floor(hash2(pl.seed, 78) * Math.min(4, h / 60));
+    for (let i = 0; i < n; i++) {
+      const my = even(pl.y0 + 14 + hash2(pl.seed, 80 + i) * Math.max(1, h - 34)), left = hash2(pl.seed, 90 + i) < 0.5;
+      const mx = left ? x0 : x0 + 6;
+      prect(ctx, mx, my, 8, 6, z.bushD || OL);           // тень мха
+      prect(ctx, mx, my - 2, 7, 6, z.bush);              // пятно
+      prect(ctx, mx + (left ? 1 : 2), my - 2, 3, 2, z.bushL || z.bush);   // светлая верхушка
+      prect(ctx, mx + (left ? 2 : 4), my + 4, 2, 3, z.bush);              // свисающий кусочек
+      if (left) prect(ctx, x0 - 2, my, 2, 3, z.bush); else prect(ctx, x0 + 14, my, 2, 3, z.bush);   // выходит за край ствола
     }
   }
   if (ZONES[pl.zone] && ZONES[pl.zone].poleStyle === 'candy' && (pl.kind === 'log' || pl.kind === 'honey' || pl.kind === 'thorn' || pl.kind === 'rotor')) {   // столбы-леденцы
@@ -10143,8 +10206,9 @@ function poleBodyInner(pl, base, dk, lt, h, cx, x0) {
     if (SET.fx && Math.random() < 0.3) parts.push({ x: cx + rand(-14, 14), y: rand(pl.y0, pl.y1), vx: 0, vy: -30, life: 0.5, max: 0.5, color: '#e0c0ff', size: 4, grav: 0, shape: 'star' });
   }
   if (pl.kind === 'rotor') for (let y = pl.y0 + 20; y < pl.y1 - 10; y += 40) { prect(ctx, x0 - 2, y, 18, 4, '#5a6078'); prect(ctx, x0, y, 14, 2, '#c8d0e0'); }
-  pell(ctx, cx, pl.y0, 9, 4, OL); pell(ctx, cx, pl.y0, 7, 3, lt); pell(ctx, cx, pl.y0, 3, 1.5, base);
-  pell(ctx, cx, pl.y1, 9, 4, OL); pell(ctx, cx, pl.y1, 7, 2.5, dk);
+  // торец сверху с годичными кольцами, снизу — тень
+  pell(ctx, cx, pl.y0, 9, 4, OL); pell(ctx, cx, pl.y0, 7, 3, lt); pell(ctx, cx, pl.y0, 5, 2, S.ring); pell(ctx, cx, pl.y0, 4, 1.5, lt); pell(ctx, cx, pl.y0, 2, 1, S.grain);
+  pell(ctx, cx, pl.y1, 9, 4, OL); pell(ctx, cx, pl.y1, 7, 2.5, dk); pell(ctx, cx - 1, pl.y1 - 1, 4, 1, S.deep);
   if (pl.thorn) drawThorns(pl.thorn < 0 ? pl.x0 - 2 : pl.x1 + 2, pl.y0 + 4, pl.y1 - 4, pl.thorn);
 }
 let groundCv = null;   // земля не меняется — рисуется один раз в картинку
