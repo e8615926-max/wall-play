@@ -9317,6 +9317,7 @@ function drawGround0() {
 }
 
 function drawHeightMarks() {
+  if (state === 'menu') return;   // в меню метки высоты просвечивали сквозь кнопки
   const step = 10 * PX_PER_M;
   const first = Math.floor((-(camY + H)) / step);
   for (let k = Math.max(1, first); k < first + 5; k++) {
