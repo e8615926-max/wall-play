@@ -3352,13 +3352,16 @@ function prect(c, x, y, w, h, col) {
 }
 // пиксельный овал: большие (от 5 строк) рисуются один раз в маленький холст и потом ставятся одной картинкой
 // вместо десятков полосок — монеты, солнце, облака, значки и кнопки; центр — на сетке 2 px, как и сами полоски
-const PELL_CACHE = new Map();
+const PELL_CACHE = new Map(), PELL_SEEN = new Set();
 function pell(c, cx, cy, rx, ry, col) {
   if (ry >= 5 && typeof col === 'string' && c.imageSmoothingEnabled === false && rx > 0) {
     rx = Math.round(rx * 2) / 2; ry = Math.round(ry * 2) / 2;
     const key = rx + ',' + ry + ',' + col;
     let e = PELL_CACHE.get(key);
     if (!e) {
+      // цвет, который меняется каждый кадр (переливы, смешение карт), больше не повторится: под него заготовку не делаем,
+      // а рисуем овал сразу. Раньше на каждый такой цвет создавалась новая картинка — сотни за переход между картами
+      if (!PELL_SEEN.has(key)) { if (PELL_SEEN.size > 3000) PELL_SEEN.clear(); PELL_SEEN.add(key); pell0(c, even(cx), even(cy), rx, ry, col); return; }
       e = document.createElement('canvas'); e.width = Math.ceil((rx * 2 + 4) / 4) * 4; e.height = Math.ceil((ry * 2 + 4) / 4) * 4;
       pell0(e.getContext('2d'), e.width / 2, e.height / 2, rx, ry, col);
       if (PELL_CACHE.size > 500) PELL_CACHE.delete(PELL_CACHE.keys().next().value);
@@ -7913,6 +7916,9 @@ function farTile(zi) {
   const z = ZONES[zi], th = 640, kind = z.farKind || 'tree';
   const c = document.createElement('canvas'); c.width = W; c.height = th;
   const g = c.getContext('2d');
+  // какие полосы по ширине заняты рисунком — отмечаем прямо по ходу рисования (раньше читали все пиксели готовой картинки: медленно)
+  const used = new Uint8Array(W), mark = (x0, x1) => { for (let x = Math.max(0, Math.floor(x0) - 1), e = Math.min(W, Math.ceil(x1) + 1); x < e; x++) used[x] = 1; };
+  const R = (x, y, w, h, col) => { mark(x, x + w); prect(g, x, y, w, h, col); }, E = (x, y, rx, ry, col) => { mark(x - rx, x + rx); pell(g, x, y, rx, ry, col); };
   for (let k = 0; k < 5; k++) {
     const left = k % 2 === 0;
     const x = even(left ? hash(k * 31 + zi) * 70 : W - hash(k * 31 + zi) * 70), y = even(hash(k * 17 + 5) * th);
@@ -7920,47 +7926,42 @@ function farTile(zi) {
       const Y = y + dy;
       if (kind === 'city') {
         const bw = even(36 + hash(k * 3) * 30), bh = even(160 + hash(k * 5) * 160);
-        prect(g, x - bw / 2 - 2, Y - bh / 2 - 2, bw + 4, bh + 4, z.farD);
-        prect(g, x - bw / 2, Y - bh / 2, bw, bh, '#140a2a');
+        R(x - bw / 2 - 2, Y - bh / 2 - 2, bw + 4, bh + 4, z.farD);
+        R(x - bw / 2, Y - bh / 2, bw, bh, '#140a2a');
         for (let wy = Y - bh / 2 + 8; wy < Y + bh / 2 - 8; wy += 12) for (let wx = x - bw / 2 + 6; wx < x + bw / 2 - 6; wx += 10)
-          if (hash2(wx | 0, wy | 0) < 0.45) prect(g, wx, wy, 4, 6, hash2(wy | 0, wx | 0) < 0.5 ? z.far : '#3af0ff');
-        prect(g, x - 2, Y - bh / 2 - 20, 4, 20, z.far);
+          if (hash2(wx | 0, wy | 0) < 0.45) R(wx, wy, 4, 6, hash2(wy | 0, wx | 0) < 0.5 ? z.far : '#3af0ff');
+        R(x - 2, Y - bh / 2 - 20, 4, 20, z.far);
       } else if (kind === 'castle') {
         const tw = 34, h2 = 200;
-        prect(g, x - tw / 2 - 2, Y - h2 / 2, tw + 4, h2, z.farD);
-        prect(g, x - tw / 2, Y - h2 / 2 + 2, tw, h2, z.far);
-        for (let i = 0; i < 4; i++) prect(g, x - tw / 2 + i * 10, Y - h2 / 2 - 8, 6, 10, z.far);
-        for (let wy = Y - h2 / 2 + 30; wy < Y + h2 / 2 - 20; wy += 40) { prect(g, x - 4, wy, 8, 12, z.farD); prect(g, x - 2, wy + 2, 4, 8, '#ffd23a'); }
-        prect(g, x - 2, Y - h2 / 2 - 34, 2, 26, z.farD); prect(g, x, Y - h2 / 2 - 34, 12, 8, '#ff3a5a');
+        R(x - tw / 2 - 2, Y - h2 / 2, tw + 4, h2, z.farD);
+        R(x - tw / 2, Y - h2 / 2 + 2, tw, h2, z.far);
+        for (let i = 0; i < 4; i++) R(x - tw / 2 + i * 10, Y - h2 / 2 - 8, 6, 10, z.far);
+        for (let wy = Y - h2 / 2 + 30; wy < Y + h2 / 2 - 20; wy += 40) { R(x - 4, wy, 8, 12, z.farD); R(x - 2, wy + 2, 4, 8, '#ffd23a'); }
+        R(x - 2, Y - h2 / 2 - 34, 2, 26, z.farD); R(x, Y - h2 / 2 - 34, 12, 8, '#ff3a5a');
       } else if (kind === 'lolly') {   // далёкие леденцы на палочках
-        prect(g, x - 3, Y, 6, 140, '#ffffff'); pell(g, x, Y, 36, 36, z.farD); pell(g, x, Y, 32, 32, z.far);
-        for (let a2 = 0; a2 < 50; a2++) { const an = a2 * 0.42, rr = a2 * 0.62; prect(g, x + Math.cos(an) * rr - 2, Y + Math.sin(an) * rr - 2, 4, 4, '#ffffff'); }
+        R(x - 3, Y, 6, 140, '#ffffff'); E(x, Y, 36, 36, z.farD); E(x, Y, 32, 32, z.far);
+        for (let a2 = 0; a2 < 50; a2++) { const an = a2 * 0.42, rr = a2 * 0.62; R(x + Math.cos(an) * rr - 2, Y + Math.sin(an) * rr - 2, 4, 4, '#ffffff'); }
       } else if (kind === 'mushroom') {
-        prect(g, x - 6, Y, 12, 90, '#f0e0c8'); prect(g, x + 2, Y, 4, 90, '#c8b8a0');
-        pell(g, x, Y, 40, 22, z.farD); pell(g, x, Y - 2, 36, 18, z.far);
-        for (let j = 0; j < 5; j++) pell(g, x - 24 + j * 12 + hash(k + j) * 6, Y - 8 + hash(j * 3 + k) * 8, 4, 3, '#ffffff');
+        R(x - 6, Y, 12, 90, '#f0e0c8'); R(x + 2, Y, 4, 90, '#c8b8a0');
+        E(x, Y, 40, 22, z.farD); E(x, Y - 2, 36, 18, z.far);
+        for (let j = 0; j < 5; j++) E(x - 24 + j * 12 + hash(k + j) * 6, Y - 8 + hash(j * 3 + k) * 8, 4, 3, '#ffffff');
       } else {
-        for (let s2 = 0; s2 < 70; s2 += 4) prect(g, x + Math.sin((y + s2) * 0.08) * 6 - 4, Y + 10 + s2, 8, 4, z.farD);
+        for (let s2 = 0; s2 < 70; s2 += 4) R(x + Math.sin((y + s2) * 0.08) * 6 - 4, Y + 10 + s2, 8, 4, z.farD);
         for (let j = 0; j < 6; j++) {
           const r = 12 + hash(k * 7 + j) * 12;
-          pell(g, x + (hash(k + j * 3) - 0.5) * 60, Y + (hash(k * 3 + j) - 0.5) * 30, r + 2, r * 0.7 + 2, z.farD);
+          E(x + (hash(k + j * 3) - 0.5) * 60, Y + (hash(k * 3 + j) - 0.5) * 30, r + 2, r * 0.7 + 2, z.farD);
         }
         for (let j = 0; j < 6; j++) {
           const r = 12 + hash(k * 7 + j) * 12;
-          pell(g, x + (hash(k + j * 3) - 0.5) * 56, Y - 2 + (hash(k * 3 + j) - 0.5) * 28, r, r * 0.7, z.far);
+          E(x + (hash(k + j * 3) - 0.5) * 56, Y - 2 + (hash(k * 3 + j) - 0.5) * 28, r, r * 0.7, z.far);
         }
       }
     }
   }
   // рисунок дальнего плана — только у краёв: запоминаем, какие полосы по ширине заняты, и каждый кадр рисуем лишь их
-  c.cols = [[0, W]];
-  try {
-    const d = g.getImageData(0, 0, W, th).data, used = new Uint8Array(W);
-    for (let y = 0; y < th; y += 2) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3]) used[x] = 1;
-    const cols = []; let x0 = -1;
+  { const cols = []; let x0 = -1;
     for (let x = 0; x <= W; x++) { if (x < W && used[x]) { if (x0 < 0) x0 = x; } else if (x0 >= 0) { if (cols.length && x0 - cols[cols.length - 1][1] < 24) cols[cols.length - 1][1] = x; else cols.push([x0, x]); x0 = -1; } }
-    c.cols = cols.map(([a, b]) => [Math.max(0, (a & ~1) - 2), Math.min(W, ((b + 1) & ~1) + 2)]);
-  } catch (e) {}
+    c.cols = cols.map(([a, b]) => [Math.max(0, (a & ~1) - 2), Math.min(W, ((b + 1) & ~1) + 2)]); }
   farTiles.set(fk, c); while (farTiles.size > FAR_KEEP) farTiles.delete(farTiles.keys().next().value);
   return c;
 }
@@ -7985,8 +7986,18 @@ function bushTile(z, T, k, lazy) {
   const key = z.bush + z.bushD + z.bushL + k;
   let set = bushSets.get(key);
   if (set) { bushSets.delete(key); bushSets.set(key, set); }
-  else { set = new Map(); bushSets.set(key, set); if (bushSets.size > 2) bushSets.delete(bushSets.keys().next().value); }
+  else { set = new Map(); bushSets.set(key, set); if (bushSets.size > 4) bushSets.delete(bushSets.keys().next().value); }   // две карты (старая и новая) × две резкости на время пересборки
   let tc = set.get(T);
+  if (!tc && !bushTile.force) {
+    // резкость холста только что изменилась: плитка того же цвета в прежней резкости уже есть — показываем её (растянется сама),
+    // а новую готовим в паузе между кадрами. Раньше все видимые плитки перерисовывались в одном кадре — рывок
+    const pre = key.slice(0, key.length - String(k).length);
+    for (const [k2, s2] of bushSets) if (k2 !== key && k2.startsWith(pre) && k2.length > pre.length && !isNaN(+k2.slice(pre.length)) && s2.has(T)) {
+      const old = s2.get(T); bushTile.fb = true;
+      idleWarm('bushK' + T + key, () => { if (Math.abs(cv.width / W - k) > 1e-6) return; const m = bushTile.made; bushTile.made = false; bushTile.force = true; try { bushTile(z, T, k, false); } finally { bushTile.force = false; bushTile.made = m; } });
+      return old;
+    }
+  }
   if (!tc) {
     if (lazy && bushTile.made) return null;   // для следующей карты — не больше одной новой плитки за кадр, без рывка
     bushTile.made = true;
@@ -8002,7 +8013,7 @@ function bushTile(z, T, k, lazy) {
 }
 function drawBushColumn(b) {
   const off = even(camR * 0.85), k = cv.width / W;
-  bushTile.made = false;
+  bushTile.made = false; bushTile.fb = false;
   const layer = (z, a, lazy) => {
     ctx.globalAlpha = a;
     for (let T = Math.floor(off / BUSH_TILE); T * BUSH_TILE < off + H; T++) { const tc = bushTile(z, T, k, lazy); if (tc) ctx.drawImage(tc, 0, T * BUSH_TILE - off, W, BUSH_TILE); }
@@ -8013,6 +8024,7 @@ function drawBushColumn(b) {
   // смена карты: крона новой карты плавно проявляется поверх старой (те же плитки, без перерисовки)
   if (b.t > 0 && b.n !== b.z && (b.n.bush !== b.z.bush || b.n.bushD !== b.z.bushD || b.n.bushL !== b.z.bushL)) layer(b.n, b.t, true);
   ctx.globalAlpha = 1;
+  if (!bushTile.fb && bushSets.size > 2) { const ks = String(k); for (const q of [...bushSets.keys()]) if (!q.endsWith(ks)) bushSets.delete(q); }   // плитки прежней резкости больше не нужны — освобождаем память
   warmNextZone(b, off, k);
 }
 // Следующую карту готовим заранее, в паузах между кадрами, ещё ДО начала перехода: все плитки кроны, которые будут
@@ -8116,12 +8128,16 @@ function drawBackground() {
   }
   if (b.t > 0 && b.n !== b.z) drawOrb(b.n.orb, b.t);
   dynBlit(b);
-  const cloud = zc(b, 'cloud'), cloudS = zc(b, 'cloudS');
+  // облака: при смене карты каждый овал — цветом старой карты и сразу поверх цветом новой с нужной прозрачностью.
+  // Итог тот же, что у смешанного цвета, но берутся готовые овалы обеих карт (смешанный цвет каждый кадр новый — заготовки не помогали)
+  const cA = b.z.cloud, sA = b.z.cloudS, cB = b.n.cloud, sB = b.n.cloudS, ct = b.t > 0 && b.n !== b.z ? b.t : 0;
+  const cl = (x, y, rx, ry, c0, c1) => { pell(ctx, x, y, rx, ry, c0); if (ct > 0 && c1 !== c0) { ctx.globalAlpha = ct; pell(ctx, x, y, rx, ry, c1); ctx.globalAlpha = 1; } };
   for (let k = 0; k < 5; k++) {
     const x = ((hash(k * 5) * (W + 200) + time * (5 + k * 3)) % (W + 200)) - 100;
     const y = ((hash(k * 9) * 1000 - camY * 0.12) % 1000 + 1000) % 1000 - 150;
-    pell(ctx, x + 2, y + 6, 46, 12, cloudS);
-    pell(ctx, x, y, 44, 11, cloud); pell(ctx, x - 18, y - 7, 20, 13, cloud); pell(ctx, x + 14, y - 10, 22, 15, cloud);
+    if (y < -40 || y > H + 40) continue;   // облако за экраном
+    cl(x + 2, y + 6, 46, 12, sA, sB);
+    cl(x, y, 44, 11, cA, cB); cl(x - 18, y - 7, 20, 13, cA, cB); cl(x + 14, y - 10, 22, 15, cA, cB);
   }
   const th = 640, off = ((-camR * 0.3) % th + th) % th;
   const drawTile = (zi, a) => {
@@ -15631,7 +15647,10 @@ function frame0(now) {
   if (perfGrace > 0) { perfGrace -= gap / 1000; perfAcc = 0; perfN = 0; perfSlow = 0; }
   // телефон не успевает (кадры приходят реже 45 в секунду или кадр считается долго) — разрешение холста на ступень ниже;
   // долго всё легко — обратно выше, но не раньше чем через 20 с после понижения, чтобы не качаться туда-сюда
-  perfAcc += performance.now() - t0; perfN++; if (gap > 27 && gap < 100) perfSlow++;   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
+  // идёт смена карты (два фона сразу) — кадры тяжелее обычного, но это ненадолго: в расчёт резкости их не берём,
+  // иначе холст пересоздавался прямо посреди перехода и потом ещё долго оставался мутным
+  const inBlend = state === 'play' && zoneBlend().t > 0;
+  if (!inBlend) { perfAcc += performance.now() - t0; perfN++; if (gap > 27 && gap < 100) perfSlow++; }   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
   if (perfN >= 90) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
