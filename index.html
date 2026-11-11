@@ -14866,19 +14866,21 @@ function drawDealsTab() {
     ctx.restore();
     // надписи — уже без сжатия карточки: пиксельный шрифт в дробном масштабе мылился и пропадал
     const sy = rr.h / 180, Y = v => Math.round(rr.y + v * sy), cxr = Math.round(rr.x + rr.w / 2), [l1, l2] = skinLines(k);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(rr.x + 2, Y(106), rr.w - 4, Y(144) - Y(106));
-    text(l1, cxr, Y(116), 1, OL, 'center', null, rr.w - 6);
-    if (l2) text(l2, cxr, Y(126), 1, R.dk, 'center', null, rr.w - 6);
-    ctx.fillStyle = R.col; ctx.fillRect(rr.x + 8, Y(130), rr.w - 16, 11); text(T('one')[k.r], cxr, Y(130) + 9, 1, '#ffffff', 'center', OL, rr.w - 18);
-    if (own) text(k.id === skinId ? T('selected') : T('take'), cxr, Y(168), 1, '#1a70c0', 'center', null, rr.w - 4);
+    // раскладка считается от низа карточки в точках экрана: имя в две строки больше не наезжает на редкость, а старая цена — на новую
+    const yb = rr.y + rr.h, barY = yb - 47;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(rr.x + 2, barY - (l2 ? 21 : 13), rr.w - 4, (l2 ? 21 : 13) + 13);
+    text(l1, cxr, barY - (l2 ? 12 : 4), 1, OL, 'center', null, rr.w - 6);
+    if (l2) text(l2, cxr, barY - 3, 1, R.dk, 'center', null, rr.w - 6);
+    ctx.fillStyle = R.col; ctx.fillRect(rr.x + 8, barY, rr.w - 16, 11); text(T('one')[k.r], cxr, barY + 9, 1, '#ffffff', 'center', OL, rr.w - 18);
+    if (own) text(k.id === skinId ? T('selected') : T('take'), cxr, yb - 12, 1, '#1a70c0', 'center', null, rr.w - 4);
     else {
       if (d.off) {
-        priceDraw(cxr, Y(155), priceOf(k), 1, '#7a6a8a');
+        priceDraw(cxr, yb - 24, priceOf(k), 1, '#7a6a8a');
         ctx.strokeStyle = '#ff3a3a'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(cxr - 22, Y(154)); ctx.lineTo(cxr + 22, Y(147)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cxr - 20, yb - 26); ctx.lineTo(cxr + 20, yb - 30); ctx.stroke();
       }
       const pr = dealPrice(k, d.off);
-      priceDraw(cxr, Y(174), pr, 2, canPay(pr) ? '#1a8a3a' : '#8a7a9a');
+      priceDraw(cxr, yb - 5, pr, 2, canPay(pr) ? '#1a8a3a' : '#8a7a9a');
     }
   });
   dailyPlate(370); ribbon(W / 2, 346, 200, '#e8a820', '#a06a10'); text(T('dailyReward'), W / 2, 360, 2, '#ffffff', 'center', OL, 196);
@@ -15076,7 +15078,7 @@ function drawPremiumTab() {
   const pb = 1 + Math.sin(time * 6) * 0.04; ctx.save(); ctx.translate(s.x + s.w - 47, s.y + 47); ctx.scale(pb, pb);
   ctx.fillStyle = OL; ctx.fillRect(-39, -13, 78, 26); ctx.fillStyle = '#3ce06a'; ctx.fillRect(-37, -11, 74, 22); ctx.fillStyle = '#9af0aa'; ctx.fillRect(-37, -11, 74, 5);
   text('$2.99', 0, 6, 2, '#ffffff', 'center', OL); ctx.restore();
-  ctx.save(); ctx.translate(s.x + s.w - 92, s.y + 14); ctx.rotate(Math.sin(time * 3) * 0.15); ctx.scale(0.75, 0.75);   // звезда «-70%»
+  ctx.save(); ctx.translate(s.x + s.w - 10, s.y + 6); ctx.rotate(Math.sin(time * 3) * 0.15); ctx.scale(0.8, 0.8);   // звезда «-70%» — на углу набора (раньше закрывала конец названия)
   ctx.fillStyle = OL; ctx.beginPath(); for (let q = 0; q < 16; q++) { const rr = q % 2 ? 13 : 19, a = q * Math.PI / 8; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.fill();
   ctx.fillStyle = '#ff2a4a'; ctx.beginPath(); for (let q = 0; q < 16; q++) { const rr = q % 2 ? 11 : 17, a = q * Math.PI / 8; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.fill();
   text('-70%', 0, 4, 1, '#ffffff', 'center', OL); ctx.restore();
@@ -19193,8 +19195,11 @@ function botMap(i) {   // карта соперника: зигзаг столб
     if (h(n + 160) < 0.5) it.push(['coin', clamp(x + side * 50, 20, W - 20), y - 30]);
     x = clamp(x + side * (90 + Math.floor(h(n + 200) * 90)), 40, W - 40); side = -side; y -= 80 + Math.floor(h(n + 240) * 30);
   }
-  const names = [['ЛЕСНАЯ БАШНЯ', 'FOREST TOWER'], ['ШИПАСТЫЙ ПОДЪЁМ', 'THORNY CLIMB'], ['ЛЕДЯНАЯ ЛЕСТНИЦА', 'ICE LADDER'], ['ПЧЕЛИНЫЙ УЛЕЙ', 'BEEHIVE'], ['ПРУЖИННЫЙ РАЙ', 'SPRING HEAVEN'], ['ЗИГЗАГ', 'ZIGZAG'], ['МЕДОВЫЙ ПУТЬ', 'HONEY PATH'], ['ДЕБРИ', 'THE THICKET']];
-  const nm = names[Math.floor(h(300) * names.length)];
+  const names = [['ЛЕСНАЯ БАШНЯ', 'FOREST TOWER'], ['ШИПАСТЫЙ ПОДЪЁМ', 'THORNY CLIMB'], ['ЛЕДЯНАЯ ЛЕСТНИЦА', 'ICE LADDER'], ['ПЧЕЛИНЫЙ УЛЕЙ', 'BEEHIVE'], ['ПРУЖИННЫЙ РАЙ', 'SPRING HEAVEN'], ['ЗИГЗАГ', 'ZIGZAG'], ['МЕДОВЫЙ ПУТЬ', 'HONEY PATH'], ['ДЕБРИ', 'THE THICKET'],
+    ['НЕБЕСНАЯ ТРОПА', 'SKY TRAIL'], ['КОЛЮЧИЙ КАНЬОН', 'SPIKY CANYON'], ['ХРУСТАЛЬНЫЙ ПИК', 'CRYSTAL PEAK'], ['ЖЕЛЕЙНЫЕ ГОРКИ', 'JELLY SLIDES'], ['ОСИНОЕ ГНЕЗДО', 'WASP NEST'], ['СКОЛЬЗКИЙ СКЛОН', 'SLIPPERY SLOPE'],
+    ['ПРЫГ-СКОК', 'HOP HOP'], ['ТАЙНЫЙ ЛАЗ', 'SECRET CLIMB'], ['БАШНЯ ВЕТРОВ', 'WIND TOWER'], ['ЛАБИРИНТ', 'THE MAZE'], ['СТАЛЬНЫЕ НЕРВЫ', 'NERVES OF STEEL'], ['ВЫШЕ ОБЛАКОВ', 'ABOVE THE CLOUDS'],
+    ['ПОСЛЕДНИЙ РЫВОК', 'FINAL DASH'], ['СЛАДКАЯ ЛОВУШКА', 'SWEET TRAP'], ['ДВА ПРЫЖКА', 'TWO JUMPS'], ['ГОРНЫЙ КОЗЁЛ', 'MOUNTAIN GOAT'], ['ХИТРЫЙ ПУТЬ', 'TRICKY WAY']];
+  const nm = names[(wk * 3 + i * 7) % names.length];   // 25 названий, шаг 7: у соседних карт недели названия не повторяются
   return edClean({ id: 'bm' + i + '_' + wk, nm: tr(nm[0], nm[1]), md: h(301) < 0.7 ? 'race' : 'king', st: [128, -17], fin: Math.max(ED_TOP, y + 60), it, au: botName(i), d: Date.now() - Math.floor(h(302) * 6) * 864e5, likes: 40 + Math.floor(h(303) * 900) });
 }
 async function weeklyLive() {   // открытые карты живых игроков из рейтинга (если есть связь с базой)

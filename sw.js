@@ -1,5 +1,5 @@
 // Кэш для игры без интернета: только свои файлы, чужие сайты не трогаем
-const CACHE = 'wall-play-v66';
+const CACHE = 'wall-play-v67';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 const NET_WAIT = 3500;   // медленная сеть: если есть копия в кэше, не ждём дольше — открываем её, а свежую версию докачиваем в фоне
 self.addEventListener('install', e => {
