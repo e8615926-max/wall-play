@@ -17855,8 +17855,8 @@ function botTro(i, now = Date.now()) {   // кубки бота медленно
   const wave = Math.sin(hr / (17 + botH(i, 12) * 20) + i) * (25 + b * 0.04) + Math.sin(hr / (3 + botH(i, 13) * 4) + i * 2.3) * (8 + b * 0.012);
   return Math.max(10000, Math.round(b * grow + wave));
 }
-function botRow(i) {   // строка рейтинга бота — в том же виде, что и строка живого игрока
-  const tr0 = botTro(i), maxR = tr0 < 200 ? 1 : tr0 < 900 ? 2 : tr0 < 3000 ? 3 : 4, k = botSkin(i, maxR), h = q => botH(i, q);
+function botRow(i, trOv) {   // строка рейтинга бота — в том же виде, что и строка живого игрока; trOv — свои кубки (участники кланов)
+  const tr0 = trOv != null ? trOv : botTro(i), maxR = tr0 < 200 ? 1 : tr0 < 900 ? 2 : tr0 < 3000 ? 3 : 4, k = botSkin(i, maxR), h = q => botH(i, q);
   const b = Math.round(clamp(tr0 / (1 + h(3) * 7), 12, 500 + h(18) * 1900));
   const sk = Math.min(SKINS.length, Math.max(Math.ceil(tr0 / b), 1 + Math.floor(h(4) * (3 + tr0 / 150))));
   const pics = AVATARS.filter(a => !a.pack), av = h(8) < 0.2 ? k.id : h(8) < 0.3 ? 'g:' + k.id : 'a:' + pics[Math.floor(h(14) * pics.length)].id;   // у большинства — картинка, не голова героя
@@ -17893,8 +17893,8 @@ function arMakeBots(n, myTr) {
     const tro = Math.max(0, Math.round(myTr * (0.65 + Math.random() * 0.7) + (Math.random() - 0.5) * 60));
     const maxR = tro < 200 ? 1 : tro < 900 ? 2 : tro < 3000 ? 3 : 4;
     const cand = SKINS.filter(s => s.r <= maxR && !s.gift && s.id !== 'zombie'), sk = cand[Math.floor(Math.random() * cand.length)] || SKINS[0];
-    const sMax = 0.55 + 0.42 * clamp(myTr / 2500, 0, 1);   // новички играют с ботами послабее, опытные — с сильными
-    const s = clamp(0.15 + Math.random() * 0.75 + 0.25 * clamp(tro / (myTr + 60) - 1, -1, 1), 0.05, sMax);   // у каждого своя сила: кто-то летит, кто-то еле лезет
+    const sMax = 0.48 + 0.48 * clamp(myTr / 3000, 0, 1);   // новички играют с ботами послабее, опытные — с сильными
+    const s = clamp(0.3 + Math.random() * 0.68 + 0.25 * clamp(tro / (myTr + 60) - 1, -1, 1), 0.22, sMax);   // у каждого своя сила: кто-то летит, кто-то еле лезет
     l.push({ id: 'b' + k, n: botName(i), s: sk.id, tr: tro, sk: +s.toFixed(2) });
   }
   return l;
@@ -17925,10 +17925,23 @@ function arChain() { const l = [], seen = new Set(); let q = poles[0]; while (q 
 const arHangX = (q, f) => f > 0 ? q.x1 + PW / 2 : q.x0 - PW / 2;
 const arHangY = (q, y) => clamp(y, q.y0 + PH / 2 + 2, q.y1 - PH / 2 - 2);
 const arFace = (q, ci) => ci === 0 ? 1 : (q.face || 1);
+// У каждого бота свой характер — он решает, как бот идёт наверх и как дерётся за корону:
+//   sprint — быстрые короткие прыжки со столба на столб;   leap — перелетает через один-два столба;
+//   steady — осторожный: хватается низко, почти не срывается;   wild — несётся сломя голову и чаще падает;
+//   hunt — охотник: догоняет соперника впереди, а в «Царе горы» бросается на царя издалека и часто
+const AR_MINDS = {
+  sprint: { pace: 1.1, err: 1, leap: -0.25, grab: [0.3, 0.55], wait: 0.6, reach: 110, cool: 0.8, agg: 0.1, chase: 0.2 },
+  leap:   { pace: 1.02, err: 1.1, leap: 0.4, grab: [0.12, 0.4], wait: 0.9, reach: 120, cool: 0.9, agg: 0.1, chase: 0.2 },
+  steady: { pace: 0.96, err: 0.25, leap: -0.15, grab: [0.45, 0.7], wait: 1, reach: 90, cool: 1.1, agg: 0, chase: 0.12 },
+  wild:   { pace: 1.18, err: 2.2, leap: 0.25, grab: [0.1, 0.6], wait: 0.4, reach: 140, cool: 0.6, agg: 0.25, chase: 0.3 },
+  hunt:   { pace: 1.05, err: 0.8, leap: 0.1, grab: [0.2, 0.5], wait: 0.5, reach: 170, cool: 0.45, agg: 0.35, chase: 0.45 },
+};
 function arBotNew(e, i) {
   const s = clamp(+e.sk || 0.5, 0.05, 0.95);
-  return { id: e.id, ci: -1, st: 'ground', x: clamp(30 + i * 34 + (i > 2 ? 40 : 0), 24, W - 24), y: -PH / 2, vx: 0, vy: 0, face: i % 2 ? -1 : 1, rot: 0, sp: 0, j: null, w: 0.3 + Math.random() * 0.5,
-    s, pace: ((AR.mode === 'king' ? 3.8 : 3.5) + 4.2 * s) * rand(0.88, 1.12), err: 0.035 - 0.03 * s, leap: clamp(0.15 + s * 0.55 + rand(-0.15, 0.2), 0.05, 0.85), hold: rand(0.6, 1.4), resp: 0, t: 0, h: 0, fin: 0, lunge: 0 };
+  const names = Object.keys(AR_MINDS), mind = names[(i + Math.floor(Math.random() * names.length)) % names.length], M = AR_MINDS[mind];   // в матче — все характеры вперемешку
+  return { id: e.id, ci: -1, st: 'ground', x: clamp(30 + i * 34 + (i > 2 ? 40 : 0), 24, W - 24), y: -PH / 2, vx: 0, vy: 0, face: i % 2 ? -1 : 1, rot: 0, sp: 0, j: null, w: (0.08 + Math.random() * 0.4) * M.wait,
+    s, mind, M, grab: rand(M.grab[0], M.grab[1]), arc: rand(-22, 22),
+    pace: ((AR.mode === 'king' ? 3.9 : 3.7) + 5.5 * s) * M.pace * rand(0.94, 1.08), err: clamp((0.03 - 0.026 * s) * M.err, 0.002, 0.07), leap: clamp(0.15 + s * 0.55 + M.leap + rand(-0.12, 0.15), 0.03, 0.92), hold: rand(0.6, 1.4), resp: 0, t: 0, h: 0, fin: 0, lunge: 0 };
 }
 function arBotJump(b, nci, opt = {}) {
   const B = AR.chain[nci]; if (!B) return;
@@ -17936,20 +17949,25 @@ function arBotJump(b, nci, opt = {}) {
     burst(b.x, b.y, 10, '#c06aff', 160, 0.4, 4, 0, 'star'); b.ci = nci; b.face = arFace(B, nci); b.x = arHangX(B, b.face); b.y = arHangY(B, B.y0 + (B.y1 - B.y0) * 0.4); b.st = 'wall'; b.w = 0.2; return;
   }
   const f2 = arFace(B, nci), x1 = opt.x != null ? opt.x : arHangX(B, f2);
-  const up = nci > b.ci, frac = up ? rand(0.2, 0.5) : rand(0.35, 0.6);
+  const up = nci > b.ci, g0 = b.grab != null ? b.grab : 0.35, frac = up ? clamp(g0 + rand(-0.12, 0.12), 0.08, 0.75) : rand(0.35, 0.6);   // каждый хватается за столб на своей высоте — боты не идут след в след
   const y1 = opt.y != null ? opt.y : arHangY(B, B.y0 + (B.y1 - B.y0) * frac);
   const dx = x1 - b.x, rise = b.y - y1;
-  let T = clamp(Math.abs(dx) / 380 + 0.12, 0.27, 0.7); if (rise > 130) T = Math.max(T, 0.3 + rise / 1000); if (opt.T) T = opt.T;   // прыжки резче — как у живого игрока
+  let T = clamp(Math.abs(dx) / 440 + 0.1, 0.22, 0.62); if (rise > 130) T = Math.max(T, 0.3 + rise / 1000); if (opt.T) T = opt.T;   // прыжки резче — как у живого игрока
   if (nci > b.ci + 1) T = Math.max(T, 0.5 + rise / 1400) * (b.hold || 1) ** 0.3;
   const vy1 = (y1 - b.y - 0.5 * G * T * T) / T;
-  b.j = { x0: b.x, y0: b.y, x1, y1, T, t: 0, vy0: vy1, ci: nci, face: f2, bulge: Math.abs(dx) < 30 ? b.face * 46 : 0, flip: nci > b.ci + 1 || Math.random() < 0.55 + b.s * 0.3, back: opt.back };
+  b.j = { x0: b.x, y0: b.y, x1, y1, T, t: 0, vy0: vy1, ci: nci, face: f2, bulge: Math.abs(dx) < 30 ? b.face * 46 : (b.arc || 0) * rand(0.4, 1), flip: nci > b.ci + 1 || Math.random() < 0.55 + b.s * 0.3, back: opt.back };
   b.face = dx > 2 ? 1 : dx < -2 ? -1 : b.face; b.st = 'air'; b.sp = 0;
 }
 function arPaceK(b) {   // царь-бот бежит чуть медленнее, догоняющие ускоряются, чем дальше отстали
-  if (AR.mode !== 'king') return 1;
-  if (AR.king === b.id) return AR.sh > 0 ? 1.2 : 0.92;   // со щитом царь отрывается
+  const ch = b.M ? b.M.chase : 0.2;
+  if (AR.mode !== 'king') {   // забег: кто отстал от тебя — прибавляет (охотники сильнее всех), кто далеко впереди — не расслабляется
+    if (state !== 'play') return 1;
+    const gap = (b.y - p.y) / PX_PER_M;   // > 0 — бот ниже игрока
+    return gap > 6 ? 1 + clamp((gap - 6) / 40, 0, 1) * ch : 1;
+  }
+  if (AR.king === b.id) return AR.sh > 0 ? 1.25 : 1;   // со щитом царь отрывается
   const kp = arPos(AR.king); if (!kp) return 1;
-  return 1 + clamp((b.y - kp.y) / PX_PER_M / 40, 0, 0.65);
+  return 1 + clamp((b.y - kp.y) / PX_PER_M / 32, 0, 0.55 + ch);
 }
 function arBotTick(b, dt) {
   if (b.fin) return;
@@ -17978,10 +17996,11 @@ function arBotTick(b, dt) {
   // погоня за царём
   const kp = arPos(AR.king); if (!kp || kp.dead) { b.w = 0.25; return; }
   const d = Math.hypot(kp.x - b.x, kp.y - b.y);
-  if (d < 90 && b.ci >= 0 && AR.sh <= 0 && b.t > b.lunge) { b.lunge = b.t + rand(0.9, 2.2) - b.s * 0.6; if (Math.random() > 0.3 + b.s * 0.35) { b.w = 0.3; return; } arBotJump(b, b.ci, { x: kp.x + rand(-18, 18), y: kp.y - 4 + rand(-22, 22), back: b.ci, T: Math.max(0.26, d / 480) }); return; }
+  const M = b.M || AR_MINDS.sprint;
+  if (d < M.reach && b.ci >= 0 && AR.sh <= 0 && b.t > b.lunge) { b.lunge = b.t + Math.max(0.35, (rand(0.9, 2.2) - b.s * 0.6) * M.cool); if (Math.random() > 0.38 + b.s * 0.35 + M.agg) { b.w = 0.18; return; } arBotJump(b, b.ci, { x: kp.x + rand(-14, 14), y: kp.y - 4 + rand(-18, 18), back: b.ci, T: Math.max(0.22, d / 560) }); return; }
   if (kp.y < b.y - 30 || b.ci < 0) arBotJump(b, kp.y < b.y - 260 ? arBotNext(b) : b.ci + 1);
   else if (kp.y > b.y + 140 && b.ci > 0) arBotJump(b, b.ci - 1);
-  else b.w = 0.15;
+  else b.w = 0.1;
 }
 function arBotNext(b) {   // смелые боты перелетают через столб, а то и через два — будто тот прозрачный
   if (b.ci < 0 || Math.random() > b.leap) return b.ci + 1;
@@ -18125,12 +18144,23 @@ function arEnd(order) {
   if (!AR.given) { AR.given = true; AR.rew = arReward(place); }
   try { if (place === 1) sfx.achieve(); else sfx.zone(); } catch (e) {}
 }
-const AR_TRO = [20, 15, 11, 8, 6, 5, 4, 3, 2, 1], AR_XP = [160, 130, 110, 90, 80, 70, 60, 50, 45, 40];
+const AR_TRO = [20, 15, 11, 8, 6, 5, 4, 3, 2, 1];
+// кубки за место — как в Brawl Stars: чем больше у тебя кубков, тем меньше дают за победу и тем больше снимают за последние места.
+// Новичок (до 500) не теряет ничего; кубки режимов не уходят ниже нуля
+const AR_TRO_STEPS = [
+  [500,  [20, 15, 11, 8, 6, 5, 4, 3, 2, 1]],
+  [1500, [20, 15, 11, 8, 5, 2, 0, -2, -3, -4]],
+  [4000, [18, 13, 9, 6, 3, 0, -3, -5, -7, -8]],
+  [9000, [16, 12, 8, 5, 2, -2, -5, -7, -9, -10]],
+  [Infinity, [14, 10, 7, 4, 1, -3, -6, -9, -11, -12]],
+];
+const arTroFor = (place, total) => { const row = AR_TRO_STEPS.find(r => total < r[0])[1]; return row[clamp(place - 1, 0, 9)]; };
+const AR_XP = [160, 130, 110, 90, 80, 70, 60, 50, 45, 40];
 function arReward(place) {
-  const i = clamp(place - 1, 0, 9), tro = AR_TRO[i], xp = 0, coins = coinsRun + [120, 80, 60, 40, 30, 25, 20, 15, 10, 10][i];
+  const i = clamp(place - 1, 0, 9), tro = Math.max(arTroFor(place, troTotal()), -(META.tro._ar || 0)), xp = 0, coins = coinsRun + [120, 80, 60, 40, 30, 25, 20, 15, 10, 10][i];
   if (!quiet) {
     try { questAdd('climb', heightM()); questAdd('best', heightM(), 'max'); questAdd('flips', flips); questAdd('flipsRun', flips, 'max'); questAdd('gems', gemsRun); questAdd('coins', coinsRun); questAdd('jumps', kicks); questAdd('rubies', rubiesRun); questAdd('runs', 1); questAdd('arena', 1); if (place <= 3) questAdd('top3a', 1); } catch (e) {}
-    META.tro._ar = Math.min(1e6, (META.tro._ar || 0) + tro); bank += coins; coinsRun = 0; store.set('coins', bank);
+    META.tro._ar = clamp((META.tro._ar || 0) + tro, 0, 1e6); bank += coins; coinsRun = 0; store.set('coins', bank);
     if (AR.mode === 'race') { arMq('race_m', Math.min(AR_FIN_M, heightM())); if (AR.fin[arMe()] != null) arMq('fin', 1); } else arMq('take', AR.takes | 0);
     arMq(AR.mode === 'race' ? 'race' : 'king', 1);
     if (place <= 3) arMq('top3', 1);
@@ -18603,7 +18633,7 @@ function arResultsHud() {
     const y = 448, d = clamp((t - 1.6) / 0.4, 0, 1); ctx.globalAlpha = d;
     ctx.fillStyle = OL; ctx.fillRect(28, y - 3, W - 56, 52); ctx.fillStyle = '#2a1a5a'; ctx.fillRect(31, y, W - 62, 46);
     text(tr('НАГРАДА', 'REWARD'), W / 2, y + 14, 1, '#c8b8f0', 'center', OL);
-    trophyIcon(68, y + 34, 0.7); text('+' + AR.rew.tro, 82, y + 40, 2, '#ffd23a', 'left', OL);
+    trophyIcon(68, y + 34, 0.7); text((AR.rew.tro >= 0 ? '+' : '') + AR.rew.tro, 82, y + 40, 2, AR.rew.tro < 0 ? '#ff6a6a' : '#ffd23a', 'left', OL);
     coinIcon(W - 110, y + 32, 7); text('+' + AR.rew.coins, W - 98, y + 40, 2, '#ffffff', 'left', OL);
     ctx.globalAlpha = 1;
   }
@@ -18891,6 +18921,8 @@ function openMainMenu() {
     };
     big(tr('ПОВТОРЫ РАУНДОВ', 'ROUND REPLAYS'), trf('ТВОИ РАУНДЫ В «СЕТИ» ЗА 5 ДНЕЙ: {n}', 'YOUR ONLINE ROUNDS FROM 5 DAYS: {n}', { n: rpList().length }), ['#3a5ad8', '#1a2a6a'], menuIcon('replay'), openReplays);
     big(tr('КОНСТРУКТОР КАРТ', 'MAP MAKER'), trf('СВОИ КАРТЫ: {n} ИЗ {m}', 'YOUR MAPS: {n} OF {m}', { n: edMaps().length, m: ED_MAX }), ['#3a9a3a', '#1a4a1a'], menuIcon('map'), openMaps);
+    { const have = troTotal(), cl = CLAN.in ? clanGet(CLAN.in) : null, ic = clanBadgeCnv(cl ? cl.bd : [4, 3, 1], 48);
+      big(tr('КЛАНЫ', 'CLUBS'), cl ? trf('ТВОЙ КЛАН: {n}', 'YOUR CLUB: {n}', { n: cl.nm }) : have < CLAN_NEED ? trf('ОТКРОЮТСЯ С {m} КУБКОВ (У ТЕБЯ {n})', 'UNLOCK AT {m} TROPHIES (YOU HAVE {n})', { n: have, m: CLAN_NEED }) : tr('ВСТУПИ В КЛАН ИЛИ СОЗДАЙ СВОЙ', 'JOIN A CLUB OR CREATE YOUR OWN'), ['#c01f6a', '#5a0a3a'], ic, () => openClans()); }
     big(tr('КАРТЫ НЕДЕЛИ', 'MAPS OF THE WEEK'), tr('ЛУЧШИЕ КАРТЫ ИГРОКОВ — ПРОСТО ПОИГРАТЬ', 'THE BEST PLAYER MAPS — JUST FOR FUN'), ['#c06a00', '#5a2a00'], menuIcon('star'), openWeekly);
   });
 }
@@ -19230,6 +19262,331 @@ function openWeekly() {
     });
   });
 }
+// ---------- КЛАНЫ: клубы как в Brawl Stars — президент, вице-президенты, ветераны, общие кубки клуба ----------
+// Клубы и их участники — боты (общей базы кланов для живых игроков нет): состав со временем меняется, президент
+// повышает активных и понижает неактивных. Свой клан и своя роль хранятся на устройстве вместе с прогрессом
+const CLAN_NEED = 1000, CLAN_MAX = 30;
+const CLAN_SRC = {
+  ru: ['Ночные Волки', 'Короли Стен', 'Хомяки Хаоса', 'Легион Теней', 'Багровый Рассвет', 'Стальные Когти', 'Орден Феникса', 'Громовержцы', 'Ледяные Драконы', 'Тихий Омут', 'Банда Пельменей', 'Космо Коты', 'Чёрная Молния', 'Имперцы', 'Бессмертные', 'Дикие Лисы', 'Красная Комета', 'Нагибаторы 2.0'],
+  en: ['Shadow Syndicate', 'Wall Kings', 'Nova Legion', 'Pixel Reapers', 'Hamster Mafia', 'Crimson Wolves', 'Frost Titans', 'Sky Raiders', 'Golden Vipers', 'No Mercy', 'Void Walkers', 'Lucky Sevens', 'Thunder Cats', 'Royal Flush', 'Dark Phoenix', 'Zero Gravity', 'Neon Samurai', 'Elite Squad', 'Savage Kittens', 'Infinity Clan'],
+  es: ['Los Invencibles', 'Reyes del Muro', 'Lobos de Fuego', 'Furia Roja', 'Los Fantasmas', 'Dragones Dorados', 'Leyendas Urbanas', 'Tigres Nocturnos'],
+  de: ['Eiserne Wölfe', 'Sturmjäger', 'Schattenritter', 'Die Unbesiegbaren', 'Donnerkeil', 'Nachtfalken'],
+  fr: ['Les Loups Noirs', 'Rois du Mur', 'Étoile Filante', 'Les Intouchables', 'Dragons de Feu', 'Chevaliers Lunaires'],
+  pt: ['Lobos da Noite', 'Reis da Parede', 'Fúria Tropical', 'Os Lendários', 'Tubarões de Ouro', 'Trovão Verde'],
+  tr: ['Gece Kurtları', 'Duvar Kralları', 'Kızıl Şafak', 'Efsaneler', 'Altın Kartallar', 'Fırtına Birliği'],
+  kk: ['Түнгі Бөрілер', 'Алтын Қырандар', 'Дала Барыстары', 'Жеңімпаздар', 'Көк Тулар', 'Батырлар Одағы'],
+  uk: ['Нічні Вовки', 'Козацька Січ', 'Сталеві Соколи', 'Вогняні Лиси', 'Королі Стін', 'Грім і Блискавка'],
+  pl: ['Nocne Wilki', 'Królowie Ścian', 'Żelazne Orły', 'Husaria', 'Smocza Straż', 'Burza Mocy'],
+  it: ['Lupi della Notte', 'Re del Muro', 'Fenice Rossa', 'Gli Imbattibili', 'Tuono Blu', 'Leoni d\'Oro'],
+};
+const CLAN_DS = {
+  ru: ['Играем каждый день. Неактивных кикаем через 5 дней.', 'Дружный клан без токсиков. Заходи, поможем поднять кубки!', 'Только топ. Ветеран — за актив, вице — за доверие.', 'Забеги по вечерам, Царь горы по выходным. Всем рады!', 'Идём в топ-10 кланов. Нужны активные игроки.', 'Клан для своих. Уважай старших, качай героев.'],
+  en: ['Daily players only. Inactive for 5 days = kick.', 'Friendly club, no toxicity. Join and climb with us!', 'Top players only. Senior for activity, Vice for trust.', 'Races every evening, King of the Hill on weekends.', 'Road to top 10 clubs. Active members wanted.', 'Chill club. Be nice, push trophies, have fun.'],
+  es: ['Jugamos todos los días. ¡Únete y sube copas!', 'Club activo y sin tóxicos. Inactivos fuera.', 'Solo los mejores. ¡Vamos al top!', 'Buen ambiente y muchas carreras. ¡Bienvenidos!'],
+  de: ['Aktiver Club. Wer 5 Tage fehlt, fliegt raus.', 'Freundlich und ehrgeizig. Auf in die Top 10!', 'Jeden Abend Rennen. Alle sind willkommen!'],
+  fr: ['Club actif, bonne ambiance. Rejoins-nous !', 'Objectif top 10. Joueurs actifs uniquement.', 'On joue tous les soirs. Pas de toxiques.'],
+  pt: ['Clube ativo e amigável. Vem subir troféus!', 'Só os melhores. Inativos são removidos.', 'Corridas todas as noites. Bem-vindos!'],
+  tr: ['Her gün oynuyoruz. Aktif olmayanlar atılır.', 'Dost canlısı kulüp. Gel, kupa kasalım!', 'Hedef ilk 10. Aktif oyuncular aranıyor.'],
+  kk: ['Күнде ойнаймыз. Белсенді ойыншылар керек.', 'Достық клан. Қосыл, кубок жинайық!', 'Мақсат — үздік ондық. Алға!'],
+  uk: ['Граємо щодня. Неактивних виключаємо.', 'Дружній клан без токсиків. Приєднуйся!', 'Йдемо в топ-10. Потрібні активні гравці.'],
+  pl: ['Gramy codziennie. Nieaktywni wylatują.', 'Przyjazny klub. Dołącz i zdobywaj puchary!', 'Cel: top 10. Szukamy aktywnych graczy.'],
+  it: ['Giochiamo ogni giorno. Unisciti a noi!', 'Club amichevole, niente tossici.', 'Obiettivo top 10. Cerchiamo giocatori attivi.'],
+};
+const CLAN_LIST = (() => { const l = []; for (const lg in CLAN_SRC) CLAN_SRC[lg].forEach(nm => l.push({ nm, lg })); return l.map((e, i) => ({ ...e, o: botH(i, 501) })).sort((a, b) => a.o - b.o); })();   // языки вперемешку
+const CLAN_N = CLAN_LIST.length;
+const clRoles = () => [tr('УЧАСТНИК', 'MEMBER'), tr('ВЕТЕРАН', 'SENIOR'), tr('ВИЦЕ-ПРЕЗИДЕНТ', 'VICE PRESIDENT'), tr('ПРЕЗИДЕНТ', 'PRESIDENT')];
+const CL_ROLE_COL = ['#c8b8f0', '#7ad8ff', '#ffb02a', '#ff6a9a'];
+const clTypes = () => [tr('ОТКРЫТЫЙ', 'OPEN'), tr('ПО ЗАЯВКЕ', 'INVITE ONLY'), tr('ЗАКРЫТЫЙ', 'CLOSED')];
+const CL_REQ = [0, 200, 500, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 10000, 15000, 20000];
+const CL_COLS = ['#ff3d7f', '#3ab0ff', '#3ce06a', '#ffd23a', '#a64aff', '#ff8a1e', '#1ad0c0', '#e8eef8', '#ff3a3a', '#5a6ad8'];
+const CL_EMB = {   // эмблемы 8×8
+  star:  ['...##...', '...##...', '########', '.######.', '..####..', '.######.', '.##..##.', '##....##'],
+  crown: ['........', '#..##..#', '#..##..#', '##.##.##', '########', '########', '.######.', '.######.'],
+  bolt:  ['....###.', '...###..', '..###...', '.######.', '...###..', '..###...', '.###....', '.#......'],
+  skull: ['.######.', '########', '#..##..#', '#..##..#', '########', '.##..##.', '.######.', '.#.##.#.'],
+  flame: ['...#....', '..##....', '..###.#.', '.####.##', '.#######', '###.####', '.##..##.', '..####..'],
+  paw:   ['.##..##.', '.##..##.', '#..##..#', '#......#', '..####..', '.######.', '.######.', '..#..#..'],
+  sword: ['......##', '.....###', '....###.', '#..###..', '.####...', '..##....', '.#.##...', '#...#...'],
+  heart: ['.##..##.', '########', '########', '########', '.######.', '..####..', '...##...', '........'],
+  moon:  ['..####..', '.###....', '###.....', '###.....', '###.....', '###....#', '.###..##', '..#####.'],
+  gem:   ['..####..', '.######.', '########', '########', '.######.', '..####..', '...##...', '........'],
+};
+const CL_EMBS = Object.keys(CL_EMB);
+function clanBadgeCnv(bd, size = 44) {
+  const c = document.createElement('canvas'); c.width = c.height = 32; c.style.cssText = 'width:' + size + 'px;height:' + size + 'px;image-rendering:pixelated;flex:none';
+  const g = c.getContext('2d'), a = CL_COLS[bd[0] % CL_COLS.length], b = CL_COLS[bd[1] % CL_COLS.length], P = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  // щит: тёмный контур, заливка, блик
+  const rows = [[4, 24], [2, 28], [2, 28], [2, 28], [2, 28], [2, 28], [2, 28], [2, 28], [2, 28], [4, 24], [4, 24], [6, 20], [8, 16], [10, 12], [12, 8], [14, 4]];
+  rows.forEach(([x, w], i) => P(x, i * 2, w, 2, '#2a1408'));
+  rows.forEach(([x, w], i) => { if (i > 0 && i < 15 && w > 4) P(x + 2, i * 2, w - 4, 2, a); });
+  P(6, 2, 20, 2, a); P(6, 4, 8, 2, '#ffffff55'); P(6, 6, 2, 8, '#ffffff33');
+  const em = CL_EMB[CL_EMBS[bd[2] % CL_EMBS.length]];
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (em[y][x] === '#') P(8 + x * 2 + 1, 6 + y * 2 + 1, 2, 2, '#2a140888');
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (em[y][x] === '#') P(8 + x * 2, 6 + y * 2, 2, 2, b === a ? '#ffffff' : b);
+  return c;
+}
+// --- клуб ботов: всё считается от номера клуба и времени, поэтому состав «живёт» сам ---
+const clH = (ci, k, q) => botH(ci * 977 + k * 31 + 40000, q);
+function clanSlot(ci, k, now) {   // место в клубе: кто его занимает сейчас и с какого времени
+  const P = k === 0 ? 60 + clH(ci, 0, 1) * 120 : 2 + clH(ci, k, 1) * 16, ph = clH(ci, k, 2) * P, g = Math.floor((now / 864e5 + ph) / P);
+  return { g, since: (g * P - ph) * 864e5, idx: 30000 + ((ci * 1009 + k * 37 + g * 7919) % 600000) };
+}
+const clanTier = ci => 1400 + 42000 * Math.pow(clH(ci, 99, 3), 2.4);
+const clanBotTro = (ci, idx, pres) => Math.round(clanTier(ci) * (0.45 + 1.1 * botH(idx, 61)) * (pres ? 1.25 : 1) * (1 + Math.sin(Date.now() / 36e5 / (9 + botH(idx, 62) * 20) + idx) * 0.03));
+function clanRolesAt(ci, slots, now) {   // президент раз в полтора дня пересматривает роли: вице и ветераны — самые активные
+  const ep = Math.floor(now / 1296e5 + clH(ci, 96, 7)), n = slots.length;
+  const nv = Math.min(n - 1, 1 + Math.floor(clH(ci, 97, 6) * 3)), ns = Math.min(Math.max(0, n - 1 - nv), 2 + Math.floor(clH(ci, 97, 8) * 4));
+  const act = slots.slice(1).map(s => ({ s, a: botH(s.idx, 700 + (ep % 5000)) + (now - s.since > 2 * 864e5 ? 0.25 : 0) })).sort((x, y) => y.a - x.a);   // новички реже получают роль
+  const r = new Map([[slots[0].idx, 3]]);
+  act.forEach((e, i) => r.set(e.s.idx, i < nv ? 2 : i < nv + ns ? 1 : 0));
+  return { r, ep, t: (ep - clH(ci, 96, 7)) * 1296e5 };
+}
+function clanBotData(ci, now = Date.now()) {
+  const src = CLAN_LIST[ci], n = clH(ci, 98, 4) > 0.62 ? CLAN_MAX : 9 + Math.floor(clH(ci, 98, 5) * 21);
+  const slots = Array.from({ length: n }, (_, k) => clanSlot(ci, k, now)), roles = clanRolesAt(ci, slots, now);
+  const tier = clanTier(ci), ty = clH(ci, 95, 9), dsl = CLAN_DS[src.lg];
+  const mem = slots.map((s, k) => ({ idx: s.idx, r: roles.r.get(s.idx) || 0, tr: clanBotTro(ci, s.idx, k === 0), since: s.since, n: botName(s.idx) }));
+  return { id: 'c' + ci, ci, nm: src.nm, lg: src.lg, ds: dsl[Math.floor(clH(ci, 94, 10) * dsl.length)], bd: [Math.floor(clH(ci, 93, 11) * 10), Math.floor(clH(ci, 93, 12) * 10), Math.floor(clH(ci, 93, 13) * CL_EMBS.length)],
+    type: ty < 0.6 ? 0 : ty < 0.88 ? 1 : 2, req: CL_REQ.filter(v => v <= tier * 0.45).pop() || 0, mem, cap: n };
+}
+function clanBotLog(ci, now = Date.now()) {   // события клуба за три дня: кто пришёл, кто вышел, кого повысили
+  const cl = clanBotData(ci, now), ev = [], pres = cl.mem[0].n, from = now - 3 * 864e5;
+  for (let k = 1; k < cl.cap; k++) { const s = clanSlot(ci, k, now); if (s.since > from) { ev.push({ t: s.since, ty: 'join', n: botName(s.idx) }); const prev = clanSlot(ci, k, s.since - 1000); ev.push({ t: s.since - (0.5 + clH(ci, k, 14) * 5) * 36e5, ty: 'leave', n: botName(prev.idx) }); } }
+  const cur = clanRolesAt(ci, cl.mem.map(m => ({ idx: m.idx, since: m.since })), now);
+  if (cur.t > from) { const old = clanBotData(ci, cur.t - 1000), was = new Map(old.mem.map(m => [m.idx, m.r]));
+    cl.mem.forEach((m, k) => { if (!k || !was.has(m.idx) || was.get(m.idx) === m.r) return; ev.push({ t: cur.t + clH(ci, k, 15) * 36e5, ty: m.r > was.get(m.idx) ? 'up' : 'down', n: m.n, r: m.r, by: pres }); }); }
+  return ev.filter(e => e.t <= now && e.t > from);
+}
+// --- моё членство ---
+const CLAN = (() => { const v = store.get('clan', null) || {}; const num = x => Number.isFinite(+x) ? +x : 0;
+  const o = { in: typeof v.in === 'string' ? v.in.slice(0, 8) : '', role: clamp(num(v.role) | 0, 0, 3), at: num(v.at), rounds: Math.max(0, num(v.rounds) | 0), last: num(v.last), rq: v.rq && typeof v.rq.id === 'string' ? { id: v.rq.id.slice(0, 8), t: num(v.rq.t) } : null,
+    ov: { kick: Array.isArray(v.ov && v.ov.kick) ? v.ov.kick.slice(0, 60).map(num) : [], role: v.ov && v.ov.role && typeof v.ov.role === 'object' ? v.ov.role : {} }, log: Array.isArray(v.log) ? v.log.slice(0, 30) : [], news: typeof v.news === 'string' ? v.news.slice(0, 200) : '', my: null };
+  const m = v.my;
+  if (m && typeof m === 'object' && typeof m.nm === 'string') o.my = { nm: m.nm.slice(0, 18), ds: String(m.ds || '').slice(0, 80), bd: Array.isArray(m.bd) ? m.bd.slice(0, 3).map(x => num(x) | 0) : [0, 3, 0], type: clamp(num(m.type) | 0, 0, 2), req: Math.max(0, num(m.req) | 0), sim: num(m.sim) || Date.now(),
+    mem: (Array.isArray(m.mem) ? m.mem : []).slice(0, CLAN_MAX).filter(x => x && Number.isFinite(+x.idx)).map(x => ({ idx: +x.idx, r: clamp(num(x.r) | 0, 0, 2), j: num(x.j), tr: Math.max(0, num(x.tr) | 0) })),
+    rq: (Array.isArray(m.rq) ? m.rq : []).slice(0, 6).filter(x => x && Number.isFinite(+x.idx)).map(x => ({ idx: +x.idx, tr: Math.max(0, num(x.tr) | 0), t: num(x.t) })) };
+  if (o.in === 'my' && !o.my) o.in = '';
+  return o; })();
+const clanSave = () => store.set('clan', { in: CLAN.in, role: CLAN.role, at: CLAN.at, rounds: CLAN.rounds, last: CLAN.last, rq: CLAN.rq, ov: CLAN.ov, log: CLAN.log.slice(0, 30), news: CLAN.news, my: CLAN.my });
+const clanLog = (ty, o = {}) => { CLAN.log.unshift({ t: Date.now(), ty, ...o }); CLAN.log.length = Math.min(CLAN.log.length, 30); };
+const clanMe = () => ({ me: true, n: nickOut(), av: META.prof.av, fr: META.prof.frame, nc: myNc(), tr: troTotal(), r: CLAN.in === 'my' ? 3 : CLAN.role, since: CLAN.at });
+function clanSimMy(now = Date.now()) {   // свой клан живёт, пока тебя нет: боты приходят (в открытый) или подают заявки, иногда уходят
+  const c = CLAN.my; if (!c || CLAN.in !== 'my') return;
+  const steps = Math.min(72, Math.floor((now - c.sim) / 6e5)); if (steps <= 0) return;
+  c.sim += steps * 6e5; if (now - c.sim > 6e5 * 72) c.sim = now;
+  const base = Math.max(c.req, 600, troTotal() * 0.5), mk = () => ({ idx: 700000 + Math.floor(Math.random() * 250000), tr: Math.round(base * (0.8 + Math.random() * 1.4)) });
+  for (let s = 0; s < steps; s++) {
+    const t = c.sim - (steps - s) * 6e5;
+    for (let i = c.mem.length - 1; i >= 0; i--) if (Math.random() < 0.0015) { const m = c.mem.splice(i, 1)[0]; CLAN.log.unshift({ t, ty: 'leave', n: botName(m.idx) }); }
+    if (c.type === 0 && c.mem.length + 1 < CLAN_MAX && Math.random() < 0.3) { const b = mk(); c.mem.push({ ...b, r: 0, j: t }); CLAN.log.unshift({ t, ty: 'join', n: botName(b.idx) }); }
+    if (c.type === 1 && c.rq.length < 6 && c.mem.length + 1 < CLAN_MAX && Math.random() < 0.22) c.rq.push({ ...mk(), t });
+  }
+  CLAN.log.length = Math.min(CLAN.log.length, 30); clanSave();
+}
+function clanMyData() {
+  const c = CLAN.my;
+  return { id: 'my', nm: c.nm, lg: lang, ds: c.ds, bd: c.bd, type: c.type, req: c.req, cap: CLAN_MAX, mine: true,
+    mem: [clanMe(), ...c.mem.map(m => ({ idx: m.idx, r: m.r, tr: Math.round(m.tr * (1 + Math.min(60, (Date.now() - m.j) / 864e5) * 0.004)), since: m.j, n: botName(m.idx) }))] };
+}
+function clanGet(id, now = Date.now()) {   // клуб по номеру — с тобой внутри, если ты в нём
+  if (id === 'my') return CLAN.my ? clanMyData() : null;
+  const ci = +String(id).slice(1); if (!(ci >= 0 && ci < CLAN_N)) return null;
+  const cl = clanBotData(ci, now);
+  if (CLAN.in === id) {
+    cl.mem = cl.mem.filter(m => !CLAN.ov.kick.includes(m.idx)); cl.mem.forEach(m => { const o = CLAN.ov.role[m.idx]; if (o != null && m.r < 3) m.r = clamp(o | 0, 0, 2); });
+    if (cl.mem.length >= CLAN_MAX) cl.mem.pop();   // твоё место
+    cl.mem.push(clanMe()); cl.joined = true;
+  }
+  return cl;
+}
+const clanTro = cl => cl.mem.reduce((a, m) => a + m.tr, 0);
+// президент-бот замечает активных: за сыгранные раунды повышает, за долгое отсутствие — понижает
+function clanTouch(played) {
+  if (!CLAN.in) return;
+  const now = Date.now();
+  if (played) { CLAN.rounds++; CLAN.last = now; }
+  if (CLAN.in !== 'my') {
+    const cl = clanBotData(+CLAN.in.slice(1), now), pres = cl.mem[0].n, R = clRoles();
+    const up = r => { CLAN.role = r; CLAN.news = trf('{p} ПОВЫСИЛ ТЕБЯ: ТЕПЕРЬ ТЫ — {r}!', '{p} PROMOTED YOU: YOU ARE NOW {r}!', { p: pres, r: R[r] }); clanLog('up', { n: nickOut(), r, by: pres }); try { sfx.achieve(); } catch (e) {} };
+    if (CLAN.role === 0 && CLAN.rounds >= 5) up(1); else if (CLAN.role === 1 && CLAN.rounds >= 20) up(2);
+    else if (CLAN.role > 0 && CLAN.last && now - CLAN.last > 5 * 864e5) { CLAN.role--; CLAN.last = now; CLAN.rounds = CLAN.role === 1 ? 5 : 0; CLAN.news = trf('{p} ПОНИЗИЛ ТЕБЯ ЗА НЕАКТИВНОСТЬ: ТЕПЕРЬ ТЫ — {r}', '{p} DEMOTED YOU FOR INACTIVITY: YOU ARE NOW {r}', { p: pres, r: R[CLAN.role] }); clanLog('down', { n: nickOut(), r: CLAN.role, by: pres }); }
+  }
+  clanSave();
+}
+function clanJoin(id) { CLAN.in = id; CLAN.role = 0; CLAN.at = Date.now(); CLAN.rounds = 0; CLAN.last = Date.now(); CLAN.rq = null; CLAN.ov = { kick: [], role: {} }; CLAN.log = []; CLAN.news = ''; clanLog('join', { n: nickOut() }); clanSave(); try { sfx.achieve(); } catch (e) {} }
+function clanLeave() { if (CLAN.in === 'my') CLAN.my = null; CLAN.in = ''; CLAN.role = 0; CLAN.rq = null; CLAN.ov = { kick: [], role: {} }; CLAN.log = []; CLAN.news = ''; clanSave(); }
+function clanRqCheck() {   // заявка в клуб «по заявке»: президент отвечает через несколько секунд
+  const q = CLAN.rq; if (!q || CLAN.in) return null;
+  if (Date.now() - q.t < 8000) return 'wait';
+  const ok = botH(+q.id.slice(1) * 7 + Math.floor(q.t / 1000) % 1000, 77) < 0.75, cl = clanGet(q.id);
+  CLAN.rq = null;
+  if (ok && cl && cl.mem.length < CLAN_MAX) { clanJoin(q.id); CLAN.news = trf('ЗАЯВКУ ПРИНЯЛИ: ТЫ В КЛАНЕ «{n}»!', 'REQUEST ACCEPTED: YOU JOINED «{n}»!', { n: cl.nm }); clanSave(); return 'yes'; }
+  CLAN.news = trf('КЛАН «{n}» ОТКЛОНИЛ ЗАЯВКУ. ПОПРОБУЙ ДРУГОЙ', '«{n}» DECLINED YOUR REQUEST. TRY ANOTHER CLUB', { n: cl ? cl.nm : '?' }); clanSave(); return 'no';
+}
+// --- экраны ---
+const CL_LANG = { ru: 'RU', en: 'EN', es: 'ES', de: 'DE', fr: 'FR', pt: 'PT', tr: 'TR', kk: 'KZ', uk: 'UA', pl: 'PL', it: 'IT' };
+const clAgo = t => { const m = Math.max(1, Math.floor((Date.now() - t) / 6e4)); return m < 60 ? trf('{n} МИН НАЗАД', '{n} MIN AGO', { n: m }) : m < 1440 ? trf('{n} Ч НАЗАД', '{n} H AGO', { n: Math.floor(m / 60) }) : trf('{n} ДН НАЗАД', '{n} D AGO', { n: Math.floor(m / 1440) }); };
+function clanStat(ic, v) { const s = moEl('span', 'row ol'); s.style.cssText += ';gap:3px;white-space:nowrap'; if (ic) s.append(iconCnv(ic, 0, 18)); s.append(moTxt('span', '', String(v))); return s; }
+function openClans(tab) {
+  moOpen(tr('КЛАНЫ', 'CLUBS'), bd => {
+    if (!navigator.onLine) { bd.appendChild(noNetNode([tr('НЕТ ИНТЕРНЕТА', 'NO INTERNET'), tr('КЛАНЫ РАБОТАЮТ ТОЛЬКО С ИНТЕРНЕТОМ', 'CLUBS NEED THE INTERNET')])); return; }
+    const have = troTotal();
+    if (have < CLAN_NEED && !CLAN.in) {
+      const c = moEl('div', 'card'); c.style.textAlign = 'center';
+      c.append(clanBadgeCnv([4, 3, 1], 72), moTxt('div', 'ol big', tr('КЛАНЫ ОТКРОЮТСЯ С 1000 КУБКОВ', 'CLUBS UNLOCK AT 1000 TROPHIES')), moTxt('div', 'sm', trf('У ТЕБЯ {n} ИЗ {m}. КУБКИ ДАЮТ ЗА РЕКОРДЫ ГЕРОЕВ И МЕСТА В «СЕТИ»', 'YOU HAVE {n} OF {m}. TROPHIES COME FROM HERO RECORDS AND ONLINE PLACES', { n: have, m: CLAN_NEED })));
+      const bar = moEl('div'); bar.style.cssText = 'height:14px;border:3px solid #2a1408;border-radius:8px;background:#1a1030;margin-top:10px;overflow:hidden'; const f = moEl('div'); f.style.cssText = 'height:100%;background:linear-gradient(#ffe27a,#e8a010);width:' + Math.round(100 * have / CLAN_NEED) + '%'; bar.appendChild(f); c.appendChild(bar);
+      bd.appendChild(c); return;
+    }
+    clanSimMy(); clanTouch(false);
+    const rq = clanRqCheck(); if (rq === 'wait') setTimeout(() => { if (bd.isConnected) moRefresh(); }, 2500);
+    if (CLAN.news) { const n = moTxt('div', 'card ol', CLAN.news); n.style.cssText += ';background:linear-gradient(#ffe27a,#e8a010);color:#2a1408;text-shadow:none;text-align:center'; bd.appendChild(n); CLAN.news = ''; clanSave(); }
+    const cur = tab || (CLAN.in ? 'mine' : 'all');
+    const tb = moEl('div', 'tabs'), t1 = moTxt('button', 'tab' + (cur === 'mine' ? ' on' : ''), tr('МОЙ КЛАН', 'MY CLUB')), t2 = moTxt('button', 'tab' + (cur === 'all' ? ' on' : ''), tr('ВСЕ КЛАНЫ', 'ALL CLUBS'));
+    t1.onclick = () => { sfx.click(); moStack.pop(); openClans('mine'); }; t2.onclick = () => { sfx.click(); moStack.pop(); openClans('all'); }; tb.append(t1, t2); bd.appendChild(tb);
+    if (cur === 'mine') {
+      if (CLAN.in) { clanBody(bd, clanGet(CLAN.in)); return; }
+      const c = moEl('div', 'card'); c.style.textAlign = 'center';
+      c.append(moTxt('div', 'ol big', tr('ТЫ ПОКА БЕЗ КЛАНА', 'YOU HAVE NO CLUB YET')), moTxt('div', 'sm', CLAN.rq ? tr('ЗАЯВКА ОТПРАВЛЕНА — ПРЕЗИДЕНТ СКОРО ОТВЕТИТ…', 'REQUEST SENT — THE PRESIDENT WILL ANSWER SOON…') : tr('ВСТУПИ В ГОТОВЫЙ КЛАН ИЛИ СОЗДАЙ СВОЙ И СТАНЬ ПРЕЗИДЕНТОМ', 'JOIN A CLUB OR CREATE YOUR OWN AND BECOME ITS PRESIDENT')));
+      const b1 = moTxt('button', 'btn blue', tr('НАЙТИ КЛАН', 'FIND A CLUB')), b2 = moTxt('button', 'btn gold', tr('СОЗДАТЬ КЛАН', 'CREATE A CLUB')); b1.style.cssText += ';width:100%;margin-top:10px'; b2.style.cssText += ';width:100%;margin-top:8px';
+      b1.onclick = () => { sfx.click(); moStack.pop(); openClans('all'); }; b2.onclick = () => { sfx.click(); clanEdit(true); }; c.append(b1, b2); bd.appendChild(c); return;
+    }
+    // все кланы: по общим кубкам
+    const inp = moEl('input'); inp.placeholder = tr('ПОИСК ПО НАЗВАНИЮ', 'SEARCH BY NAME'); inp.maxLength = 18; inp.style.marginBottom = '8px'; bd.appendChild(inp);
+    const box = moEl('div'); bd.appendChild(box);
+    const all = Array.from({ length: CLAN_N }, (_, ci) => clanGet('c' + ci)); if (CLAN.my && CLAN.in === 'my') all.push(clanMyData());
+    all.forEach(cl => { cl.tro = clanTro(cl); }); all.sort((a, b) => b.tro - a.tro); all.forEach((cl, i) => { cl.rank = i + 1; });
+    const show = () => {
+      const q = inp.value.trim().toLowerCase(); box.innerHTML = '';
+      const l = all.filter(cl => !q || cl.nm.toLowerCase().includes(q));
+      if (!l.length) { box.appendChild(moTxt('div', 'card sm', tr('ТАКОГО КЛАНА НЕТ', 'NO SUCH CLUB'))); return; }
+      l.forEach(cl => {
+        const mine = CLAN.in === cl.id, r = moEl('div', 'rk' + (mine ? ' glow' : ''));
+        const n = moEl('div', 'n ol'); n.textContent = String(cl.rank); if (cl.rank <= 3) n.style.color = ['#ffd23a', '#e8eef8', '#e0904a'][cl.rank - 1];
+        const nm = moEl('div'); nm.style.cssText = 'min-width:0;flex:1';
+        nm.append(moTxt('div', 'ol', cl.nm + (mine ? tr(' (ТВОЙ)', ' (YOURS)') : '')), moTxt('div', 'sm', (CL_LANG[cl.lg] || 'RU') + ' · ' + clTypes()[cl.type] + ' · ' + cl.mem.length + '/' + CLAN_MAX + (cl.req ? ' · ' + trf('ОТ {n}', 'FROM {n}', { n: cl.req }) : '')));
+        const v = moEl('div', 'v ol row'); v.style.gap = '4px'; v.append(iconCnv('trophy', 0, 20), moTxt('span', '', String(cl.tro)));
+        r.append(n, clanBadgeCnv(cl.bd, 40), nm, v); r.onclick = () => { sfx.click(); clanPage(cl.id); }; box.appendChild(r);
+      });
+    };
+    inp.oninput = show; show();
+  }, tab ? true : undefined);
+}
+function clanPage(id) { const cl = clanGet(id); if (!cl) return; moOpen(cl.nm, bd => clanBody(bd, clanGet(id)), true); }
+function clanBody(bd, cl) {
+  if (!cl) { bd.appendChild(moTxt('div', 'card sm', tr('КЛАН НЕ НАЙДЕН', 'CLUB NOT FOUND'))); return; }
+  const mine = CLAN.in === cl.id, tro = clanTro(cl), R = clRoles(), have = troTotal();
+  cl.mem.sort((a, b) => b.tr - a.tr);
+  const pres = cl.mem.find(m => m.r === 3) || cl.mem[0];
+  const hd = moEl('div', 'card'), top = moEl('div', 'row'), tw = moEl('div'); tw.style.cssText = 'flex:1;min-width:0';
+  tw.append(moTxt('div', 'ol big', cl.nm), moTxt('div', 'sm', cl.ds)); top.append(clanBadgeCnv(cl.bd, 64), tw); hd.appendChild(top);
+  const grid = moEl('div'); grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px';
+  const cell = (k, node) => { const c = moEl('div'); c.style.cssText = 'background:rgba(20,10,40,.55);border-radius:8px;padding:5px 8px'; c.append(moTxt('div', 'sm', k), node); grid.appendChild(c); };
+  cell(tr('КУБКИ КЛАНА', 'CLUB TROPHIES'), clanStat('trophy', tro)); cell(tr('УЧАСТНИКИ', 'MEMBERS'), clanStat('', cl.mem.length + ' / ' + CLAN_MAX));
+  cell(tr('ТИП', 'TYPE'), clanStat('', clTypes()[cl.type])); cell(tr('НУЖНО КУБКОВ', 'REQUIRED TROPHIES'), clanStat('trophy', cl.req));
+  cell(tr('ПРЕЗИДЕНТ', 'PRESIDENT'), clanStat('', pres.n)); cell(tr('ЯЗЫК', 'LANGUAGE'), clanStat('', CL_LANG[cl.lg] || 'RU'));
+  hd.appendChild(grid);
+  const act = (txt, cls, fn) => { const b = moTxt('button', 'btn ' + cls, txt); b.style.cssText += ';width:100%;margin-top:10px'; if (fn) b.onclick = () => { sfx.click(); fn(); }; hd.appendChild(b); return b; };
+  if (mine) {
+    hd.appendChild((() => { const s = moTxt('div', 'sm', trf('ТВОЯ РОЛЬ: {r}', 'YOUR ROLE: {r}', { r: R[cl.id === 'my' ? 3 : CLAN.role] }) + (cl.id !== 'my' && CLAN.role < 2 ? ' · ' + trf('РАУНДОВ В КЛАНЕ: {n} (ПОВЫШЕНИЕ — ЗА {m})', 'ROUNDS IN CLUB: {n} (PROMOTION AT {m})', { n: CLAN.rounds, m: CLAN.role ? 20 : 5 }) : '')); s.style.marginTop = '8px'; return s; })());
+    if (cl.id === 'my') act(tr('НАСТРОЙКИ КЛАНА', 'CLUB SETTINGS'), 'blue', () => clanEdit(false));
+    let armed = false; const lb = act(cl.id === 'my' ? tr('РАСПУСТИТЬ КЛАН', 'DISBAND THE CLUB') : tr('ВЫЙТИ ИЗ КЛАНА', 'LEAVE THE CLUB'), 'red');
+    lb.onclick = () => { sfx.click(); if (!armed) { armed = true; pxiSet(lb, tr('ТОЧНО? НАЖМИ ЕЩЁ РАЗ', 'SURE? TAP AGAIN')); return; } clanLeave(); moStack = []; openClans('all'); };
+  } else if (CLAN.in) act(tr('ТЫ УЖЕ В ДРУГОМ КЛАНЕ', 'YOU ARE IN ANOTHER CLUB'), 'off');
+  else if (cl.mem.length >= CLAN_MAX) act(tr('КЛАН ЗАПОЛНЕН', 'CLUB IS FULL'), 'off');
+  else if (cl.type === 2) act(tr('КЛАН ЗАКРЫТ', 'CLUB IS CLOSED'), 'off');
+  else if (have < cl.req) act(trf('НУЖНО {n} КУБКОВ (У ТЕБЯ {m})', 'NEEDS {n} TROPHIES (YOU HAVE {m})', { n: cl.req, m: have }), 'off');
+  else if (cl.type === 1) { const w = CLAN.rq && CLAN.rq.id === cl.id; act(w ? tr('ЗАЯВКА ОТПРАВЛЕНА…', 'REQUEST SENT…') : tr('ПОДАТЬ ЗАЯВКУ', 'SEND A REQUEST'), w ? 'off' : 'gold', w ? null : () => { CLAN.rq = { id: cl.id, t: Date.now() }; clanSave(); moRefresh(); setTimeout(() => { if (clanRqCheck() && moUi && moUi.style.display === 'flex') { moStack = []; openClans(CLAN.in ? 'mine' : 'all'); } }, 8600); }); }
+  else act(tr('ВСТУПИТЬ', 'JOIN'), '', () => { clanJoin(cl.id); moStack = []; openClans('mine'); });
+  bd.appendChild(hd);
+  // заявки в мой клан
+  if (cl.id === 'my' && CLAN.my.rq.length) {
+    const c = moEl('div', 'card'); c.appendChild(moTxt('div', 'ol', tr('ЗАЯВКИ В КЛАН', 'JOIN REQUESTS')));
+    CLAN.my.rq.forEach((q, i) => { const r = moEl('div', 'row'); r.style.marginTop = '8px'; const nm = moEl('div'); nm.style.cssText = 'flex:1;min-width:0'; nm.append(moTxt('div', 'ol', botName(q.idx)), clanStat('trophy', q.tr));
+      const y = moTxt('button', 'btn', '✓'), n = moTxt('button', 'btn red', '✕');
+      y.onclick = () => { sfx.click(); CLAN.my.rq.splice(i, 1); if (CLAN.my.mem.length + 1 < CLAN_MAX) { CLAN.my.mem.push({ idx: q.idx, tr: q.tr, r: 0, j: Date.now() }); clanLog('join', { n: botName(q.idx) }); } clanSave(); moRefresh(); };
+      n.onclick = () => { sfx.click(); CLAN.my.rq.splice(i, 1); clanSave(); moRefresh(); };
+      r.append(avatarCnv(botRow(q.idx, q.tr).av, 36), nm, y, n); c.appendChild(r); });
+    bd.appendChild(c);
+  }
+  // участники и события
+  const tb = moEl('div', 'tabs'), t1 = moTxt('button', 'tab on', tr('УЧАСТНИКИ', 'MEMBERS')), t2 = moTxt('button', 'tab', tr('СОБЫТИЯ', 'EVENTS')); tb.append(t1, t2); bd.appendChild(tb);
+  const box = moEl('div'); bd.appendChild(box);
+  const myR = mine ? (cl.id === 'my' ? 3 : CLAN.role) : -1;
+  const members = () => {
+    box.innerHTML = '';
+    cl.mem.forEach((m, i) => {
+      const row = m.me ? null : botRow(m.idx, m.tr), r = moEl('div', 'rk' + (m.me ? ' glow' : ''));
+      const n = moEl('div', 'n ol'); n.textContent = String(i + 1);
+      const nm = moEl('div'); nm.style.cssText = 'min-width:0;flex:1';
+      nm.appendChild(nickStyle(moTxt('div', 'ol', m.n + (m.me ? tr(' (ТЫ)', ' (YOU)') : '')), m.me ? m.nc : row.nc));
+      const rl = moTxt('div', 'sm', R[m.r]); rl.style.color = CL_ROLE_COL[m.r]; nm.appendChild(rl);
+      const v = moEl('div', 'v ol row'); v.style.gap = '4px'; v.append(iconCnv('trophy', 0, 18), moTxt('span', '', String(m.tr)));
+      r.append(n, framed(avatarCnv(m.me ? m.av : row.av, 36), m.me ? m.fr : row.fr, 2), nm, v);
+      r.onclick = () => { sfx.click(); if (m.me) { openProfile(); return; } moOpen(m.n, bd2 => { clanMemberActs(bd2, cl, m, myR); profBody(bd2, { ...row, n: m.n, tr: m.tr }, false); }, true); };
+      box.appendChild(r);
+    });
+  };
+  const events = () => {
+    box.innerHTML = '';
+    const ev = (cl.id === 'my' ? [] : clanBotLog(cl.ci)).concat(mine ? CLAN.log : []).sort((a, b) => b.t - a.t).slice(0, 25);
+    if (!ev.length) { box.appendChild(moTxt('div', 'card sm', tr('ПОКА ТИХО', 'NOTHING YET'))); return; }
+    ev.forEach(e => {
+      const txt = e.ty === 'join' ? trf('{n} ВСТУПИЛ В КЛАН', '{n} JOINED THE CLUB', e) : e.ty === 'leave' ? trf('{n} ВЫШЕЛ ИЗ КЛАНА', '{n} LEFT THE CLUB', e) : e.ty === 'kick' ? trf('{by} ИСКЛЮЧИЛ {n}', '{by} KICKED {n}', e)
+        : e.ty === 'up' ? trf('{by} ПОВЫСИЛ {n}: {role}', '{by} PROMOTED {n}: {role}', { ...e, role: R[e.r] }) : e.ty === 'down' ? trf('{by} ПОНИЗИЛ {n}: {role}', '{by} DEMOTED {n}: {role}', { ...e, role: R[e.r] }) : trf('КЛАН СОЗДАН', 'CLUB CREATED', e);
+      const c = moEl('div', 'card'); c.style.cssText += ';padding:8px 10px;margin-bottom:6px;border-left:6px solid ' + (e.ty === 'join' ? '#3ce06a' : e.ty === 'leave' || e.ty === 'kick' ? '#ff6a5a' : e.ty === 'up' ? '#ffd23a' : '#7ad8ff');
+      c.append(moTxt('div', '', txt), moTxt('div', 'sm', clAgo(e.t))); box.appendChild(c);
+    });
+  };
+  t1.onclick = () => { sfx.click(); t1.className = 'tab on'; t2.className = 'tab'; members(); }; t2.onclick = () => { sfx.click(); t2.className = 'tab on'; t1.className = 'tab'; events(); };
+  members();
+}
+// что я могу сделать с участником: президент — всё; вице — повышать до ветерана, понижать и исключать младших; ветеран — исключать участников
+function clanMemberActs(bd, cl, m, myR) {
+  if (myR < 1 || m.r >= myR || m.me) return;
+  const R = clRoles(), c = moEl('div', 'card'), me = nickOut(); c.appendChild(moTxt('div', 'ol', trf('РОЛЬ: {r}', 'ROLE: {r}', { r: R[m.r] })));
+  const set = r => { if (cl.id === 'my') { const x = CLAN.my.mem.find(q => q.idx === m.idx); if (x) x.r = r; } else CLAN.ov.role[m.idx] = r; clanLog(r > m.r ? 'up' : 'down', { n: m.n, r, by: me }); clanSave(); moBack(); };
+  const btn = (txt, cls, fn) => { const b = moTxt('button', 'btn ' + cls, txt); b.style.cssText += ';width:100%;margin-top:8px'; b.onclick = () => { sfx.click(); fn(); }; c.appendChild(b); };
+  const maxUp = myR === 3 ? 2 : 1;
+  if (myR >= 2 && m.r < maxUp) btn(trf('ПОВЫСИТЬ: {r}', 'PROMOTE: {r}', { r: R[m.r + 1] }), 'gold', () => set(m.r + 1));
+  if (myR >= 2 && m.r > 0) btn(trf('ПОНИЗИТЬ: {r}', 'DEMOTE: {r}', { r: R[m.r - 1] }), 'blue', () => set(m.r - 1));
+  btn(tr('ИСКЛЮЧИТЬ ИЗ КЛАНА', 'KICK FROM THE CLUB'), 'red', () => { if (cl.id === 'my') CLAN.my.mem = CLAN.my.mem.filter(q => q.idx !== m.idx); else CLAN.ov.kick.push(m.idx); clanLog('kick', { n: m.n, by: me }); clanSave(); moBack(); });
+  bd.appendChild(c);
+}
+// создание и настройки своего клана
+function clanEdit(isNew) {
+  const c0 = CLAN.my, d = isNew ? { nm: '', ds: '', bd: [Math.floor(Math.random() * 10), 3, Math.floor(Math.random() * CL_EMBS.length)], type: 0, req: 0 } : { nm: c0.nm, ds: c0.ds, bd: c0.bd.slice(), type: c0.type, req: c0.req };
+  moOpen(isNew ? tr('НОВЫЙ КЛАН', 'NEW CLUB') : tr('НАСТРОЙКИ КЛАНА', 'CLUB SETTINGS'), bd => {
+    const c = moEl('div', 'card'), prev = moEl('div'); prev.style.textAlign = 'center';
+    const paint = () => { prev.innerHTML = ''; prev.appendChild(clanBadgeCnv(d.bd, 80)); }; paint(); c.appendChild(prev);
+    const pick = (label, n, k, sw) => { c.appendChild(moTxt('div', 'sm', label)); const row = moEl('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px'; for (let i = 0; i < n; i++) { const b = sw(i); b.style.cursor = 'pointer'; b.onclick = () => { sfx.click(); d.bd[k] = i; paint(); }; row.appendChild(b); } c.appendChild(row); };
+    const dot = i => { const b = moEl('div'); b.style.cssText = 'width:26px;height:26px;border:3px solid #2a1408;border-radius:8px;background:' + CL_COLS[i]; return b; };
+    pick(tr('ЦВЕТ ЩИТА', 'SHIELD COLOUR'), 10, 0, dot); pick(tr('ЦВЕТ ЭМБЛЕМЫ', 'EMBLEM COLOUR'), 10, 1, dot); pick(tr('ЭМБЛЕМА', 'EMBLEM'), CL_EMBS.length, 2, i => clanBadgeCnv([7, 9, i], 34));
+    const nm = moEl('input'); nm.placeholder = tr('НАЗВАНИЕ (3–18 СИМВОЛОВ)', 'NAME (3–18 CHARACTERS)'); nm.maxLength = 18; nm.value = d.nm; nm.style.textTransform = 'none';
+    const ds = moEl('input'); ds.placeholder = tr('ОПИСАНИЕ', 'DESCRIPTION'); ds.maxLength = 80; ds.value = d.ds; ds.style.cssText += ';text-transform:none;margin-top:8px';
+    c.append(nm, ds);
+    const cyc = (label, get, next) => { const b = moTxt('button', 'btn blue', label + ': ' + get()); b.style.cssText += ';width:100%;margin-top:8px'; b.onclick = () => { sfx.click(); next(); pxiSet(b, label + ': ' + get()); }; c.appendChild(b); };
+    cyc(tr('ТИП', 'TYPE'), () => clTypes()[d.type], () => { d.type = (d.type + 1) % 3; });
+    cyc(tr('НУЖНО КУБКОВ', 'REQUIRED TROPHIES'), () => d.req, () => { d.req = CL_REQ[(CL_REQ.indexOf(d.req) + 1) % CL_REQ.length]; });
+    const err = moTxt('div', 'sm', ''); err.style.cssText = 'color:#ff8a8a;margin-top:6px;min-height:14px'; c.appendChild(err);
+    const ok = moTxt('button', 'btn gold', isNew ? tr('СОЗДАТЬ КЛАН', 'CREATE THE CLUB') : tr('СОХРАНИТЬ', 'SAVE')); ok.style.cssText += ';width:100%;margin-top:6px';
+    ok.onclick = () => {
+      const name = nm.value.replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim(), desc = ds.value.replace(/[<>&`]/g, '').replace(/\s+/g, ' ').trim();
+      if (name.length < 3) { sfx.no(); pxiSet(err, tr('НАЗВАНИЕ — ОТ 3 СИМВОЛОВ', 'THE NAME NEEDS AT LEAST 3 CHARACTERS')); return; }
+      if (CLAN_LIST.some(e => e.nm.toLowerCase() === name.toLowerCase())) { sfx.no(); pxiSet(err, tr('ТАКОЙ КЛАН УЖЕ ЕСТЬ', 'THIS NAME IS TAKEN')); return; }
+      sfx.click();
+      if (isNew) { const now = Date.now(), base = Math.max(600, troTotal() * 0.5);
+        CLAN.my = { nm: name, ds: desc || tr('Новый клан. Заходите!', 'A new club. Join us!'), bd: d.bd, type: d.type, req: d.req, sim: now, rq: [], mem: [] };
+        CLAN.in = 'my'; CLAN.role = 3; CLAN.at = now; CLAN.rounds = 0; CLAN.last = now; CLAN.rq = null; CLAN.ov = { kick: [], role: {} }; CLAN.log = []; clanLog('made', {});
+        if (d.type === 0) for (let i = 0; i < 3; i++) { const idx = 700000 + Math.floor(Math.random() * 250000), t = Math.round(Math.max(d.req, base) * (0.8 + Math.random() * 1.2)); CLAN.my.mem.push({ idx, tr: t, r: 0, j: now }); clanLog('join', { n: botName(idx) }); }   // первые участники приходят сразу
+        try { sfx.achieve(); } catch (e) {}
+      } else Object.assign(CLAN.my, { nm: name, ds: desc || CLAN.my.ds, bd: d.bd, type: d.type, req: d.req });
+      clanSave(); moStack = []; openClans('mine');
+    };
+    c.appendChild(ok); bd.appendChild(c);
+  }, true);
+}
+// сыгранный раунд или забег — это активность в клане
+{ const a0 = arReward; arReward = function (place) { const r = a0.apply(this, arguments); try { if (!quiet) clanTouch(true); } catch (e) {} return r; }; }
 // ---------- связки ----------
 { const g0 = generate; generate = function () { if (CM.on || ED.on || RP.on) return; g0.apply(this, arguments); }; }   // на своей карте и в повторе новые столбы не растут
 { const u0 = update; update = function (dt) { if (state === 'replay') { time += dt; updateParts(dt); rpTick(dt); return; } if (state === 'edit') { time += dt; if (ED.msgT > 0) ED.msgT -= dt; return; } u0(dt); cmTick(dt); if (mp.mode && mp.active && AR.phase === 'play') rpRecTick(); }; }
@@ -19246,7 +19603,7 @@ window.addEventListener('pointerup', () => { if (RP.drag) RP.drag = null; if (ED
 reset();
 window.__game = { get FR() { return FR; }, get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; },
   // для автотестов и замеров скорости
-  get mp() { return mp; }, get AR() { return AR; }, store2(sc) { state = "shop"; shopMain = 1; storeScroll = sc; sv = null; }, go(st) { state = st; if (st === "allies") allyScene.last = -1; }, arPlay, arInfo, mpOpen, openBoard, openPass, openQuests, openAccounts, accEmailCheck, openHeroBoards, openNickColor, openProfile, openMainMenu, openReplays, openMaps, openWeekly, edOpen, cmStart, rpOpen, rpList, get RP() { return RP; }, get ED() { return ED; }, get CM() { return CM; }, arLobby, mpHi, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
+  get mp() { return mp; }, get AR() { return AR; }, store2(sc) { state = "shop"; shopMain = 1; storeScroll = sc; sv = null; }, go(st) { state = st; if (st === "allies") allyScene.last = -1; }, arPlay, arInfo, mpOpen, openBoard, openPass, openQuests, openAccounts, accEmailCheck, openHeroBoards, openNickColor, openProfile, openMainMenu, openReplays, openMaps, openWeekly, openClans, clanGet, get CLAN() { return CLAN; }, clanTouch, arTroFor, edOpen, cmStart, rpOpen, rpList, get RP() { return RP; }, get ED() { return ED; }, get CM() { return CM; }, arLobby, mpHi, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
   drawOnce() { draw(); },
   dynBench() { const out = []; for (const z of ZONES) if (z.dyn) { window.__n = 0; const t0 = performance.now(); for (let i = 0; i < 20; i++) { time += 0.05; drawDyn(z, 1, false); } out.push([z.dyn, Math.round(window.__n / 20), +((performance.now() - t0) / 20).toFixed(2)]); } return out.sort((a, b) => b[1] - a[1]); },
   bench(n = 60) { const t0 = performance.now(); for (let i = 0; i < n; i++) { time += 1 / 60; draw(); } return (performance.now() - t0) / n; } };
