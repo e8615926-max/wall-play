@@ -9657,7 +9657,7 @@ function updatePoles(dt) {
         for (let j = 0; j < 10; j++) parts.push({ x: pl.cx + rand(-12, 12), y: rand(pl.y0, pl.y1), vx: rand(-40, 40), vy: rand(-30, 10), life: 0.8, max: 0.8, color: '#e8d0b0', size: rand(8, 13), grav: -20 });   // пыль
         if (onScreen(pl) && SET.shake) shake = Math.max(shake, 0.12);
         sfx.crack(); noise(0.3, 0.1, 0, 700);
-        poles.splice(i, 1);
+        pl.gone = true; poles.splice(i, 1);   // рассыпался насовсем (боты это видят)
         if (p.pole === pl) { p.pole = null; if (p.state === 'wall') { p.state = 'air'; p.vx = 0; p.vy = 0; } }
         if (p.stand === pl) { p.stand = null; if (p.state === 'ground') { p.state = 'air'; p.vy = 0; } }
         for (const b of birds) if (b.st === 'perch' && Math.abs(b.x - pl.cx) < 10 && Math.abs(b.y - pl.y0) < 4) { b.st = 'fly'; b.vx = 120; b.vy = -100; }
@@ -16097,17 +16097,19 @@ function passPerksOff() {
     if (ch) { metaSave(); boardPush(); }
   } catch (e) {}   // при самом первом вызове META ещё не готов — проверим в следующий раз
 }
-// награды: [бесплатная, премиум] на каждом уровне (cf/cp — сколько первых уровней уже забрано)
+// награды: [бесплатная, премиум] на каждом уровне (cf/cp — сколько первых уровней уже забрано).
+// Экономика: всё, что даёт премиум в кристаллах, монетах и героях, вместе стоит меньше цены Pass (169 кристаллов):
+// легендарный герой (~120) + эпический (~12) + 10 кристаллов + ~1100 монет (~11) + силы. Остальное в премиуме — украшения:
+// 8 рамок с узором, 2 титула и переливающиеся ники. Бесплатная дорожка — монеты, немного кристаллов, сундуки, силы, титул
+// и эпический герой в конце; рамок в ней больше нет
 const PASS_REW = (() => {
-  const L = [];
+  const L = [], PF = { 10: 'gold', 15: 'ice', 18: 'circuit', 20: 'rainbow', 22: 'fire', 28: 'royal', 40: 'galaxy', 52: 'neon' };
   for (let i = 1; i <= PASS_TIERS; i++) {
     let f, pr;
-    if (i % 10 === 0) f = { k: 'chest', gold: true }; else if (i % 5 === 0) f = { k: 'chest' }; else if (i % 3 === 0) f = { k: 'gems', n: 3 + Math.floor(i / 6) }; else if (i % 4 === 0) f = { k: 'power', n: 2 }; else f = { k: 'coins', n: 100 + i * 10 };
-    if (i === 30) pr = { k: 'skin', r: 3 }; else if (i === 20) pr = { k: 'frame', id: 'rainbow' }; else if (i === 25) pr = { k: 'title', id: 'pass2' }; else if (i === 10) pr = { k: 'frame', id: 'gold' }; else if (i === 15) pr = { k: 'skin', r: 2 };
-    else if (i === 5) pr = { k: 'title', id: 'pass1' }; else if (i % 7 === 0) pr = { k: 'ruby', n: 1 }; else if (i % 2 === 0) pr = { k: 'gems', n: 8 + i } ; else pr = { k: 'coins', n: 300 + i * 20 };
-    if (i === 40) pr = { k: 'frame', id: 'galaxy' }; if (i === 45) pr = { k: 'ruby', n: 5 }; if (i === 50) pr = { k: 'skin', r: 3 }; if (i === 55) f = { k: 'skin', r: 2 }; if (i === 35) f = { k: 'gems', n: 25 };
-    if (i === 60) { f = { k: 'skin', r: 3 }; pr = { k: 'skin', r: 4 }; }   // финал сезона: легенда бесплатно, мифик в премиуме
-    if (i === 12) f = { k: 'frame', id: 'ice' }; if (i === 8) f = { k: 'title', id: 'free1' }; if (i === 18) pr = { k: 'frame', id: 'circuit' }; if (i === 28) pr = { k: 'frame', id: 'royal' }; if (i === 22) f = { k: 'frame', id: 'fire' };   // в Pass — и рамки с узором
+    if (i === 60) f = { k: 'skin', r: 2 }; else if (i === 30) f = { k: 'chest', gold: true }; else if (i % 10 === 0) f = { k: 'chest' }; else if (i === 8) f = { k: 'title', id: 'free1' };
+    else if (i % 6 === 3) f = { k: 'gems', n: i < 30 ? 1 : 2 }; else if (i % 4 === 0) f = { k: 'power', n: 1 }; else f = { k: 'coins', n: 20 + i };
+    if (i === 60) pr = { k: 'skin', r: 3 }; else if (i === 30) pr = { k: 'skin', r: 2 }; else if (PF[i]) pr = { k: 'frame', id: PF[i] }; else if (i === 5) pr = { k: 'title', id: 'pass1' }; else if (i === 25) pr = { k: 'title', id: 'pass2' };
+    else if (i % 10 === 7) pr = { k: 'gems', n: 2 }; else if (i % 2 === 0) pr = { k: 'coins', n: 20 + i }; else pr = { k: 'power', n: 1 };
     L.push([f, pr]);
   }
   return L;
@@ -16642,14 +16644,14 @@ function openPass() {
     const pl = moTxt('div', 'ol', tr('ГЛАВНЫЙ ПРИЗ', 'GRAND PRIZE')); pl.style.cssText = 'font-size:9px;text-align:center;line-height:10px';
     prize.append(moEl('div', 'rays'), hv, pl, q);
     top.append(ring, info, prize); head.appendChild(top);
-    head.appendChild(Object.assign(moTxt('div', 'sm', tr('ОПЫТ PASS — ТОЛЬКО ЗА ЗАДАНИЯ: ЗАДАНИЯ ДНЯ И ЗАДАНИЯ РЕЖИМОВ. 60 УРОВНЕЙ, В КОНЦЕ — МИФИК', 'PASS XP COMES ONLY FROM QUESTS: DAILY AND MODE QUESTS. 60 LEVELS, A MYTHIC AT THE END')), { style: 'position:relative;z-index:1;margin-top:8px' }));
+    head.appendChild(Object.assign(moTxt('div', 'sm', tr('ОПЫТ PASS — ТОЛЬКО ЗА ЗАДАНИЯ: ЗАДАНИЯ ДНЯ И ЗАДАНИЯ РЕЖИМОВ. 60 УРОВНЕЙ, В КОНЦЕ — ЛЕГЕНДАРНЫЙ ГЕРОЙ В PREMIUM И ЭПИЧЕСКИЙ БЕСПЛАТНО', 'PASS XP COMES ONLY FROM QUESTS: DAILY AND MODE QUESTS. 60 LEVELS: A LEGENDARY HERO IN PREMIUM AND AN EPIC ONE FOR FREE AT THE END')), { style: 'position:relative;z-index:1;margin-top:8px' }));
     bd.appendChild(head);
     // покупка: что даёт золотая дорожка
     if (!v.prem) {
       const buy = moEl('div', 'card passBuy');
       buy.appendChild(moTxt('div', 'ol', '👑 ' + tr('ЗОЛОТАЯ ДОРОЖКА', 'GOLDEN TRACK')));
       const ul = moEl('div'); ul.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0';
-      for (const t2 of [tr('ЛЕГЕНДАРНЫЙ ГЕРОЙ', 'LEGENDARY HERO'), tr('ЭПИЧЕСКИЙ ГЕРОЙ', 'EPIC HERO'), tr('4 РАМКИ (2 С УЗОРОМ)', '4 FRAMES'), tr('2 ТИТУЛА', '2 TITLES'), tr('РУБИНЫ', 'RUBIES'), tr('ГОРЫ КРИСТАЛЛОВ', 'LOTS OF GEMS')]) { const li = moTxt('div', 'perk', '★ ' + t2); ul.appendChild(li); }
+      for (const t2 of [tr('ЛЕГЕНДАРНЫЙ ГЕРОЙ', 'LEGENDARY HERO'), tr('ЭПИЧЕСКИЙ ГЕРОЙ', 'EPIC HERO'), tr('8 РАМОК С УЗОРОМ', '8 PATTERNED FRAMES'), tr('2 ТИТУЛА', '2 TITLES'), tr('ПЕРЕЛИВАЮЩИЙСЯ НИК', 'SHIMMERING NICK'), tr('СИЛЫ И МОНЕТЫ', 'POWERS AND COINS')]) { const li = moTxt('div', 'perk', '★ ' + t2); ul.appendChild(li); }
       const b = moEl('button', 'btn gold big pulse'); b.style.cssText += ';width:100%;font-size:18px;display:flex;align-items:center;justify-content:center;gap:8px';
       b.append(moTxt('span', '', tr('КУПИТЬ PREMIUM', 'GET PREMIUM')), iconCnv('gems', 0, 24), moTxt('span', '', String(PASS_PRICE)));
       b.onclick = () => { if (gems < PASS_PRICE) { sfx.no(); b.firstChild.textContent = trf('НУЖНО {n}', 'NEED {n}', { n: PASS_PRICE }); return; } gems -= PASS_PRICE; saveMoney(); v.prem = true; store.set('pass', v); moRefresh(); moReward('PREMIUM!', iconCnv('chest', 1, 90), tr('ОТКРЫТА ЗОЛОТАЯ ДОРОЖКА НАГРАД', 'GOLDEN REWARD TRACK UNLOCKED')); };
@@ -17930,32 +17932,35 @@ const arFace = (q, ci) => ci === 0 ? 1 : (q.face || 1);
 //   steady — осторожный: хватается низко, почти не срывается;   wild — несётся сломя голову и чаще падает;
 //   hunt — охотник: догоняет соперника впереди, а в «Царе горы» бросается на царя издалека и часто
 const AR_MINDS = {
-  sprint: { pace: 1.1, err: 1, leap: -0.25, grab: [0.3, 0.55], wait: 0.6, reach: 110, cool: 0.8, agg: 0.1, chase: 0.2 },
-  leap:   { pace: 1.02, err: 1.1, leap: 0.4, grab: [0.12, 0.4], wait: 0.9, reach: 120, cool: 0.9, agg: 0.1, chase: 0.2 },
-  steady: { pace: 0.96, err: 0.25, leap: -0.15, grab: [0.45, 0.7], wait: 1, reach: 90, cool: 1.1, agg: 0, chase: 0.12 },
-  wild:   { pace: 1.18, err: 2.2, leap: 0.25, grab: [0.1, 0.6], wait: 0.4, reach: 140, cool: 0.6, agg: 0.25, chase: 0.3 },
-  hunt:   { pace: 1.05, err: 0.8, leap: 0.1, grab: [0.2, 0.5], wait: 0.5, reach: 170, cool: 0.45, agg: 0.35, chase: 0.45 },
+  sprint: { iq: 0, miss: 1, pace: 1.1, err: 1, leap: -0.25, grab: [0.3, 0.55], wait: 0.6, reach: 110, cool: 0.8, agg: 0.1, chase: 0.2 },
+  leap:   { iq: -0.05, miss: 1.2, pace: 1.02, err: 1.1, leap: 0.4, grab: [0.12, 0.4], wait: 0.9, reach: 120, cool: 0.9, agg: 0.1, chase: 0.2 },
+  steady: { iq: 0.2, miss: 0.4, pace: 0.96, err: 0.25, leap: -0.15, grab: [0.45, 0.7], wait: 1, reach: 90, cool: 1.1, agg: 0, chase: 0.12 },
+  wild:   { iq: -0.25, miss: 2, pace: 1.18, err: 2.2, leap: 0.25, grab: [0.1, 0.6], wait: 0.4, reach: 140, cool: 0.6, agg: 0.25, chase: 0.3 },
+  hunt:   { iq: 0.05, miss: 0.8, pace: 1.05, err: 0.8, leap: 0.1, grab: [0.2, 0.5], wait: 0.5, reach: 170, cool: 0.45, agg: 0.35, chase: 0.45 },
 };
 function arBotNew(e, i) {
   const s = clamp(+e.sk || 0.5, 0.05, 0.95);
   const names = Object.keys(AR_MINDS), mind = names[(i + Math.floor(Math.random() * names.length)) % names.length], M = AR_MINDS[mind];   // в матче — все характеры вперемешку
   return { id: e.id, ci: -1, st: 'ground', x: clamp(30 + i * 34 + (i > 2 ? 40 : 0), 24, W - 24), y: -PH / 2, vx: 0, vy: 0, face: i % 2 ? -1 : 1, rot: 0, sp: 0, j: null, w: (0.08 + Math.random() * 0.4) * M.wait,
     s, mind, M, grab: rand(M.grab[0], M.grab[1]), arc: rand(-22, 22),
-    pace: ((AR.mode === 'king' ? 3.9 : 3.7) + 5.5 * s) * M.pace * rand(0.94, 1.08), err: clamp((0.03 - 0.026 * s) * M.err, 0.002, 0.07), leap: clamp(0.15 + s * 0.55 + M.leap + rand(-0.12, 0.15), 0.03, 0.92), hold: rand(0.6, 1.4), resp: 0, t: 0, h: 0, fin: 0, lunge: 0 };
+    pace: ((AR.mode === 'king' ? 3.9 : 3.7) + 5.5 * s) * M.pace * rand(0.94, 1.08), err: clamp((0.03 - 0.026 * s) * M.err, 0.002, 0.07), leap: clamp(0.15 + s * 0.55 + M.leap + rand(-0.12, 0.15), 0.03, 0.92), hold: rand(0.6, 1.4), resp: 0, t: 0, h: 0, fin: 0, lunge: 0,
+    iq: clamp(0.6 + s * 0.35 + M.iq + rand(-0.08, 0.08), 0.25, 0.98),   // как часто бот замечает опасность: ток, шипы, исчезающий столб
+    miss: clamp((0.012 + 0.05 * (1 - s)) * M.miss, 0.004, 0.09) };   // как часто прыгает не туда: промах мимо столба или прыжок не на тот столб
 }
 function arBotJump(b, nci, opt = {}) {
   const B = AR.chain[nci]; if (!B) return;
   if (B.kind === 'exit' && AR.chain[b.ci] && AR.chain[b.ci].kind === 'portal' && nci === b.ci + 1) {   // портал: мгновенно к выходу
     burst(b.x, b.y, 10, '#c06aff', 160, 0.4, 4, 0, 'star'); b.ci = nci; b.face = arFace(B, nci); b.x = arHangX(B, b.face); b.y = arHangY(B, B.y0 + (B.y1 - B.y0) * 0.4); b.st = 'wall'; b.w = 0.2; return;
   }
-  const f2 = arFace(B, nci), x1 = opt.x != null ? opt.x : arHangX(B, f2);
+  const f2 = arFace(B, nci); let x1 = opt.x != null ? opt.x : arHangX(B, f2);
+  if (opt.miss) x1 = clamp(x1 + (Math.random() < 0.5 ? -1 : 1) * rand(34, 60), 16, W - 16);   // промахнулся: летит мимо столба
   const up = nci > b.ci, g0 = b.grab != null ? b.grab : 0.35, frac = up ? clamp(g0 + rand(-0.12, 0.12), 0.08, 0.75) : rand(0.35, 0.6);   // каждый хватается за столб на своей высоте — боты не идут след в след
   const y1 = opt.y != null ? opt.y : arHangY(B, B.y0 + (B.y1 - B.y0) * frac);
   const dx = x1 - b.x, rise = b.y - y1;
   let T = clamp(Math.abs(dx) / 440 + 0.1, 0.22, 0.62); if (rise > 130) T = Math.max(T, 0.3 + rise / 1000); if (opt.T) T = opt.T;   // прыжки резче — как у живого игрока
   if (nci > b.ci + 1) T = Math.max(T, 0.5 + rise / 1400) * (b.hold || 1) ** 0.3;
   const vy1 = (y1 - b.y - 0.5 * G * T * T) / T;
-  b.j = { x0: b.x, y0: b.y, x1, y1, T, t: 0, vy0: vy1, ci: nci, face: f2, bulge: Math.abs(dx) < 30 ? b.face * 46 : (b.arc || 0) * rand(0.4, 1), flip: nci > b.ci + 1 || Math.random() < 0.55 + b.s * 0.3, back: opt.back };
+  b.j = { x0: b.x, y0: b.y, x1, y1, T, t: 0, vy0: vy1, ci: nci, face: f2, bulge: Math.abs(dx) < 30 ? b.face * 46 : (b.arc || 0) * rand(0.4, 1), flip: nci > b.ci + 1 || Math.random() < 0.55 + b.s * 0.3, back: opt.back, miss: !!opt.miss };
   b.face = dx > 2 ? 1 : dx < -2 ? -1 : b.face; b.st = 'air'; b.sp = 0;
 }
 function arPaceK(b) {   // царь-бот бежит чуть медленнее, догоняющие ускоряются, чем дальше отстали
@@ -17981,26 +17986,93 @@ function arBotTick(b, dt) {
     if (k >= 1) {
       b.j = null; b.rot = 0; b.sp = 0; b.vx = 0; b.vy = 0;
       if (j.back != null) { arBotJump(b, j.back); return; }   // бросок к царю — и обратно на столб
+      if (j.miss) { arBotDie(b, 'miss'); return; }   // мимо столба — вниз
+      const L = AR.chain[j.ci];
+      if (L && !arSolidAt(L, 0)) { arBotDie(b, 'gone'); return; }   // столб исчез или рассыпался
+      if (L && arZapAt(L, 0)) { b.x = arHangX(L, j.face); arBotDie(b, 'zap'); return; }   // прыгнул на столб под током
+      if (L && arThornAt(L, j.face, 0)) { b.x = arHangX(L, j.face); arBotDie(b, 'thorn'); return; }   // на шипы
       const rise = j.y0 - j.y1; b.ci = j.ci; b.face = j.face; b.st = 'wall';
       b.w = rise <= 0 ? rand(0.08, 0.2) : Math.max(0.05, rise / (b.pace * arPaceK(b) * PX_PER_M) - j.T) * rand(0.75, 1.25);
+      if (Math.random() < 0.07 * (1.2 - b.s)) b.w += rand(0.25, 0.9);   // иногда задумался, как живой
     }
     return;
   }
   // висит на столбе (или стоит на земле)
   const P = AR.chain[b.ci];
-  if (b.st === 'wall' && P) { b.x = arHangX(P, b.face); b.y = Math.min(b.y + 22 * dt, P.y1 - PH / 2 - 2); }
+  if (b.st === 'wall' && P) {
+    if (P.kind === 'rotor' && P.thorn === b.face && P.flipA >= 0.5) b.face = -b.face;   // столб с шипами повернулся — бота переносит на другую сторону, как живого
+    b.x = arHangX(P, b.face); b.y = Math.min(b.y + 22 * dt, P.y1 - PH / 2 - 2);
+    if (!arSolidAt(P, 0)) { arBotDie(b, 'gone'); return; }   // столб исчез — падает
+    if (arZapAt(P, 0)) { arBotDie(b, 'zap'); return; }   // ток — погиб
+    // столб вот-вот ударит током или исчезнет: кто заметил — уходит сразу, не дожидаясь
+    if (b.w > 0 && b.warned !== b.ci && arSafeFor(P, b.face, 0) < 0.55) { b.warned = b.ci; if (Math.random() < b.iq) b.w = 0; }
+  }
   if (AR.mode === 'king' && arKgHead() > 0 && AR.king !== b.id) return;   // фора царя: все ждут
   b.w -= dt; if (b.w > 0) return;
-  if (b.ci >= 0 && Math.random() < b.err) { b.st = 'fall'; b.t = 0; b.vx = b.face * rand(60, 160); b.vy = -rand(200, 420); return; }   // сорвался
-  if (AR.mode !== 'king' || AR.king === b.id) { arBotJump(b, arBotNext(b)); return; }
+  if (AR.mode !== 'king' || AR.king === b.id) { arBotGo(b, arBotNext(b)); return; }
   // погоня за царём
   const kp = arPos(AR.king); if (!kp || kp.dead) { b.w = 0.25; return; }
   const d = Math.hypot(kp.x - b.x, kp.y - b.y);
   const M = b.M || AR_MINDS.sprint;
   if (d < M.reach && b.ci >= 0 && AR.sh <= 0 && b.t > b.lunge) { b.lunge = b.t + Math.max(0.35, (rand(0.9, 2.2) - b.s * 0.6) * M.cool); if (Math.random() > 0.38 + b.s * 0.35 + M.agg) { b.w = 0.18; return; } arBotJump(b, b.ci, { x: kp.x + rand(-14, 14), y: kp.y - 4 + rand(-18, 18), back: b.ci, T: Math.max(0.22, d / 560) }); return; }
-  if (kp.y < b.y - 30 || b.ci < 0) arBotJump(b, kp.y < b.y - 260 ? arBotNext(b) : b.ci + 1);
-  else if (kp.y > b.y + 140 && b.ci > 0) arBotJump(b, b.ci - 1);
+  if (kp.y < b.y - 30 || b.ci < 0) arBotGo(b, kp.y < b.y - 260 ? arBotNext(b) : b.ci + 1);
+  else if (kp.y > b.y + 140 && b.ci > 0) arBotGo(b, b.ci - 1);
   else b.w = 0.1;
+}
+// ---------- опасности столбов глазами бота ----------
+// время столба — своё (как у тока и мигания в «Сети»), поэтому бот видит опасность и там, куда не смотрит камера игрока
+const arPT = q => mp.rng && q.t0 != null ? q.t0 + mp.clock : (q.t || 0);
+const arZapAt = (q, dt) => q.kind === 'electric' && ((arPT(q) + dt) % 4.2) >= 3.1;   // ток: 2.6 с нет, 0.5 с искрит, 1.1 с бьёт
+function arSolidAt(q, dt) {
+  if (!q || q.gone) return false;   // рассыпался (столбы далеко внизу игра убирает из расчёта — для ботов они на месте)
+  if (q.kind === 'blink') return ((arPT(q) + dt) % 4.2) < 3.2;   // исчезающий кристалл
+  return q.solid !== false;
+}
+function arThornAt(q, face, dt) {   // шипы с той стороны, где висеть
+  if (!q.thorn) return false;
+  if (q.kind === 'rotor') { if (q.flipA >= 0) return true; if (q.timer - dt <= 0) return -q.thorn === face; }   // вертушка: вот-вот повернётся — опасно
+  return q.thorn === face;
+}
+function arSafeFor(q, face, dt) {   // сколько секунд с момента dt на столбе можно спокойно висеть
+  for (let s = 0; s <= 2.4; s += 0.1) if (!arSolidAt(q, dt + s) || arZapAt(q, dt + s)) return s;
+  return 2.4;
+}
+const arJumpT = (b, n) => { const B = AR.chain[n]; if (!B) return 0.4; const dx = Math.abs(arHangX(B, arFace(B, n)) - b.x); return clamp(dx / 440 + 0.1, 0.22, 0.62) + (n > b.ci + 1 ? 0.25 : 0); };
+function arTargetOk(b, n) {   // прилетит ли бот туда безопасно и успеет ли там передохнуть
+  const B = AR.chain[n]; if (!B) return false;
+  const f2 = arFace(B, n), T = arJumpT(b, n);
+  return arSolidAt(B, T) && !arZapAt(B, T) && !arThornAt(B, f2, T) && arSafeFor(B, f2, T) >= 0.5;
+}
+function arBotDie(b, why) {   // погиб: ток, шипы, промах, сорвался — эффект и падение
+  b.st = 'fall'; b.t = 0; b.j = null; b.sp = 0; b.vx = b.face * rand(40, 140); b.vy = why === 'miss' || why === 'gone' ? rand(-80, 40) : -rand(200, 380);
+  const near = b.y > camY - 60 && b.y < camY + H + 60;
+  if (why === 'zap') { burst(b.x, b.y - 10, 18, '#fff6a0', 260, 0.5, 3, 0, 'star'); burst(b.x, b.y - 10, 10, '#7ad8ff', 200, 0.4, 3, 0); if (near) try { sfx.zap(); } catch (e) {} b.zapT = 0.6; }
+  else if (why === 'thorn') { burst(b.x, b.y - 10, 14, '#ff3a5a', 220, 0.5, 4, 400); if (near) try { sfx.no(); } catch (e) {} }
+  else if (why === 'lava') { b.burn = 1; }
+}
+// бот выбирает, куда прыгнуть. Внимательный проверяет, не ударит ли там током, не исчезнет ли столб, не будет ли шипов:
+// опасно — ждёт на своём столбе или перепрыгивает опасный; невнимательный прыгает как есть и может погибнуть.
+// Иногда, как живой, прыгает не туда: мимо столба или вниз
+function arBotGo(b, want) {
+  if (b.ci >= 0 && Math.random() < b.err) { arBotDie(b, 'slip'); return; }   // сорвался при толчке
+  if (b.ci >= 0 && Math.random() < b.miss) {
+    if (Math.random() < 0.55 || b.ci < 1) { arBotJump(b, want, { miss: true }); return; }   // промах мимо столба
+    arBotJump(b, b.ci - 1); return;   // прыгнул не туда — вниз, на прошлый столб
+  }
+  if (b.ci < 0 || Math.random() > b.iq) { arBotJump(b, want); return; }   // не посмотрел — прыгает как есть
+  const cands = [want, b.ci + 1, b.ci + 2].filter((n, i, a) => n > b.ci - 2 && a.indexOf(n) === i && AR.chain[n]);
+  for (const n of cands) {
+    if (n === b.ci + 2 && want !== n) {   // обход через опасный столб — только если долетит
+      const B = AR.chain[n], dx = Math.abs(arHangX(B, arFace(B, n)) - b.x), rise = b.y - (B.y0 + (B.y1 - B.y0) * 0.4);
+      if (!(rise > 20 && rise < 340 && dx < 280) || B.kind === 'exit' || AR.chain[b.ci + 1].kind === 'portal') continue;
+    }
+    if (arTargetOk(b, n)) { b.wait = 0; arBotJump(b, n); return; }
+  }
+  const P = AR.chain[b.ci], here = P ? arSafeFor(P, b.face, 0) : 2.4;
+  if (here > 0.5 && (b.wait || 0) < 5) { b.wait = (b.wait || 0) + 0.12; b.w = 0.12; return; }   // тут пока безопасно — ждёт, когда выключится ток или появится столб
+  b.wait = 0;
+  if (b.ci > 0 && arTargetOk(b, b.ci - 1)) { arBotJump(b, b.ci - 1); return; }   // тут сейчас ударит — спасается вниз
+  arBotJump(b, want);   // деваться некуда — рискует
 }
 function arBotNext(b) {   // смелые боты перелетают через столб, а то и через два — будто тот прозрачный
   if (b.ci < 0 || Math.random() > b.leap) return b.ci + 1;
@@ -18014,7 +18086,9 @@ function arBotNext(b) {   // смелые боты перелетают чере
   return b.ci + 1;
 }
 function arBotRespawn(b) {
-  const ci = Math.max(0, b.ci - 2), P = AR.chain[ci]; if (!P) { b.st = 'ground'; b.x = 60; b.y = -PH / 2; b.ci = -1; return; }
+  let ci = Math.max(0, b.ci - 2);
+  while (ci > 0 && AR.chain[ci] && (AR.chain[ci].kind === 'electric' || AR.chain[ci].kind === 'blink' || AR.chain[ci].kind === 'rotor' || AR.chain[ci].kind === 'portal' || AR.chain[ci].kind === 'exit' || AR.chain[ci].gone)) ci--;   // не на ток и не на исчезающий столб
+  const P = AR.chain[ci]; b.burn = 0; b.zapT = 0; b.wait = 0; if (!P) { b.st = 'ground'; b.x = 60; b.y = -PH / 2; b.ci = -1; return; }
   b.ci = ci; b.face = arFace(P, ci); b.x = arHangX(P, b.face); b.y = arHangY(P, P.y0 + (P.y1 - P.y0) * 0.35); b.st = 'wall'; b.w = 0.4; b.t = 0; b.rot = 0;
 }
 function arBotSample(b) {
@@ -18659,7 +18733,7 @@ function arHud() {
     arKingHud();
     if (AR.goT != null && AR.goT < 0.9) { ctx.globalAlpha = 1 - AR.goT / 0.9; text(tr('ВПЕРЁД!', 'GO!'), W / 2, 220, 6, '#3ce06a', 'center', OL); ctx.globalAlpha = 1; }
   }
-  if (state === 'dead' && !AR.meFin) {
+  if (state === 'dead' && !AR.meFin && !(AR.md && AR.md.meGh)) {
     const n = Math.max(1, Math.ceil(AR_RESP - AR.respT));
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#000'; ctx.fillRect(0, 240, W, 140); ctx.globalAlpha = 1;
     text(tr('ВОЗРОЖДЕНИЕ', 'RESPAWN'), W / 2, 274, 2, '#9be7ff', 'center', OL);
@@ -18766,7 +18840,7 @@ function arQuestsCard() {
   if (mp.mode && mp.active && AR.meFin && (AR.finFx || 0) > 2.6) return;
   if (mp.mode && mp.active && state === 'play') {   // в режимах свой герой — с зелёным контуром, чтобы не потеряться среди десятерых
     heroSprite(curSkin(), p.state === 'wall' ? 'cling' : p.state === 'ground' || p.stand ? 'idle' : 'jump', time, false);
-    const tc = tintSprite('#3ce06a', 1);
+    const tc = tintSprite(AR.md && AR.md.k === 'kill' && AR.md.who === arMe() ? '#ff2a2a' : '#3ce06a', 1);   // убийца — с красным контуром
     ctx.save(); ctx.translate(even(p.x), even(p.y)); if (p.rot) ctx.rotate(p.rot); ctx.scale(p.face || 1, 1);
     for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) ctx.drawImage(tc, -32 + dx, -52 + dy, 64, 80);
     ctx.restore();
@@ -18784,6 +18858,388 @@ function arQuestsCard() {
   d0.apply(this, arguments);
 }; }
 
+
+// =====================================================================================
+// ---------- МОДИФИКАЦИИ РАУНДА: в случайный момент сверху крутится рулетка и выбирает одну ----------
+//   ЛАВА — снизу поднимается лава: чем дальше от неё игроки, тем быстрее; коснулся — сгорел и рассыпался пеплом
+//   ЗАРАЖЕНИЕ — вторая рулетка выбирает игрока: он зомби. 30 секунд все убегают, потом зомби ловит; пойманные тоже
+//              становятся зомби. Наверху база: добрался — спасся
+//   УБИЙЦА — вторая рулетка выбирает убийцу: красный контур и нож. Кого догонит — тот становится призраком и выбывает
+// Решает хост: он выбирает модификацию и цель и рассылает остальным; в игре с ботами хост — ты сам
+// =====================================================================================
+const MD_KINDS = ['lava', 'inf', 'kill'];
+const MD_ZREL = 30, MD_REEL = 2.9, MD_HOLD = 1.3, MD_CW = 60, MD_CG = 8;   // зомби ждёт 30 с; рулетка крутится 2.9 с и держит итог 1.3 с
+const mdName = k => k === 'lava' ? tr('ЛАВА!', 'LAVA!') : k === 'inf' ? tr('ЗАРАЖЕНИЕ!', 'INFECTION!') : tr('УБИЙЦА!', 'KILLER!');
+const mdDesc = k => k === 'lava' ? tr('СНИЗУ ПОДНИМАЕТСЯ ЛАВА — ЛЕЗЬ ВЫШЕ!', 'LAVA IS RISING — CLIMB!') : k === 'inf' ? tr('ОДИН ИЗ ВАС — ЗОМБИ. БЕГИ НА БАЗУ!', 'ONE OF YOU IS A ZOMBIE. RUN TO THE BASE!') : tr('СРЕДИ ВАС УБИЙЦА — НЕ ПОПАДИСЬ!', 'THERE IS A KILLER — DON\'T GET CAUGHT!');
+const mdAlive = id => { const o = arPos(id); return !!o && !o.dead; };
+function mdReset() { AR.md = null; AR.rl = null; AR.mdFx = []; AR.mdAt = arHost() ? (AR.mode === 'race' ? rand(5, 9) : rand(14, 28)) : Infinity; AR.mdSent = 0; }
+// ---------- рулетка ----------
+function mdReel(stage, cards, win) {   // лента карточек: едет слева направо и останавливается выигрышной карточкой под стрелкой
+  const n = 30, list = [];
+  for (let i = 0; i < n + 4; i++) list.push(i === n ? win : cards[Math.floor(Math.random() * cards.length)]);
+  if (list[n - 1] === win && cards.length > 1) list[n - 1] = cards.find(c => c !== win);   // соседняя — другая, чтобы стоп был заметен
+  return { stage, list, n, t: 0, jit: rand(-MD_CW * 0.3, MD_CW * 0.3), tick: -1, done: false, win };
+}
+function mdStart(k, who) {   // начать: сначала рулетка модификаций, для заражения и убийцы — потом рулетка игроков
+  if (AR.md || AR.rl) return;
+  AR.rlPend = { k, who };
+  AR.rl = mdReel(1, MD_KINDS.map(x => ({ k: x })), null);
+  AR.rl.list[AR.rl.n] = { k }; AR.rl.win = AR.rl.list[AR.rl.n];
+  for (let i = 0; i < AR.rl.list.length; i++) if (i !== AR.rl.n && AR.rl.list[i].k === k && (i === AR.rl.n - 1 || i === AR.rl.n + 1)) AR.rl.list[i] = { k: MD_KINDS.find(x => x !== k) };
+  try { tone(260, 520, 0.25, 'triangle', 0.06); noise(0.3, 0.06, 1500); } catch (e) {}
+}
+function mdReelTick(dt) {
+  const R = AR.rl; if (!R) return;
+  R.t += dt;
+  const q = clamp(R.t / MD_REEL, 0, 1), e = 1 - Math.pow(1 - q, 4), pos = e * (R.n * (MD_CW + MD_CG) + R.jit), idx = Math.floor(pos / (MD_CW + MD_CG) + 0.5);
+  if (idx !== R.tick && q < 1) { R.tick = idx; try { tone(1300 - q * 500, 1000 - q * 400, 0.03, 'square', 0.035); } catch (e) {} }   // щелчок на каждой карточке
+  if (q >= 1 && !R.done) {   // остановилась
+    R.done = true; R.doneT = R.t;
+    try { tone(660, 660, 0.12, 'square', 0.06); tone(880, 880, 0.12, 'square', 0.06, 0.1); tone(1320, 1320, 0.3, 'triangle', 0.07, 0.2); noise(0.25, 0.08, 2000, 0, 0.05); } catch (e) {}
+    vib([30, 30, 60]); flashT = Math.max(flashT || 0, 0.18);
+    for (let k = 0; k < 3; k++) mdUiBurst(W / 2, 134, ['#ffd23a', '#ffffff', '#ff3d7f'][k]);
+  }
+  if (R.done && R.t - R.doneT > MD_HOLD) {
+    const pend = AR.rlPend;
+    if (R.stage === 1 && pend.who) {   // вторая рулетка: кто станет зомби или убийцей
+      const ppl = arPeople().map(p2 => ({ id: p2.id, nick: p2.me ? (mp.nick || 'PLAYER') : p2.nick, skin: p2.skin, me: p2.me }));
+      const win = ppl.find(p2 => p2.id === pend.who) || ppl[0];
+      AR.rl = mdReel(2, ppl, win); AR.rl.k = pend.k;
+      try { tone(300, 600, 0.2, 'triangle', 0.06); } catch (e) {}
+    } else { AR.rl = null; mdApply(pend.k, pend.who); }
+  }
+}
+const mdUiBurst = (x, y, col) => { for (let i = 0; i < 10; i++) AR.mdUi.push({ x, y, vx: rand(-160, 160), vy: rand(-200, 40), t: 0, col }); };
+// ---------- применить модификацию ----------
+function mdApply(k, who) {
+  const M = AR.md = { k, t0: mp.clock, hide: {}, gh: {}, z: {}, safe: {}, cat: {}, by: {} };
+  if (k === 'lava') {
+    let low = -1e9; for (const e of arPeople()) { const o = arPos(e.id); if (o && !o.dead) low = Math.max(low, o.y); }
+    if (low < -1e8) low = camY + H;
+    M.y = low + 520; M.v = 30; M.sy = M.y;
+    try { noise(1.4, 0.18, 0, 380); tone(90, 45, 1.2, 'sawtooth', 0.06); } catch (e) {}
+    mdMsg(tr('ЛАВА ПОДНИМАЕТСЯ!', 'THE LAVA IS RISING!'), '#ff8a1e');
+  } else if (k === 'inf') {
+    M.rel = mp.clock + MD_ZREL;
+    let top = 0; for (const e of arPeople()) top = Math.max(top, arHeight(e.id));
+    M.base = AR.mode === 'race' ? AR_FIN_Y : -PH / 2 - Math.min(top + 160, mdChainTopM() - 12) * PX_PER_M;   // база: в забеге — финиш, в «Царе горы» — на 160 м выше лучшего
+    mdInfect(who, true);
+    try { tone(150, 80, 0.8, 'sawtooth', 0.07); tone(110, 70, 0.9, 'sawtooth', 0.05, 0.15); } catch (e) {}
+  } else {
+    M.who = who; M.cd = 1.2;
+    try { tone(1800, 240, 0.35, 'sawtooth', 0.06); noise(0.2, 0.12, 3000); } catch (e) {}
+    const nk = mdNick(who); mdMsg(who === arMe() ? tr('ТЫ УБИЙЦА! ДОГОНЯЙ ДРУГИХ', 'YOU ARE THE KILLER! CATCH THEM') : trf('УБИЙЦА — {n}! УБЕГАЙ!', 'THE KILLER IS {n}! RUN!', { n: nk }), '#ff3a3a');
+  }
+}
+const mdChainTopM = () => { let m = 0; for (const q of AR.chain) m = Math.max(m, (-PH / 2 - q.y0) / PX_PER_M); return m; };
+const mdNick = id => { if (id === arMe()) return mp.nick || 'PLAYER'; const q = mp.pl[id]; return q ? q.nick : '?'; };
+function mdMsg(s, col) { AR.mdMsg = { s, col, t: 0 }; }
+function mdInfect(id, first) {   // игрок становится зомби: скин зомби, зелёная вспышка
+  const M = AR.md; if (!M || M.z[id] != null) return;
+  M.z[id] = mp.clock; if (!first) M.cat[id] = mp.clock;
+  const q = mp.pl[id]; if (q) { if (q.skin0 == null) q.skin0 = q.skin; q.skin = 'zombie'; }
+  const o = arPos(id); if (o) { burst(o.x, o.y - 10, 22, '#6aff5a', 240, 0.7, 4, 100, 'star'); burst(o.x, o.y - 10, 12, '#2a5a1a', 160, 0.6, 5, 200); }
+  const me = id === arMe();
+  if (first) mdMsg(me ? tr('ТЫ ЗОМБИ! ЖДИ 30 СЕКУНД И ЛОВИ ВСЕХ', 'YOU ARE THE ZOMBIE! WAIT 30 S, THEN CATCH THEM') : trf('{n} — ЗОМБИ! 30 СЕКУНД, ЧТОБЫ УБЕЖАТЬ', '{n} IS THE ZOMBIE! 30 SECONDS TO ESCAPE', { n: mdNick(id) }), '#6aff5a');
+  else { mdMsg(me ? tr('ТЕБЯ ЗАРАЗИЛИ! ТЕПЕРЬ ЛОВИ ДРУГИХ', 'YOU GOT INFECTED! NOW CATCH THE OTHERS') : trf('{n} ЗАРАЖЁН!', '{n} GOT INFECTED!', { n: mdNick(id) }), '#6aff5a'); try { tone(200, 90, 0.5, 'sawtooth', 0.06); } catch (e) {} }
+  if (me) { vib([80, 40, 80]); flashT = 0.25; }
+  if (arHost() && mp.tx) mpSend({ t: 'qi', id });
+}
+function mdKill(id, by) {   // убийца достал: жертва — призрак
+  const M = AR.md; if (!M || M.gh[id] != null) return;
+  M.gh[id] = mp.clock; M.by[by] = (M.by[by] || 0) + 1; M.cd = 0.9;
+  const o = arPos(id), q = mp.pl[id], skin = id === arMe() ? skinId : q ? q.skin : 'hamster';
+  if (o) { burst(o.x, o.y - 14, 18, '#ff2a2a', 280, 0.6, 4, 500); burst(o.x, o.y - 14, 8, '#ffffff', 200, 0.4, 3, 0, 'star'); AR.mdFx.push({ k: 'ghost', x: o.x, y: o.y, skin, face: (o.f || 1), t: 0, id }); }
+  const kp = arPos(by); if (kp) AR.mdSwing = { id: by, t: 0 };
+  try { noise(0.18, 0.14, 2500); tone(900, 180, 0.3, 'sawtooth', 0.06); tone(520, 260, 0.6, 'triangle', 0.05, 0.15); } catch (e) {}
+  if (id === arMe()) { p.shield = 0; p.revive = 0; die('ghost'); M.meGh = 1; mdMsg(tr('ТЕБЯ ПОЙМАЛ УБИЙЦА — ТЫ ПРИЗРАК', 'THE KILLER GOT YOU — YOU ARE A GHOST'), '#c8e8ff'); vib([120, 60, 200]); }
+  else { const b = AR.bots[id]; if (b) { b.st = 'dead'; b.resp = 1e9; b.j = null; } mdMsg(trf('УБИЙЦА ПОЙМАЛ {n}', 'THE KILLER GOT {n}', { n: mdNick(id) }), '#ff6a6a'); }
+  if (AR.mode === 'king' && AR.king === id && by) arKgSet(by, KG_SH, false);   // убил царя — корона убийце
+  if (arHost() && mp.tx) mpSend({ t: 'qx', id, by });
+}
+function mdBurn(id) {   // коснулся лавы: горит, чернеет и рассыпается пеплом
+  const o = arPos(id), q = mp.pl[id], me = id === arMe(), skin = me ? skinId : q ? q.skin : 'hamster';
+  if (o) AR.mdFx.push({ k: 'burn', x: o.x, y: o.y, skin, face: me ? (p.face || 1) : ((q && q.r && q.r.f) || 1), t: 0 });
+  if (o && o.y > camY - 80 && o.y < camY + H + 80) try { noise(0.6, 0.12, 400, 3000); tone(220, 60, 0.5, 'sawtooth', 0.05); } catch (e) {}
+  if (me) { AR.md.meBurn = 1; p.shield = 0; p.revive = 0; die('lava'); vib([60, 30, 140]); if (state === 'play') { AR.md.meBurn = 0; p.state = 'air'; p.pole = null; p.stand = null; p.vy = -1100; p.inv = 1; } }   // спасла способность — выбрасывает вверх
+  else { const b = AR.bots[id]; if (b) { b.st = 'dead'; b.resp = AR_RESP; b.j = null; b.t = 0; } AR.md.hide[id] = mp.clock + AR_RESP + 0.2; }
+  if (arHost() && mp.tx && !me) mpSend({ t: 'qb', id });
+}
+// ---------- ход модификации ----------
+function mdTick(dt) {
+  if (!AR.mdUi) AR.mdUi = [];
+  for (const u of AR.mdUi) { u.t += dt; u.x += u.vx * dt; u.y += u.vy * dt; u.vy += 500 * dt; }
+  AR.mdUi = AR.mdUi.filter(u => u.t < 0.9);
+  if (AR.mdMsg) AR.mdMsg.t += dt;
+  if (AR.mdSwing) { AR.mdSwing.t += dt; if (AR.mdSwing.t > 0.35) AR.mdSwing = null; }
+  for (const f of AR.mdFx) f.t += dt;
+  AR.mdFx = AR.mdFx.filter(f => f.k === 'ghost' || f.t < 1.8);
+  for (const f of AR.mdFx) if (f.k === 'burn' && SET.fx) {   // огонь, потом дым и пепел
+    if (f.t < 0.7 && Math.random() < dt * 40) parts.push({ x: f.x + rand(-12, 12), y: f.y + rand(-30, 10), vx: rand(-30, 30), vy: -rand(60, 160), life: 0.45, max: 0.45, color: ['#ffd23a', '#ff8a1e', '#ff3a1a'][Math.floor(Math.random() * 3)], size: rand(3, 5), grav: -120 });
+    else if (f.t >= 0.9 && f.t < 1.6 && Math.random() < dt * 50) parts.push({ x: f.x + rand(-12, 12), y: f.y + rand(-30, 14), vx: rand(-20, 20), vy: rand(-20, 30), life: 1.1, max: 1.1, color: ['#4a4040', '#7a7070', '#a09898', '#2a2424'][Math.floor(Math.random() * 4)], size: rand(2, 4), grav: 260 });
+  }
+  if (AR.phase !== 'play') return;
+  if (!AR.md && !AR.rl && arHost() && mp.clock >= AR.mdAt) {   // хост решает, что выпадет
+    const k = MD_KINDS[Math.floor(Math.random() * MD_KINDS.length)];
+    const cand = arPeople().filter(e => AR.fin[e.id] == null && mdAlive(e.id)).map(e => e.id), who = k === 'lava' ? '' : (cand[Math.floor(Math.random() * cand.length)] || arMe());
+    if (mp.tx) mpSend({ t: 'qd', k, who });
+    mdStart(k, who); AR.mdAt = Infinity;
+  }
+  mdReelTick(dt);
+  const M = AR.md; if (!M) return;
+  const host = arHost(), me = arMe();
+  if (M.k === 'lava') {
+    if (host) {
+      let low = -1e9, top = 1e9;
+      for (const e of arPeople()) { const o = arPos(e.id); if (o && !o.dead && AR.fin[e.id] == null) { low = Math.max(low, o.y); top = Math.min(top, o.y); } }
+      const gap = low > -1e8 ? M.y - low : 300;
+      M.v = clamp(16 + Math.max(0, gap) * 0.13 + (mp.clock - M.t0) * 0.25, 16, 220);   // чем дальше игроки от лавы, тем она быстрее
+      let ny = M.y - M.v * dt;
+      if (top < 1e8) ny = Math.max(ny, top + 300);   // лидера не догоняет: лава гонит отстающих
+      if (AR.mode === 'race') ny = Math.max(ny, AR_FIN_Y + 160);
+      M.y = Math.min(M.y, ny);
+      if (mp.tx && (M.sent || 0) + 0.4 < mp.clock) { M.sent = mp.clock; mpSend({ t: 'ql', y: Math.round(M.y) }); }
+      for (const id in AR.bots) { const b = AR.bots[id]; if (b.st !== 'dead' && !b.fin && b.y + 16 > M.y) mdBurn(id); }
+    } else if (M.ty != null) M.y += (M.ty - M.y) * Math.min(1, dt * 6);
+    if (state === 'play' && !AR.meFin && !(p.inv > 0) && p.y + 22 > M.y) mdBurn(me);
+    if (state === 'play') M.meBurn = 0;
+  } else if (M.k === 'inf') {
+    const ids = arPeople().map(e => e.id);
+    // кто добрался до базы — спасён
+    for (const id of ids) { if (M.z[id] != null || M.safe[id] != null) continue; const o = arPos(id); if (o && !o.dead && (o.y <= M.base || AR.fin[id] != null)) { M.safe[id] = mp.clock; if (id === me) { mdMsg(tr('ТЫ НА БАЗЕ! СПАСЁН!', 'YOU MADE IT TO THE BASE!'), '#3ce06a'); try { sfx.achieve(); } catch (e) {} } else burst(o.x, o.y - 20, 16, '#3ce06a', 220, 0.7, 4, 200, 'star'); const b = AR.bots[id]; if (b) b.fin = 1; } }
+    if (host && mp.clock >= M.rel) {   // зомби ловят: касание — заражение
+      for (const zid of ids) { if (M.z[zid] == null) continue; const zo = arPos(zid); if (!zo || zo.dead) continue;
+        for (const hid of ids) { if (M.z[hid] != null || M.safe[hid] != null) continue; const ho = arPos(hid); if (!ho || ho.dead) continue; if (Math.abs(ho.x - zo.x) < 28 && Math.abs(ho.y - zo.y) < 34) { mdInfect(hid, false); M.by[zid] = (M.by[zid] || 0) + 1; } } }
+    }
+    if (host && !M.endAt) { const left = ids.filter(id => M.z[id] == null && M.safe[id] == null); if (!left.length) M.endAt = mp.clock + 1.6; }
+    if (host && M.endAt && mp.clock >= M.endAt) { M.endOk = 1; arEnd(); }
+  } else if (M.k === 'kill') {
+    if (host && M.cd > 0) M.cd -= dt;
+    if (host && M.cd <= 0) {
+      const ko = arPos(M.who);
+      if (ko && !ko.dead) for (const e of arPeople()) { const id = e.id; if (id === M.who || M.gh[id] != null || AR.fin[id] != null) continue; const o = arPos(id); if (!o || o.dead) continue; if (Math.abs(o.x - ko.x) < 28 && Math.abs(o.y - ko.y) < 36) { mdKill(id, M.who); break; } }
+    }
+    if (host && !M.endAt) { const left = arPeople().filter(e => e.id !== M.who && M.gh[e.id] == null && AR.fin[e.id] == null); if (!left.length) M.endAt = mp.clock + 2; }
+    if (host && M.endAt && mp.clock >= M.endAt) arEnd();
+  }
+  // ты призрак или спасён в «Царе горы» — камера следит за другими
+  if (M.meGh || (M.k === 'inf' && M.safe[me] != null && AR.mode === 'king')) {
+    const l = arSpecList().filter(e => !(M.gh[e.id] != null)); if (l.length && !l.some(e => e.id === AR.spec)) AR.spec = l[0].id;
+    const sp = arPos(AR.spec); if (sp && (!M.meGh || mp.clock - M.gh[me] > 2.2)) { camY += (sp.y - H * 0.58 - camY) * Math.min(1, dt * 4); camR = even(camY); }
+  }
+}
+// ---------- бот под модификацией: зомби гонится, люди бегут к базе, убийца охотится ----------
+function mdNearest(b, ok) {
+  let best = null, bd = 1e9;
+  for (const e of arPeople()) { if (e.id === b.id || !ok(e.id)) continue; const o = arPos(e.id); if (!o || o.dead) continue; const d = Math.hypot(o.x - b.x, (o.y - b.y) * 0.8) + (o.y > b.y + 300 ? 400 : 0); if (d < bd) { bd = d; best = e.id; } }
+  return best;
+}
+// погоня — тем же умением, что у ботов в «Царе горы»: бросок на цель, прыжки вдогонку
+function mdChase(t0, b, dt, tid, k) {
+  const sv = [AR.mode, AR.king, AR.sh, b.pace]; AR.mode = 'king'; AR.king = tid; AR.sh = 0; b.pace *= k;
+  try { t0(b, dt); } finally { AR.mode = sv[0]; AR.king = sv[1]; AR.sh = sv[2]; b.pace = sv[3]; }
+}
+function mdAsRace(t0, b, dt) { const m = AR.mode; AR.mode = 'race'; try { t0(b, dt); } finally { AR.mode = m; } }
+// ---------- отрисовка: мир ----------
+function mdWorld() {
+  const M = AR.md;
+  if (M && M.k === 'lava') mdDrawLava(M.y);
+  if (M && M.k === 'inf') mdDrawBase(M.base);
+  for (const f of AR.mdFx) mdDrawFx(f);
+  if (M && M.k === 'kill') {   // нож у убийцы-бота (у тебя — в отрисовке героя)
+    const q = mp.pl[M.who], g = q && q.g; if (q && g && M.who !== arMe() && !(q.r && q.r.d)) mdKnife(g.x, g.y, (q.r && q.r.f) || 1, AR.mdSwing && AR.mdSwing.id === M.who ? AR.mdSwing.t : -1);
+  }
+}
+function mdDrawLava(top) {
+  if (top > camY + H + 140) return;
+  const wave = x => Math.sin(x * 0.045 + time * 2.6) * 4 + Math.sin(x * 0.12 - time * 1.7) * 2;
+  const gl = ctx.createLinearGradient(0, top - 90, 0, top); gl.addColorStop(0, 'rgba(255,80,10,0)'); gl.addColorStop(1, 'rgba(255,110,20,0.5)');
+  ctx.fillStyle = gl; ctx.fillRect(0, top - 90, W, 90);   // жар над лавой
+  const y1 = camY + H + 40, g = ctx.createLinearGradient(0, top - 6, 0, top + 300);
+  g.addColorStop(0, '#ffe27a'); g.addColorStop(0.06, '#ff9a1e'); g.addColorStop(0.3, '#e8380a'); g.addColorStop(0.75, '#8a1206'); g.addColorStop(1, '#3a0604');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, y1);
+  for (let x = 0; x <= W; x += 6) ctx.lineTo(x, even(top + wave(x))); ctx.lineTo(W, y1); ctx.closePath(); ctx.fill();
+  for (let x = 0; x < W; x += 6) { const yy = even(top + wave(x)); prect(ctx, x, yy, 6, 2, '#fff6b0'); if ((x / 6 + Math.floor(time * 6)) % 7 === 0) prect(ctx, x, yy - 2, 4, 2, '#ffffff'); }
+  // тёмная корка и пузыри
+  for (let k = 0; k < 7; k++) { const cx = (hash(k * 5) * W + time * (8 + k * 3)) % (W + 60) - 30, cy = top + 30 + hash(k * 7) * 140; ctx.globalAlpha = 0.45; pell(ctx, cx, cy, 16 + hash(k) * 14, 5, '#5a0a04'); ctx.globalAlpha = 1; }
+  for (let k = 0; k < 12; k++) { const ph = (time * (0.5 + hash(k * 3) * 0.6) + hash(k)) % 1, bx = hash(k * 11) * W, by = top + 6 + (1 - ph) * 150, r = 2 + ph * 5; if (by > camY + H + 20) continue; pell(ctx, bx, by, r + 1, r + 1, '#a01a06'); pell(ctx, bx, by, r, r, ph > 0.85 ? '#fff6b0' : '#ffb02a'); }
+  if (SET.fx && Math.random() < 0.6) parts.push({ x: rand(0, W), y: top - 2, vx: rand(-20, 20), vy: -rand(50, 140), life: rand(0.5, 1.1), max: 1.1, color: Math.random() < 0.5 ? '#ffd23a' : '#ff6a1a', size: rand(2, 3), grav: -40 });   // искры
+}
+function mdDrawBase(y) {
+  if (y < camY - 120 || y > camY + H + 60) return;
+  const sq = 12;
+  for (const x of [6, W - 10]) { prect(ctx, x - 2, y - 84, 8, 102, OL); prect(ctx, x, y - 82, 4, 100, '#e8eef8'); }
+  for (let i = 0; i * sq < W; i++) for (let r = 0; r < 2; r++) { const yy = y - 64 + r * sq + Math.sin(time * 4 + i * 0.4) * 3; prect(ctx, i * sq, yy - 1, sq, sq + 2, OL); prect(ctx, i * sq, yy, sq, sq, (i + r) % 2 ? '#3ce06a' : '#1a6a2a'); }
+  const bx = W / 2; prect(ctx, bx - 30, y - 120, 60, 36, OL); prect(ctx, bx - 28, y - 118, 56, 32, '#fff6d8'); prect(ctx, bx - 36, y - 128, 72, 10, OL); prect(ctx, bx - 34, y - 126, 68, 6, '#c03a2a'); prect(ctx, bx - 6, y - 104, 12, 18, '#7a4a24');   // домик базы
+  text(tr('БАЗА', 'BASE'), W / 2, y - 134, 3, '#3ce06a', 'center', OL);
+}
+function mdDrawFx(f) {
+  const k = mpSkin(f.skin);
+  if (f.k === 'burn') {
+    if (f.t > 1.6 || f.y < camY - 80 || f.y > camY + H + 80) return;
+    heroSprite(k, 'fall', time, false);
+    ctx.save(); ctx.translate(even(f.x), even(f.y + (f.t > 1 ? (f.t - 1) * 30 : 0))); ctx.scale(f.face || 1, 1);
+    if (f.t < 0.7) { ctx.drawImage(hcv, -32, -52, 64, 80); ctx.globalAlpha = Math.min(1, f.t / 0.5) * 0.85; ctx.drawImage(tintSprite('#ff7a1a', 0), -32, -52, 64, 80); }
+    else { ctx.globalAlpha = f.t < 1 ? 1 : Math.max(0, 1 - (f.t - 1) / 0.6); const sc = f.t < 1 ? 1 : 1 - (f.t - 1) * 0.6; ctx.scale(1, sc); ctx.drawImage(tintSprite('#1e1612', 0), -32, -52 / sc + (1 - sc) * 30, 64, 80); }
+    ctx.restore(); ctx.globalAlpha = 1;
+    if (f.t < 0.8) { ctx.globalAlpha = 0.5; pell(ctx, f.x, f.y - 12, 24, 28, '#ff6a1a'); ctx.globalAlpha = 1; }
+  } else if (f.k === 'ghost') {   // душа выходит из тела, белеет и улетает вверх, покачиваясь
+    const up = Math.min(f.t, 2) * 26 + Math.max(0, f.t - 2) * 14, x = f.x + Math.sin(f.t * 2.2) * 10, y = f.y - up;
+    if (y < camY - 100 || y > camY + H + 100) return;
+    heroSprite(k, 'jump', time, false);
+    const a = f.t < 0.4 ? f.t / 0.4 : 1;
+    ctx.save(); ctx.translate(even(x), even(y)); ctx.scale(f.face || 1, 1);
+    ctx.globalAlpha = 0.25 * a; pell(ctx, 0, -16, 30, 34, '#bfe8ff');
+    ctx.globalAlpha = 0.6 * a; ctx.drawImage(tintSprite('#eef8ff', 0), -32, -52, 64, 80);
+    ctx.globalAlpha = 0.5 * a; for (let i = 0; i < 4; i++) prect(ctx, -12 + i * 6, 22 + Math.sin(time * 6 + i) * 3, 6, 6, '#eef8ff');   // волнистый хвост
+    prect(ctx, -6, -24, 4, 4, '#1a2a4a'); prect(ctx, 4, -24, 4, 4, '#1a2a4a');
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+}
+function mdKnife(x, y, f, sw) {   // нож в руке; при ударе — взмах
+  ctx.save(); ctx.translate(even(x + f * 16), even(y - 6)); ctx.scale(f, 1); ctx.rotate(sw >= 0 ? -1.2 + sw * 6 : -0.5 + Math.sin(time * 4) * 0.12);
+  prect(ctx, -2, -2, 8, 8, OL); prect(ctx, 0, 0, 4, 4, '#5a2a10'); prect(ctx, 4, -14, 6, 16, OL); prect(ctx, 6, -12, 2, 12, '#e8eef8'); prect(ctx, 6, -16, 2, 4, '#ffffff'); prect(ctx, 2, -2, 10, 2, '#8a8a98');
+  ctx.restore();
+  if (sw >= 0 && sw < 0.25) { ctx.globalAlpha = 1 - sw * 4; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x + f * 18, y - 8, 22, -1.6, 0.6); ctx.stroke(); ctx.globalAlpha = 1; }
+}
+// ---------- отрисовка: экран ----------
+function mdCardArt(c, x, y, s) {   // картинка в квадрате рулетки
+  const P = (a, b, w, h, col) => prect(ctx, x + a, y + b, w, h, col);
+  if (c.k === 'lava') {
+    P(0, 0, s, s, '#3a0a06'); const g = ctx.createLinearGradient(0, y + s * 0.45, 0, y + s); g.addColorStop(0, '#ffb02a'); g.addColorStop(1, '#c01a0a'); ctx.fillStyle = g; ctx.fillRect(x, y + s * 0.5, s, s * 0.5);
+    for (let i = 0; i < s; i += 6) P(i, s * 0.5 + Math.sin(i * 0.3 + time * 4) * 2 - 2, 6, 2, '#fff6b0');
+    P(s / 2 - 6, s * 0.18, 12, 16, '#ff8a1e'); P(s / 2 - 4, s * 0.12, 8, 8, '#ffd23a'); P(s / 2 - 2, s * 0.06, 4, 6, '#fff6b0'); P(s / 2 - 10, s * 0.28, 4, 8, '#ff3a1a'); P(s / 2 + 6, s * 0.26, 4, 10, '#ff3a1a');
+  } else if (c.k === 'inf') {
+    P(0, 0, s, s, '#123a12'); heroSprite(mpSkin('zombie'), 'idle', time, false); ctx.drawImage(hcv, SPR_X + 2, SPR_Y + 4, 28, 28, x + 4, y + 2, s - 8, s - 8);
+    P(4, s - 10, s - 8, 6, '#3a8a2a'); for (let i = 0; i < 3; i++) P(8 + i * 14, s - 12 + (i % 2) * 2, 6, 4, '#6aff5a');
+  } else if (c.k === 'kill') {
+    P(0, 0, s, s, '#1a0610'); ctx.globalAlpha = 0.5; pell(ctx, x + s / 2, y + s / 2, s * 0.4, s * 0.4, '#ff2a2a'); ctx.globalAlpha = 1;
+    ctx.save(); ctx.translate(x + s / 2, y + s / 2); ctx.rotate(-0.7); prect(ctx, -3, 2, 6, 14, OL); prect(ctx, -2, 4, 4, 10, '#5a2a10'); prect(ctx, -8, 0, 16, 4, OL); prect(ctx, -7, 1, 14, 2, '#8a8a98'); prect(ctx, -4, -22, 8, 22, OL); prect(ctx, -2, -20, 4, 20, '#e8eef8'); prect(ctx, -2, -24, 2, 4, '#ffffff'); ctx.restore();
+    P(s - 14, s - 12, 6, 6, '#ff2a2a'); P(s - 12, s - 16, 2, 4, '#ff2a2a');
+  } else {   // игрок: голова его героя и ник
+    P(0, 0, s, s, c.me ? '#2a5a2a' : '#2a1a4a'); ctx.drawImage(mpIcon(c.skin), 5, 4, 22, 20, x + 6, y + 4, s - 12, (s - 12) * 20 / 22);
+  }
+}
+function mdHud() {
+  const R = AR.rl;
+  for (const u of AR.mdUi || []) { ctx.globalAlpha = 1 - u.t / 0.9; prect(ctx, u.x, u.y, 4, 4, u.col); } ctx.globalAlpha = 1;
+  if (R) {   // лента рулетки сверху
+    const appear = Math.min(1, R.t / 0.25), y = 104 - (1 - appear) * 90, h = MD_CW + 16;
+    const q = clamp(R.t / MD_REEL, 0, 1), e = 1 - Math.pow(1 - q, 4), step = MD_CW + MD_CG, off = e * (R.n * step + R.jit);
+    ctx.fillStyle = OL; ctx.fillRect(0, y - 4, W, h + 8); const bg = ctx.createLinearGradient(0, y, 0, y + h); bg.addColorStop(0, '#3a1a6a'); bg.addColorStop(1, '#1a0a34'); ctx.fillStyle = bg; ctx.fillRect(0, y, W, h);
+    for (let i = 0; i < 24; i++) prect(ctx, i * 16 + (Math.floor(time * 8) % 2) * 8, y + 1, 4, 2, i % 2 ? '#ffd23a' : '#ff3d7f');   // бегущие огоньки
+    R.list.forEach((c, i) => {   // едет слева направо: выигрышная карточка приходит в центр
+      const cx = W / 2 - i * step + off; if (cx < -MD_CW || cx > W + MD_CW) return;
+      const win = R.done && i === R.n, pulse = win ? 1 + Math.sin((R.t - R.doneT) * 14) * 0.06 + 0.06 : 1, s = MD_CW * pulse, x0 = cx - s / 2, y0 = y + 8 + (MD_CW - s) / 2;
+      ctx.fillStyle = win ? '#ffd23a' : OL; ctx.fillRect(x0 - 3, y0 - 3, s + 6, s + 6);
+      mdCardArt(c, x0, y0, s);
+      if (c.nick) text(c.nick, cx, y0 + s - 3, 1, '#ffffff', 'center', OL, s + 4);
+      if (R.done && i !== R.n) { ctx.globalAlpha = 0.55; ctx.fillStyle = '#000'; ctx.fillRect(x0, y0, s, s); ctx.globalAlpha = 1; }
+    });
+    // стрелка в центре
+    ctx.fillStyle = OL; ctx.beginPath(); ctx.moveTo(W / 2 - 12, y - 6); ctx.lineTo(W / 2 + 12, y - 6); ctx.lineTo(W / 2, y + 10); ctx.fill(); ctx.beginPath(); ctx.moveTo(W / 2 - 12, y + h + 6); ctx.lineTo(W / 2 + 12, y + h + 6); ctx.lineTo(W / 2, y + h - 10); ctx.fill();
+    ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(W / 2 - 8, y - 4); ctx.lineTo(W / 2 + 8, y - 4); ctx.lineTo(W / 2, y + 6); ctx.fill(); ctx.beginPath(); ctx.moveTo(W / 2 - 8, y + h + 4); ctx.lineTo(W / 2 + 8, y + h + 4); ctx.lineTo(W / 2, y + h - 6); ctx.fill();
+    const title = R.stage === 1 ? tr('МОДИФИКАЦИЯ', 'MODIFIER') : (R.k === 'inf' ? tr('КТО СТАНЕТ ЗОМБИ?', 'WHO IS THE ZOMBIE?') : tr('КТО УБИЙЦА?', 'WHO IS THE KILLER?'));
+    if (!R.done) text(title, W / 2, y + h + 22, 2, '#ffffff', 'center', OL);
+    if (R.done) { const w = R.list[R.n], a = Math.min(1, (R.t - R.doneT) * 5); ctx.globalAlpha = a; ctx.save(); ctx.translate(W / 2, y + h + 34); const sc = 1 + Math.max(0, 0.25 - (R.t - R.doneT)) * 2; ctx.scale(sc, sc);
+      text(R.stage === 1 ? mdName(w.k) : (w.me ? tr('ЭТО ТЫ!', 'IT\'S YOU!') : w.nick), 0, 0, 4, R.stage === 1 ? (w.k === 'lava' ? '#ff8a1e' : w.k === 'inf' ? '#6aff5a' : '#ff3a3a') : '#ffd23a', 'center', OL); ctx.restore();
+      if (R.stage === 1) text(mdDesc(w.k), W / 2, y + h + 56, 1, '#ffffff', 'center', OL); ctx.globalAlpha = 1; }
+    return;
+  }
+  const M = AR.md; if (!M) return;
+  const me = arMe();
+  // плашка модификации под таймером
+  const chip = (s, col, ic) => { const w = Math.min(W - 40, s.length * 6 + 46), x = W / 2 - w / 2, y = AR.mode === 'king' ? 104 : 64; ctx.fillStyle = OL; ctx.fillRect(x - 3, y - 3, w + 6, 26); ctx.fillStyle = '#1a0a34'; ctx.fillRect(x, y, w, 20); ctx.fillStyle = col; ctx.fillRect(x, y, 4, 20); mdCardArt({ k: ic }, x + 6, y + 1, 18); text(s, x + 30, y + 14, 1, col, 'left', OL, w - 34); };
+  if (M.k === 'lava') {
+    const d = Math.max(0, Math.round((M.y - p.y) / PX_PER_M));
+    chip(trf('ЛАВА: {n} М НИЖЕ ТЕБЯ', 'LAVA: {n} M BELOW YOU', { n: d }), d < 12 ? (Math.sin(time * 12) > 0 ? '#ff3a1a' : '#ffd23a') : '#ff8a1e', 'lava');
+    if (M.y < camY + H + 200) { const a = clamp(1 - (M.y - (camY + H)) / 200, 0, 1) * (0.25 + Math.sin(time * 6) * 0.08); const g = ctx.createLinearGradient(0, H - 160, 0, H); g.addColorStop(0, 'rgba(255,60,0,0)'); g.addColorStop(1, 'rgba(255,60,0,' + a.toFixed(3) + ')'); ctx.fillStyle = g; ctx.fillRect(0, H - 160, W, 160); }
+  } else if (M.k === 'inf') {
+    const zs = Object.keys(M.z).length, left = arPeople().filter(e => M.z[e.id] == null && M.safe[e.id] == null).length, wait = Math.ceil(M.rel - mp.clock);
+    if (wait > 0) {
+      chip(M.z[me] != null ? trf('ТЫ ЗОМБИ! ВЫЙДЕШЬ ЧЕРЕЗ {n}', 'YOU ARE THE ZOMBIE! FREE IN {n}', { n: wait }) : trf('ЗОМБИ ПРОСНЁТСЯ ЧЕРЕЗ {n} — БЕГИ НА БАЗУ!', 'THE ZOMBIE WAKES IN {n} — RUN TO THE BASE!', { n: wait }), '#6aff5a', 'inf');
+      if (wait <= 5) { ctx.globalAlpha = 0.6; text(String(wait), W / 2, 330, 8, '#6aff5a', 'center', OL); ctx.globalAlpha = 1; }
+    } else chip(M.z[me] != null ? trf('ТЫ ЗОМБИ · ЗОМБИ {z} · ЛЮДИ {h}', 'YOU ARE A ZOMBIE · ZOMBIES {z} · HUMANS {h}', { z: zs, h: left }) : M.safe[me] != null ? trf('ТЫ СПАСЁН · ЗОМБИ {z} · ЛЮДИ {h}', 'YOU ARE SAFE · ZOMBIES {z} · HUMANS {h}', { z: zs, h: left }) : trf('ЗОМБИ {z} · ЛЮДИ {h} · ДО БАЗЫ {m} М', 'ZOMBIES {z} · HUMANS {h} · BASE IN {m} M', { z: zs, h: left, m: Math.max(0, Math.round((p.y - M.base) / PX_PER_M)) }), '#6aff5a', 'inf');
+    if (M.base < camY + 20 && M.z[me] == null && M.safe[me] == null && AR.mode === 'king') { const b = Math.sin(time * 8) * 3; ctx.fillStyle = OL; ctx.beginPath(); ctx.moveTo(W / 2, 132 + b); ctx.lineTo(W / 2 - 12, 146 + b); ctx.lineTo(W / 2 + 12, 146 + b); ctx.fill(); ctx.fillStyle = '#3ce06a'; ctx.beginPath(); ctx.moveTo(W / 2, 136 + b); ctx.lineTo(W / 2 - 8, 144 + b); ctx.lineTo(W / 2 + 8, 144 + b); ctx.fill(); }
+  } else if (M.k === 'kill') {
+    const left = arPeople().filter(e => e.id !== M.who && M.gh[e.id] == null).length;
+    chip(M.who === me ? trf('ТЫ УБИЙЦА · ОСТАЛОСЬ {n}', 'YOU ARE THE KILLER · {n} LEFT', { n: left }) : M.meGh ? tr('ТЫ ПРИЗРАК — СМОТРИ ДО КОНЦА', 'YOU ARE A GHOST — WATCH TO THE END') : trf('УБИЙЦА: {k} · В ЖИВЫХ {n}', 'KILLER: {k} · {n} ALIVE', { k: mdNick(M.who), n: left }), '#ff3a3a', 'kill');
+    const kp = arPos(M.who);   // где убийца, если его не видно
+    if (kp && M.who !== me && !M.meGh && (kp.y > camY + H - 20 || kp.y < camY + 20)) { const up = kp.y < camY, ax = clamp(kp.x, 30, W - 120), ay = up ? 150 : H - 80, d = Math.round(Math.abs(kp.y - p.y) / PX_PER_M); ctx.fillStyle = '#ff3a3a'; ctx.beginPath(); ctx.moveTo(ax, ay + (up ? -12 : 12)); ctx.lineTo(ax - 10, ay); ctx.lineTo(ax + 10, ay); ctx.fill(); text(d + tr('М', 'M'), ax, ay + (up ? 18 : -10), 1, '#ff6a6a', 'center', OL); }
+  }
+  if (AR.mdMsg && AR.mdMsg.t < 3) { const a = AR.mdMsg.t < 0.2 ? AR.mdMsg.t / 0.2 : AR.mdMsg.t > 2.5 ? (3 - AR.mdMsg.t) * 2 : 1; ctx.globalAlpha = a; text(AR.mdMsg.s, W / 2, 200, 2, AR.mdMsg.col, 'center', OL, W - 20); ctx.globalAlpha = 1; }
+}
+// ---------- связки ----------
+{ const b0 = arBegin; arBegin = function (o) { b0.apply(this, arguments); mdReset(); }; }
+{ const u0 = update; update = function (dt) { u0(dt); if (mp.mode && mp.active && AR.phase && AR.phase !== 'res') { try { mdTick(dt); } catch (e) { console.error(e); } } }; }
+{ const w0 = drawWorld; drawWorld = function () { w0(); if (mp.mode && mp.active && AR.mdFx) { try { mdWorld(); } catch (e) {} } }; }   // лава — поверх всего мира: герои в неё погружаются
+{ const h0 = arHud; arHud = function () { h0(); if (mp.mode && mp.active && AR.phase === 'play') mdHud(); }; }
+{ const k0 = arKingHud; arKingHud = function () { if (AR.md && AR.md.k === 'inf') return; k0(); }; }   // при заражении корона не важна
+{ const k0 = arKgTick; arKgTick = function (dt) { if (AR.md && AR.md.k === 'inf') return; k0(dt); }; }
+{ const r0 = arRaceBar; arRaceBar = function () { r0(); const M = AR.md; if (!M || M.k !== 'lava') return;   // лава на полоске высоты справа
+  const X = W - 20, Y0 = 92, Y1 = H - 120, L = Y1 - Y0, lm = clamp((-PH / 2 - M.y) / PX_PER_M, 0, AR_FIN_M), yy = Y1 - L * lm / AR_FIN_M;
+  ctx.fillStyle = Math.sin(time * 10) > 0 ? '#ff3a1a' : '#ff8a1e'; ctx.fillRect(X - 3, yy, 6, Y1 - yy); ctx.fillStyle = '#ffd23a'; ctx.fillRect(X - 5, yy - 2, 10, 2); mdCardArt({ k: 'lava' }, X - 9, yy - 20, 16); }; }
+{ const a0 = arPos; arPos = function (id) { const o = a0(id); if (o && AR.md) { if (AR.md.gh[id] != null || (AR.md.hide[id] || 0) > mp.clock) return { ...o, dead: true }; } return o; }; }
+{ const p0 = arPeople; arPeople = function () { const l = p0(); if (AR.md && AR.md.z[arMe()] != null) for (const e of l) if (e.me) e.skin = 'zombie'; return l; }; }
+{ const f0 = arFinish; arFinish = function (id, tm) {   // при заражении зомби не финиширует, а люди на финише — на базе (раунд не кончается после троих)
+  const M = AR.md; if (M && M.k === 'inf') { if (M.z[id] != null || AR.fin[id] != null) return; AR.fin[id] = tm; M.safe[id] = M.safe[id] != null ? M.safe[id] : mp.clock; if (id === arMe()) { AR.meFin = Object.keys(AR.fin).length; AR.finFx = 0; try { sfx.achieve(); } catch (e) {} } return; }
+  if (M && M.k === 'kill' && M.gh[id] != null) return;
+  f0.apply(this, arguments); }; }
+{ const e0 = arEnd; arEnd = function (order) { const M = AR.md; if (!order && M && M.k === 'inf' && !M.endOk && mp.clock < AR_TIME && arHost()) return; e0.apply(this, arguments); }; }
+{ const o0 = arOrder; arOrder = function () {   // места: при заражении спасённые и люди выше зомби; при убийце призраки — в конце
+  const l = o0(), M = AR.md; if (!M) return l;
+  if (M.k === 'inf') { const hum = l.filter(id => M.z[id] == null), zom = l.filter(id => M.z[id] != null);
+    hum.sort((a, b) => { const sa = M.safe[a], sb = M.safe[b]; if (sa != null && sb != null) return sa - sb; if (sa != null) return -1; if (sb != null) return 1; return arHeight(b) - arHeight(a); });
+    zom.sort((a, b) => (M.by[b] || 0) - (M.by[a] || 0) || (M.z[b] || 0) - (M.z[a] || 0)); return hum.concat(zom); }
+  if (M.k === 'kill') { const al = l.filter(id => M.gh[id] == null), gh = l.filter(id => M.gh[id] != null).sort((a, b) => M.gh[b] - M.gh[a]); return al.concat(gh); }
+  return l; }; }
+{ const r0 = arRespawn; arRespawn = function () {
+  const M = AR.md; if (M && M.meGh) { AR.respT = 0; return; }   // призрак не возрождается
+  if (M && M.k === 'lava') AR.deadCam = Math.min(AR.deadCam != null ? AR.deadCam : camY, M.y - 460 - H * 0.62);   // над лавой
+  r0.apply(this, arguments); if (M) M.meBurn = 0; }; }
+{ const r0 = arBotRespawn; arBotRespawn = function (b) { r0(b); const M = AR.md; if (!M || M.k !== 'lava') return;
+  let ci = b.ci; while (AR.chain[ci + 1] && AR.chain[ci].y1 > M.y - 300) ci++;   // возрождается над лавой
+  const P = AR.chain[ci]; if (P && ci !== b.ci) { b.ci = ci; b.face = arFace(P, ci); b.x = arHangX(P, b.face); b.y = arHangY(P, P.y0 + (P.y1 - P.y0) * 0.35); } }; }
+{ const t0 = arBotTick; arBotTick = function (b, dt) {
+  const M = AR.md; if (!M || b.fin) return t0(b, dt);
+  if (M.gh[b.id] != null) return;   // призрак
+  if (M.k === 'inf') {
+    if (M.safe[b.id] != null) return;
+    if (M.z[b.id] != null) { if (mp.clock < M.rel) { if (b.st === 'air' || b.st === 'fall' || b.st === 'dead') t0(b, dt); return; } const tg = mdNearest(b, id => M.z[id] == null && M.safe[id] == null); if (tg) { mdChase(t0, b, dt, tg, 1.3); return; } return; }
+    mdAsRace(t0, b, dt); return;   // человек — лезет к базе
+  }
+  if (M.k === 'kill' && M.who === b.id) { const tg = mdNearest(b, id => M.gh[id] == null && AR.fin[id] == null); if (tg) { mdChase(t0, b, dt, tg, 1.3); return; } }
+  t0(b, dt); }; }
+{ const p0 = press; press = function () {   // зомби до выхода и спасённый на базе стоят
+  const M = AR.md; if (M && mp.mode && mp.active && state === 'play' && ((M.k === 'inf' && ((M.z[arMe()] != null && mp.clock < M.rel) || (M.safe[arMe()] != null && AR.mode === 'king'))))) { held = true; return; }
+  p0.apply(this, arguments); }; }
+{ const h0 = drawHero; drawHero = function () {   // ты зомби — скин зомби; убийца — красный контур и нож; сгорел — не виден
+  const M = mp.mode && mp.active ? AR.md : null;
+  if (M && M.meBurn && state === 'dead') return;
+  if (M && M.meGh && state === 'dead') return;   // душа летит отдельно
+  if (M && M.k === 'inf' && M.z[arMe()] != null) { const s0 = skinId; skinId = 'zombie'; try { h0(); } finally { skinId = s0; } }
+  else h0();
+  if (M && M.k === 'kill' && M.who === arMe() && state === 'play') mdKnife(p.x, p.y, p.face || 1, AR.mdSwing && AR.mdSwing.id === arMe() ? AR.mdSwing.t : -1);
+}; }
+{ const g0 = arGhostLite; arGhostLite = function (q, g, r) {   // соперник: сгоревшего и призрака не видно (их рисуют эффекты), у убийцы — красный контур
+  const M = AR.md; if (!M) return g0(q, g, r);
+  const id = q.__id || (q.__id = Object.keys(mp.pl).find(k => mp.pl[k] === q));
+  if (M.gh[id] != null || (M.hide[id] || 0) > mp.clock) return;
+  if (M.k === 'kill' && M.who === id && !r.d) {
+    heroSprite(mpSkin(q.skin), r.st === 'wall' ? 'cling' : r.st === 'ground' ? 'idle' : 'jump', time, false); const tc = tintSprite('#ff2a2a', 1);
+    ctx.save(); ctx.translate(even(g.x), even(g.y)); if (r.rot) ctx.rotate(r.rot); ctx.scale(r.f || 1, 1); for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) ctx.drawImage(tc, -32 + dx, -52 + dy, 64, 80); ctx.restore();
+  }
+  g0(q, g, r); }; }
+{ const g0 = arGot; arGot = function (m) {   // сообщения модификаций от хоста
+  if (m && typeof m.t === 'string' && m.t.length === 2 && m.t[0] === 'q' && mp.mode && mp.active && mp.role === 'join') {
+    if (m.t === 'qd' && MD_KINDS.includes(m.k)) mdStart(m.k, typeof m.who === 'string' ? m.who.slice(0, 8) : '');
+    else if (m.t === 'ql' && AR.md && AR.md.k === 'lava' && Number.isFinite(m.y)) AR.md.ty = m.y;
+    else if (m.t === 'qi' && AR.md && AR.md.k === 'inf' && typeof m.id === 'string') mdInfect(m.id.slice(0, 8), false);
+    else if (m.t === 'qx' && AR.md && AR.md.k === 'kill' && typeof m.id === 'string') mdKill(m.id.slice(0, 8), String(m.by || '').slice(0, 8));
+    else if (m.t === 'qb' && AR.md && AR.md.k === 'lava' && typeof m.id === 'string' && m.id !== arMe()) mdBurn(m.id.slice(0, 8));
+    return true;
+  }
+  return g0.apply(this, arguments); }; }
 
 // =====================================================================================
 // ---------- СТРАЙК: сколько раундов в «Сети» подряд выиграл (общий и на каждом герое) ----------
@@ -19603,7 +20059,7 @@ window.addEventListener('pointerup', () => { if (RP.drag) RP.drag = null; if (ED
 reset();
 window.__game = { get FR() { return FR; }, get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; },
   // для автотестов и замеров скорости
-  get mp() { return mp; }, get AR() { return AR; }, store2(sc) { state = "shop"; shopMain = 1; storeScroll = sc; sv = null; }, go(st) { state = st; if (st === "allies") allyScene.last = -1; }, arPlay, arInfo, mpOpen, openBoard, openPass, openQuests, openAccounts, accEmailCheck, openHeroBoards, openNickColor, openProfile, openMainMenu, openReplays, openMaps, openWeekly, openClans, clanGet, get CLAN() { return CLAN; }, clanTouch, arTroFor, edOpen, cmStart, rpOpen, rpList, get RP() { return RP; }, get ED() { return ED; }, get CM() { return CM; }, arLobby, mpHi, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
+  get mp() { return mp; }, get AR() { return AR; }, store2(sc) { state = "shop"; shopMain = 1; storeScroll = sc; sv = null; }, go(st) { state = st; if (st === "allies") allyScene.last = -1; }, arPlay, arInfo, mpOpen, openBoard, openPass, openQuests, openAccounts, accEmailCheck, openHeroBoards, openNickColor, openProfile, openMainMenu, openReplays, openMaps, openWeekly, openClans, clanGet, mdStart, mdApply, get CLAN() { return CLAN; }, clanTouch, arTroFor, edOpen, cmStart, rpOpen, rpList, get RP() { return RP; }, get ED() { return ED; }, get CM() { return CM; }, arLobby, mpHi, mpGot, mpBegin, FireConn, gfxReset, shop(tab, page = 0) { state = 'shop'; shopMain = 0; shopTab = tab; shopPage = page; sv = null; },
   drawOnce() { draw(); },
   dynBench() { const out = []; for (const z of ZONES) if (z.dyn) { window.__n = 0; const t0 = performance.now(); for (let i = 0; i < 20; i++) { time += 0.05; drawDyn(z, 1, false); } out.push([z.dyn, Math.round(window.__n / 20), +((performance.now() - t0) / 20).toFixed(2)]); } return out.sort((a, b) => b[1] - a[1]); },
   bench(n = 60) { const t0 = performance.now(); for (let i = 0; i < n; i++) { time += 1 / 60; draw(); } return (performance.now() - t0) / n; } };
