@@ -2799,7 +2799,7 @@ let scale = 1;
 const DPR_STEPS = [2, 1.75, 1.5, 1.25, 1];
 // качество графики (настройки): низкое / нормальное / высокое — это резкость холста. С базы — нормальное.
 // Если телефон не тянет, игра сама опускает резкость, но только на одну ступень от выбранной
-const GQ = [1, 1.5, 2];
+const GQ = [1.25, 2, 3];   // на экранах телефонов 1.5× выглядело мутно — значки и кнопки расплывались
 let gq = (() => { try { const v = JSON.parse(localStorage.getItem('wk3_gq')); return v === 0 || v === 1 || v === 2 ? v : 1; } catch (e) { return 1; } })();
 let dprLvl = 0;
 function resize() {
@@ -9075,7 +9075,7 @@ function uiClick(pt) {
     if (inRect(pt, PW_BTN)) {
       if (TUT.on) { if (pwSel === 'pie' && pw.pie > 0) { swapK = 'pPieHint'; swapT = 1.4; return true; } if (pwSel && pw[pwSel] > 0) usePower(pwSel); else openPm(); return true; }
       const l = pwFanList();
-      if (!l.length) openPm(); else if (l.length === 1 && l[0].id !== 'pie') usePower(l[0].id);
+      if (!l.length) openPm();
       else { pwFan = true; pwFanT = 0; held = false; try { tone(500, 900, 0.12, 'triangle', 0.05); } catch (e) {} }
       return true;
     }
@@ -15979,7 +15979,7 @@ function openNickColor() {
 function frameBg(el, f, dur = 4) {
   el.style.background = f.bg;
   if (f.pat) { el.classList.add('pat'); el.style.setProperty('--pw', f.pw); el.style.setProperty('--ph', f.ph); el.style.animation = 'moPat ' + (f.spd || 2) + 's linear infinite'; }
-  else { el.style.backgroundSize = '300% 100%'; el.style.animation = f.anim ? 'moFr ' + dur + 's linear infinite' : ''; }
+  else { el.style.backgroundSize = '300% 100%'; el.style.animation = f.anim ? 'moFr ' + (dur + 2) + 's ease-in-out infinite alternate' : ''; }   // туда-обратно: у незамкнутого перелива не видно скачка
 }
 const framePrice = id => (FRAME_STYLES[id] && FRAME_STYLES[id].g) || 0;
 
@@ -16303,8 +16303,8 @@ function moCss() {
 #mo .fr{border-radius:12px;padding:3px;border:3px solid #2a1408}
 #mo .fr:not(.pat){background-size:300% 100%!important}
 @keyframes moPat{from{background-position:0 0}to{background-position:var(--pw) var(--ph)}}
-#mo .fr.anim{animation:moFr 4s linear infinite}
-@keyframes moFr{from{background-position:0 0}to{background-position:300% 0}}
+#mo .fr.anim{animation:moFr 6s ease-in-out infinite alternate}
+@keyframes moFr{from{background-position:0 0}to{background-position:100% 0}}
 #mo .av{border-radius:12px;border:3px solid #2a1408;background:#1a1030;position:relative;overflow:hidden;flex:none}
 #mo .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 #mo .tab{flex:1;min-width:60px;font:inherit;font-size:10px;padding:8px 4px;border:3px solid #2a1408;border-radius:10px;background:#4a3a7a;color:#fff;cursor:pointer;box-shadow:0 3px 0 #2a1408}
@@ -16330,7 +16330,7 @@ function moCss() {
 #mo::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;background:radial-gradient(ellipse 60px 22px,#ffffff22 60%,transparent 62%) 0 0/340px 260px,radial-gradient(ellipse 90px 30px,#ffffff18 60%,transparent 62%) 170px 130px/340px 260px,radial-gradient(circle,#ffffffaa 0 1px,transparent 1.6px) 0 0/90px 70px,radial-gradient(circle,#ffe27a88 0 1px,transparent 1.6px) 45px 35px/90px 70px;animation:moSky 60s linear infinite}
 #mo>*{position:relative;z-index:1}
 @keyframes moSky{to{background-position:340px 0,510px 130px,90px 70px,135px 105px}}
-#mo .passHead{background:repeating-linear-gradient(90deg,#00000030 0 16px,transparent 16px 32px),linear-gradient(120deg,#14141e,#8a1410,#14141e,#c8261a);background-size:auto,300% 100%;border-color:#ffd23a !important;animation:moFr 8s linear infinite;position:relative;overflow:hidden}
+#mo .passHead{background:linear-gradient(180deg,#0a3a7a,#06204a);border-color:#ffd23a !important;animation:none !important;animation:moFr 8s linear infinite;position:relative;overflow:hidden}
 #mo .passHead::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,#ffffff55 50%,transparent 60%);background-size:250% 100%;animation:moShine 3.5s ease-in-out infinite;pointer-events:none}
 @keyframes moShine{from{background-position:120% 0}to{background-position:-120% 0}}
 #mo .ring{flex:none;width:70px;height:70px;border-radius:50%;background:conic-gradient(#ffd23a var(--p),#2a1a4a 0);display:grid;place-items:center;border:3px solid #2a1408;box-shadow:0 0 16px #ffd23a99}
@@ -16761,11 +16761,35 @@ function passGive(rw) {
   if (rw.k === 'skin') { const want = rw.id && skinById(rw.id) && !owned.includes(rw.id) ? skinById(rw.id) : null, k = want || randomSkin(rw.r, true); moClose(); if (k) { grantSkin(k); state = 'shop'; shopMain = 0; chest = { t: CHEST_END, k, dup: false }; } else { gems += 50; saveMoney(); } return false; }
   return true;
 }
+// фон шапки Pass: море, острова с пальмами, корабль под парусами и птицы — живая пиксельная картинка
+function passSeaCnv() {
+  const c = document.createElement('canvas'); c.width = 200; c.height = 110; c.style.cssText = 'display:block;width:calc(100% + 24px);height:132px;margin:-12px -12px 10px;image-rendering:pixelated;border-bottom:3px solid #2a1408';   // отдельной картиной над шапкой — её ничто не закрывает
+  const g = c.getContext('2d'), R = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(Math.round(x), Math.round(y), w, h); };
+  const paint = t => {
+    const sky = g.createLinearGradient(0, 0, 0, 62); sky.addColorStop(0, '#2a6ad8'); sky.addColorStop(0.6, '#ff9a5a'); sky.addColorStop(1, '#ffd88a'); g.fillStyle = sky; g.fillRect(0, 0, 200, 62);
+    R(150, 34, 22, 22, '#fff2a8'); R(146, 38, 30, 14, '#fff2a8'); R(154, 30, 14, 30, '#fff2a8');   // солнце у горизонта
+    for (let i = 0; i < 3; i++) { const x = (i * 80 + t * (3 + i)) % 240 - 30; R(x, 10 + i * 9, 26, 5, '#ffffffcc'); R(x + 6, 7 + i * 9, 14, 4, '#ffffffcc'); }   // облака
+    const sea = g.createLinearGradient(0, 62, 0, 110); sea.addColorStop(0, '#2ab8d8'); sea.addColorStop(1, '#0a3a7a'); g.fillStyle = sea; g.fillRect(0, 62, 200, 48);
+    for (let i = 0; i < 14; i++) { const y = 66 + i * 3.2, x = (i * 37 + t * (6 + i % 3 * 3)) % 220 - 10; R(x, y, 10 + i % 3 * 4, 1, '#ffffff66'); }   // блики волн
+    const island = (x, w, h, palm) => { R(x, 62 - h, w, h + 2, '#e8c878'); R(x + 3, 62 - h - 2, w - 6, 2, '#e8c878'); R(x + 2, 62, w - 4, 2, '#c8a050');
+      if (palm) { const px = x + w / 2, sway = Math.sin(t * 1.3 + x) * 1.5; R(px, 62 - h - 14, 2, 14, '#7a4a24'); for (const d of [-1, 1]) { R(px + d * 2 + sway, 62 - h - 17, 6 * 1, 2, '#2a9a3a'); R(px + d * 7 + sway - (d < 0 ? 5 : 0), 62 - h - 15, 6, 2, '#1a7a2a'); } R(px - 2 + sway, 62 - h - 19, 6, 3, '#3ac04a'); } };
+    island(6, 34, 5, true); island(26, 16, 3, false); island(168, 28, 4, true);
+    const sx = 60 + ((t * 5) % 120), sy = 58 + Math.sin(t * 1.8) * 1.5;   // корабль плывёт и качается
+    R(sx - 16, sy + 4, 32, 5, '#5a2a10'); R(sx - 13, sy + 9, 26, 2, '#3a1a08'); R(sx - 18, sy + 2, 6, 3, '#5a2a10'); R(sx + 12, sy + 2, 8, 3, '#5a2a10'); R(sx - 12, sy + 6, 24, 1, '#ffd23a');
+    R(sx - 1, sy - 20, 2, 24, '#3a1a08'); R(sx - 10, sy - 17, 9, 14, '#fff6e0'); R(sx + 1, sy - 18, 11, 16, '#fff6e0'); R(sx + 1, sy - 11, 11, 2, '#e8d8b8');
+    R(sx + 1, sy - 24, 8, 5, '#1a1a24'); R(sx + 4, sy - 23, 2, 2, '#ffffff');   // чёрный флаг
+    R(sx - 22 - (t * 10 % 6), sy + 8, 4, 1, '#ffffffaa'); R(sx - 28 - (t * 10 % 6), sy + 9, 3, 1, '#ffffff77');   // пена за кормой
+    for (let i = 0; i < 5; i++) { const bx = (i * 47 + t * (9 + i * 2)) % 230 - 15, by = 16 + i * 6 + Math.sin(t * 2 + i) * 3, f = Math.sin(t * 9 + i * 2) > 0 ? 1 : 0;   // чайки
+      R(bx, by, 2, 1, '#1a1a24'); R(bx - 2, by - 1 + f, 2, 1, '#1a1a24'); R(bx + 2, by - 1 + f, 2, 1, '#1a1a24'); }
+  };
+  paint(0); moAnim.push({ c, paint });
+  return c;
+}
 function openPass() {
   moOpen('WALL PLAY PASS', bd => {
     const v = passData(), lv = passLevel(), inLv = lv >= PASS_TIERS ? PASS_XP : v.xp % PASS_XP;
     // шапка: перелив, блик, кольцо уровня, сезон, главный приз
-    const head = moEl('div', 'card passHead');
+    const head = moEl('div', 'card passHead'); head.appendChild(passSeaCnv());
     const top = moEl('div', 'row'); top.style.cssText = 'gap:12px;position:relative;z-index:1';
     const ring = moEl('div', 'ring'); ring.style.setProperty('--p', (inLv / PASS_XP * 100) + '%'); const rb = moTxt('b', 'ol', String(lv)); ring.appendChild(rb);
     const info = moEl('div'); info.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:4px';
@@ -16819,6 +16843,9 @@ function openPass() {
       const num = moTxt('div', 'num ol', String(t));
       col.append(mk(pr, true), num, mk(f, false)); sc.appendChild(col);
     });
+    { const col = moEl('div', 'tier' + (lv >= PASS_TIERS ? ' done' : '')), mk = () => { const c = moEl('div', 'rw' + (v.bx > 0 ? ' cur' : lv >= PASS_TIERS ? '' : ' lock')); c.appendChild(iconCnv('chest', 1, 40)); if (v.bx > 0) { c.appendChild(moTxt('div', 'ck', '×' + v.bx)); c.onclick = () => passBoxOpen(); } else if (lv < PASS_TIERS) c.appendChild(moTxt('div', 'lk', '🔒')); return c; };
+      col.append(mk(), moTxt('div', 'num ol', '60+'), mk()); sc.appendChild(col);   // после 60 уровня — бонусные ящики: каждые 500 опыта
+      const tip = moTxt('div', 'sm', trf('+{n} XP', '+{n} XP', { n: PASS_BOX_XP })); tip.style.cssText = 'text-align:center;margin-top:2px'; col.appendChild(tip); }
     wrap.appendChild(sc); bd.appendChild(wrap);
     setTimeout(() => { sc.scrollLeft = Math.max(0, Math.min(v.cf, v.prem ? v.cp : v.cf) - 1) * 86; }, 0);
   });
@@ -17049,7 +17076,7 @@ function drawPassBtn() {
 // задания — круглая иконка рядом с Pass: свиток с галочками
 function drawQuestIcon() {
   const b = BTN.quest, cx = b.x + b.w / 2, bob = Math.sin(time * 3 + 2.6) * 1.5, cy = b.y + b.h / 2 + bob;
-  pell(ctx, cx, cy + 2, 25, 25, OL); pell(ctx, cx, cy, 23, 23, '#1a70c0'); pell(ctx, cx, cy - 2, 21, 20, '#3ab0ff');
+  sqBtn(b, '#3ab0ff', '#8ad8ff', '#1a70c0', b.y + bob);
   prect(ctx, cx - 12, cy - 15, 24, 30, OL); prect(ctx, cx - 10, cy - 13, 20, 26, '#fff6dc'); prect(ctx, cx - 10, cy - 13, 20, 4, '#e8c88a');
   for (let k = 0; k < 3; k++) { const y = cy - 6 + k * 7, done = k < 2; prect(ctx, cx - 8, y, 4, 4, done ? '#3ce06a' : '#c8b8a0'); prect(ctx, cx - 2, y + 1, 10, 2, '#8a7a6a'); }
   prect(ctx, cx - 3, cy - 17, 6, 4, '#c8820a');
@@ -18059,7 +18086,7 @@ PASS_TITLES.abs = ['АБСОЛЮТНЫЙ ЧЕМПИОН!', 'ABSOLUTE CHAMPION!']
 function shadowRow(top) {   // лучший игрок: всегда первый, с отрывом, который то растёт, то тает
   const hr = Date.now() / 36e5, tr0 = Math.round(top + 900 + Math.sin(hr / 2.3) * 500 + Math.sin(hr / 0.4) * 120), own = SKINS.filter(k => !k.gift && k.id !== 'zombie').map(k => k.id);
   return { id: 'botS', bot: true, bi: -1, n: 'Shadow_player_SK🦑', av: 'a:dragon', fr: 'galaxy', ti: 'abs', nc: Object.keys(NICK_COLS).find(x => NICK_COLS[x].g) || '', stk: 77, stkH: 'hamster', bg: 'abyss',
-    c: 9999999, g: 99999, r: 999, b: 2640, tr: tr0, sk: own.length, pl: PASS_TIERS, own, ic: own.slice(0, 12), ach: ACH.map(a => a.id), show: ACH.slice(-3).map(a => a.id),
+    c: 1284650 + Math.floor(hr * 37) % 9000, g: 8420, r: 137, b: 2640, tr: tr0, sk: own.length, pl: PASS_TIERS, own, ic: own.slice(0, 12), ach: ACH.map(a => a.id), show: ACH.slice(-3).map(a => a.id),
     tro: own.slice(0, 12).map(id => [id, shadowHero(id)]).sort((x, y) => y[1] - x[1]) };
 }
 const shadowHero = id => 2700 + (idHash(id) % 240);   // на каждом герое — выше любого бота
