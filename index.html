@@ -11770,7 +11770,7 @@ let flyChipT = 0, flyLast = 0;
 const flyShown = k => (k === 'g' ? gems : bank) - flyPend[k];
 function flyTarget(k) {   // где сумма: в магазине — плашки сверху справа, в меню — слева над кнопками; иначе — своя плашка сверху справа
   if (state === 'shop') return k === 'g' ? { x: 247, y: 34 } : { x: 247, y: 13 };
-  if (state === 'menu' && !screenCovered()) return k === 'g' ? { x: 116, y: 154 } : { x: 24, y: 154 };
+  if (state === 'menu' && !screenCovered()) return k === 'g' ? { x: 108, y: 154 } : { x: 24, y: 154 };
   return { x: W - 82, y: 24, chip: 1 };
 }
 function coinFly(x, y, amount, k = 'c') {
@@ -11954,9 +11954,9 @@ function priceDraw(cx, y, pr, k = 1, col = OL) {
 }
 function drawMenu() {
   coinIcon(24, 154); text(String(flyShown('c')), 36, 164, 2, '#ffffff', 'left', OL, 70);
-  gemIcon(116, 154, 0.8); text(String(flyShown('g')), 130, 164, 2, '#bfeaff', 'left', OL, 56);
-  rubyIcon(196, 154, 0.7); text(String(rubies), 210, 164, 2, '#ffc0c8', 'left', OL, 50);
-  trophyIcon(270, 154); text(best + T('m'), 284, 164, 2, '#ffffff', 'left', OL, 72);
+  gemIcon(108, 154, 0.8); text(String(flyShown('g')), 122, 164, 2, '#bfeaff', 'left', OL, 50);
+  rubyIcon(180, 154, 0.7); text(String(rubies), 193, 164, 2, '#ffc0c8', 'left', OL, 36);
+  trophyIcon(238, 154); text(best + T('m'), 252, 164, 2, '#ffffff', 'left', OL, 56);
   button(BTN.shop, T('heroes'), '#ff3d7f', '#c01f5a');
   button(BTN.store, T('shop'), '#ffb02a', '#c06a00');
   if (canClaim() || freeSpin()) badge(BTN.store.x + BTN.store.w - 4, BTN.store.y + 2);
@@ -16312,6 +16312,7 @@ function moCss() {
 @keyframes moSpin{to{transform:rotate(360deg)}}
 #mo .rk{display:flex;align-items:center;gap:8px;padding:6px 8px;border:3px solid #2a1408;border-radius:12px;margin-bottom:6px;background:linear-gradient(90deg,#3a2a6a,#2a1a4a);cursor:pointer;position:relative}
 #mo .rk .n{width:30px;text-align:center;font-size:16px}
+#mo .rk>div>.ol{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 #mo .rk .v{margin-left:auto;font-size:15px;color:#ffe680;white-space:nowrap}
 #mo .glow{animation:moGl 1s ease-in-out infinite alternate}
 @keyframes moGl{from{box-shadow:0 0 4px #ffd23a,0 4px 0 #2a1408}to{box-shadow:0 0 22px #ffd23a,0 4px 0 #2a1408}}
@@ -16994,7 +16995,7 @@ function openBoard(keep) {
 // главное всегда на виду (герои, магазин, колесо, задания); остальное раскрывается стрелкой «ЕЩЁ»
 Object.assign(BTN, { prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: 172, y: 100, w: 132, h: 32 }, mp: { x: 12, y: 100, w: 150, h: 32 }, friends: { x: W - 46, y: 99, w: 34, h: 34 },
   quest: { x: 152, y: 584, w: 46, h: 46 }, pass: { x: 12, y: 584, w: 132, h: 46 }, wheel: { x: -999, y: -999, w: 0, h: 0 },   // колесо — во вкладке магазина
-  clan: { x: 206, y: 584, w: 46, h: 46 }, ach: { x: W - 88, y: 12, w: 34, h: 34 }, menuB: { x: W - 46, y: 54, w: 34, h: 34 },   // награды — круглой иконкой у новостей, под звуком — меню
+  clan: { x: W - 46, y: 142, w: 34, h: 34 }, ach: { x: W - 88, y: 12, w: 34, h: 34 }, menuB: { x: W - 46, y: 54, w: 34, h: 34 },   // награды — круглой иконкой у новостей, под звуком — меню
   tent: { x: 12, y: 282, w: 116, h: 34 }, allies: { x: -999, y: -999, w: 0, h: 0 }, emo: { x: -999, y: -999, w: 0, h: 0 }, more: { x: -999, y: -999, w: 0, h: 0 } });   // надписи WALL PLAY больше нет — всё поднято
 const MORE_KEYS = ['tent', 'allies', 'emo'];
 // круглые иконки меню: награды (у новостей), меню (под звуком), друзья (справа от рейтинга)
@@ -17018,15 +17019,14 @@ function sqBtn(b, col, light, dark, y = b.y) {
 // клан — отдельная кнопка внизу, рядом с заданиями: щит своего клана (или замок, пока нет 1000 кубков)
 let clanBtnImg = null, clanBtnKey = '';
 function drawClanBtn() {
-  const b = BTN.clan, bob = Math.sin(time * 3 + 3.8) * 1.5, y = b.y + bob, cl = CLAN.in ? clanGet(CLAN.in) : null, bd = cl ? cl.bd : [4, 3, 1], key = bd.join(',');
+  const b = BTN.clan, cl = CLAN.in ? clanGet(CLAN.in) : null, bd = cl ? cl.bd : [4, 3, 1], key = bd.join(',');
   if (clanBtnKey !== key) { clanBtnKey = key; clanBtnImg = clanBadgeCnv(bd, 32); }
-  sqBtn(b, '#c01f6a', '#ff5aa0', '#7a0a3a', y);
+  sqBtn(b, '#c01f6a', '#ff5aa0', '#7a0a3a');
   const locked = !CLAN.in && troTotal() < CLAN_NEED;
   if (locked) ctx.globalAlpha = 0.45;
-  drawRaw.call(ctx, clanBtnImg, b.x + 7, Math.round(y) + 6, 32, 32); ctx.globalAlpha = 1;
-  if (locked) { const lx = b.x + b.w / 2, ly = Math.round(y) + 26; prect(ctx, lx - 8, ly - 4, 16, 14, OL); prect(ctx, lx - 6, ly - 2, 12, 10, '#ffd23a'); prect(ctx, lx - 6, ly - 10, 4, 8, OL); prect(ctx, lx + 2, ly - 10, 4, 8, OL); prect(ctx, lx - 6, ly - 12, 12, 4, OL); prect(ctx, lx - 2, ly + 2, 4, 4, OL); }
-  text(tr('КЛАН', 'CLUB'), b.x + b.w / 2, b.y + b.h + 10, 1, '#ffffff', 'center', OL, 60);
-  if (CLAN.news || (CLAN.my && CLAN.in === 'my' && CLAN.my.rq.length)) badge(b.x + b.w - 2, y + 2);
+  drawRaw.call(ctx, clanBtnImg, b.x + 5, b.y + 5, 24, 24); ctx.globalAlpha = 1;
+  if (locked) { const lx = b.x + b.w / 2, ly = b.y + 20; prect(ctx, lx - 6, ly - 4, 12, 10, OL); prect(ctx, lx - 4, ly - 2, 8, 6, '#ffd23a'); prect(ctx, lx - 4, ly - 8, 2, 6, OL); prect(ctx, lx + 2, ly - 8, 2, 6, OL); prect(ctx, lx - 4, ly - 10, 8, 2, OL); }
+  if (CLAN.news || (CLAN.my && CLAN.in === 'my' && CLAN.my.rq.length)) badge(b.x + b.w - 2, b.y + 4);
 }
 const moreOpen = () => menuMoreT > 0.85;
 let menuSw = null;
