@@ -8897,6 +8897,7 @@ function drawLoad() {
 
 function draw() {
   if (state === 'load') { drawLoad(); return; }
+  if (state === 'shop' || state === 'tent' || state === 'allies') { drawMenus(); return; }   // эти экраны непрозрачные: мир под ними не рисуем
   ctx.save();
   if (shake > 0) ctx.translate(even(rand(-1, 1) * shake * 14), even(rand(-1, 1) * shake * 14));
   drawBackground();
@@ -8909,6 +8910,9 @@ function draw() {
   if (state === 'play' && p.slow > 0) { ctx.globalAlpha = 0.14; ctx.fillStyle = '#3a6aff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (flashT > 0) { ctx.globalAlpha = clamp(flashT * 2.5, 0, 0.8); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   drawHUD();
+  drawMenus();
+}
+function drawMenus() {
   if (state === 'menu') drawMenu();
   if (state === 'shop') drawShop();
   if (state === 'ach') drawAch();
