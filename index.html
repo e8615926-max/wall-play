@@ -10277,6 +10277,7 @@ function drawGround0() {
   }
 }
 
+let HMARK = null;
 function drawHeightMarks() {
   if (state === 'menu') return;   // в меню метки высоты и линия рекорда ложились на кнопки и кошелёк
   const step = 10 * PX_PER_M;
@@ -10284,10 +10285,13 @@ function drawHeightMarks() {
   for (let k = Math.max(1, first); k < first + 5; k++) {
     const y = even(-PH / 2 - k * step);
     if (y < camY + 90 || y > camY + H + 10) continue;
-    ctx.fillStyle = 'rgba(42,20,8,0.45)';
-    for (let x = 0; x < W; x += 12) ctx.fillRect(x, y, 8, 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    for (let x = 0; x < W; x += 12) ctx.fillRect(x, y - 2, 8, 2);
+    if (!HMARK) {   // пунктир — одна заготовка вместо 60 fillRect на каждую метку
+      HMARK = document.createElement('canvas'); HMARK.width = W; HMARK.height = 4;
+      const g = HMARK.getContext('2d');
+      g.fillStyle = 'rgba(42,20,8,0.45)'; for (let x = 0; x < W; x += 12) g.fillRect(x, 2, 8, 2);
+      g.fillStyle = 'rgba(255,255,255,0.9)'; for (let x = 0; x < W; x += 12) g.fillRect(x, 0, 8, 2);
+    }
+    drawRaw.call(ctx, HMARK, 0, y - 2);
     text(String(k * 10), 8, y - 6, 2, '#ffe24a', 'left');
   }
   if (best > 0) {
@@ -11700,7 +11704,23 @@ function drawWorld() {
 }
 
 // ---------- Интерфейс ----------
+// монета целиком — одна заготовка на размер и угол поворота (раньше 3 овала и 2 полоски на каждую монету)
+const COIN_CACHE = new Map();
 function coinIcon(x, y, r = 8, sx = 1) {   // одна монета везде; sx — поворот при вращении
+  if (ctx.imageSmoothingEnabled !== false || r !== Math.round(r)) { coinRaw(ctx, x, y, r, sx); return; }
+  sx = Math.round(sx * 20) / 20;
+  const key = r * 100 + sx * 20;
+  let c = COIN_CACHE.get(key);
+  if (!c) {
+    const S = Math.ceil((r + 4) / 2) * 4;   // центр (S/2) — чётный: на сетке 2 px, как у прямого рисования
+    c = document.createElement('canvas'); c.width = S; c.height = S;
+    coinRaw(c.getContext('2d'), S / 2, S / 2, r, sx);
+    if (COIN_CACHE.size > 400) COIN_CACHE.clear();
+    COIN_CACHE.set(key, c);
+  }
+  drawRaw.call(ctx, c, even(x) - c.width / 2, even(y) - c.height / 2);
+}
+function coinRaw(ctx, x, y, r, sx) {
   const rx = Math.max(1.5, r * sx);
   pell(ctx, x, y, rx + 2, r + 2, OL); pell(ctx, x, y, rx, r, '#c8820a'); pell(ctx, x, y, Math.max(1, rx - 2.5), r - 2.5, '#ffd23a');
   if (sx > 0.45) { prect(ctx, x - 1, y - r + 4, 2, Math.max(2, r * 2 - 8), '#e8a820'); prect(ctx, x - rx * 0.55, y - r + 4, 2, Math.max(2, r - 3), '#fff6a0'); }
@@ -11934,7 +11954,22 @@ const GEM_PIX = ['...OOOOOOO...', '..OWWLLLLLO..', '.OWLLLLLLLLO.', 'OBBBBMMMDDD
 const GEM_COL = { O: OL, W: '#ffffff', L: '#9ae6ff', B: '#5ac8ff', M: '#3ab0ff', D: '#2a80d0' };
 const RUBY_PIX = ['...OOOOO...', '..OLLLLLO..', '.OLWWLLLDO.', 'OLLRRRRRDDO', 'OLRRRRRRRDO', 'OLRRRRRRRDO', 'OLRRRRRRRDO', 'OMMRRRRRDDO', '.OMMDDDDDO.', '..ODDDDDO..', '...OOOOO...'];
 const RUBY_COL = { O: OL, W: '#ffffff', L: '#ff7a8e', R: '#e81838', D: '#9a0420', M: '#c80a2a' };
+// значок по точкам рисуется один раз в маленький холст (раньше — десятки fillRect на каждый кристалл каждый кадр)
+const PIX_CACHE = new Map();
 function pixIcon(rows, cols, x, y, s) {
+  const u = Math.max(1, Math.round(s * 2.2)), w = rows[0].length, h = rows.length;
+  if (ctx.imageSmoothingEnabled !== false) { pixIconRaw(ctx, rows, cols, x, y, s); return; }
+  let byU = PIX_CACHE.get(rows);
+  if (!byU) { byU = new Map(); PIX_CACHE.set(rows, byU); }
+  let c = byU.get(u);
+  if (!c) {
+    c = document.createElement('canvas'); c.width = w * u; c.height = h * u;
+    pixIconRaw(c.getContext('2d'), rows, cols, w * u / 2, h * u / 2, s);
+    byU.set(u, c);
+  }
+  drawRaw.call(ctx, c, Math.round(x - w * u / 2), Math.round(y - h * u / 2));
+}
+function pixIconRaw(ctx, rows, cols, x, y, s) {
   const u = Math.max(1, Math.round(s * 2.2)), w = rows[0].length, x0 = Math.round(x - w * u / 2), y0 = Math.round(y - rows.length * u / 2);
   for (let r = 0; r < rows.length; r++) { const row = rows[r]; let c = 0; while (c < w) { const ch = row[c]; if (ch === '.') { c++; continue; } let e = c + 1; while (e < w && row[e] === ch) e++; ctx.fillStyle = cols[ch]; ctx.fillRect(x0 + c * u, y0 + r * u, (e - c) * u, u); c = e; } }
 }
