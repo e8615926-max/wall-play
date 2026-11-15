@@ -2207,7 +2207,10 @@ function FirePeer(id) {
 async function fbBoardPush(e) {
   await fbAuth();   // сначала вход: без него FB.uid ещё пуст и строка ушла бы в board/null
   const { own, ic, ach, show, tro, ...row } = e;
-  try { await fbReq('PUT', 'board/' + FB.uid, { ...row, t: FB_NOW }); fbBoardPush.n = 0; }
+  // строка рейтинга не изменилась с прошлой отправки — запрос не нужен (раньше уходил после каждого забега)
+  const rowKey = FB.uid + JSON.stringify(row);
+  if (rowKey !== fbBoardPush.lastRow)
+  try { await fbReq('PUT', 'board/' + FB.uid, { ...row, t: FB_NOW }); fbBoardPush.n = 0; fbBoardPush.lastRow = rowKey; }
   catch (x) {
     // правила базы не пускают слишком большой рост за раз (защита от накрутки): пишем столько, сколько уже можно, и догоняем позже
     if (!x || (x.status !== 401 && x.status !== 403) || (fbBoardPush.n = (fbBoardPush.n || 0) + 1) > 40) throw x;
@@ -2222,7 +2225,9 @@ async function fbBoardPush(e) {
   }
   let map = null; try { const pm = edMaps().find(m => m.pub); if (pm) map = { ...pm, it: pm.it.slice(0, 120) }; } catch (x) {}   // открытая карта — в «Карты недели» других игроков
   const pj = JSON.stringify({ own, ic, ach, show, tro, map });
+  if (FB.uid + pj === fbBoardPush.lastPj) return;   // профиль (до 30 КБ) тот же, что уже в базе — не отправляем заново
   await fbReq('PUT', 'profiles/' + FB.uid, { p: pj.length <= 30000 ? pj : JSON.stringify({ own, ic, ach, show, tro }).slice(0, 30000), t: FB_NOW });
+  fbBoardPush.lastPj = FB.uid + pj;
 }
 async function fbBoardTop(field) {
   const d = await fbReq('GET', 'board', undefined, '&orderBy=' + encodeURIComponent('"' + field + '"') + '&limitToLast=99');
@@ -3334,6 +3339,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
 const even = v => Math.round(v / 2) * 2;
+// до точки экрана (а не до 2 единиц игры, это 4–6 точек на телефоне): камера и герой двигаются плавно, без ступенек
+const pxSnap = v => { const k = cv.width / W; return Math.round(v * k) / k; };
 function hash(n) { n = (n << 13) ^ n; return ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 0x7fffffff; }
 const hash2 = (a, b) => hash((a * 73856093) ^ (b * 19349663));
 function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
@@ -3505,7 +3512,8 @@ const SPR_FPS = 20, SPR_MAX = 280, SPR_CACHE = new Map(), SPR_IDS = new WeakMap(
 let sprN = 0;
 function heroSprite(sk, pose, t, blink) {
   let id = SPR_IDS.get(sk); if (!id) SPR_IDS.set(sk, id = ++sprN);
-  const fps = SPR_FPS, tq = Math.floor(t * fps), key = id + '|' + pose + '|' + (blink ? 1 : 0) + '|' + tq;
+  const fps = state === 'play' ? 30 : SPR_FPS, tq = Math.floor(t * fps),   // в игре героев на экране мало — анимация плавнее (30 кадров/с)
+        key = id + '|' + pose + '|' + (blink ? 1 : 0) + '|' + fps + ':' + tq;
   let c = SPR_CACHE.get(key);
   hctx.setTransform(1, 0, 0, 1, 0, 0);
   if (c) { hctx.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(hctx, c, 0, 0); hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y); return; }
@@ -7497,7 +7505,7 @@ function svDemoTick(D, dt) {
     for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.life -= dt; if (q.life <= 0) { parts.splice(i, 1); continue; } q.vy += (q.grav || 0) * dt; q.x += q.vx * dt; q.y += q.vy * dt; }
     if (parts.length > 300) parts.splice(0, parts.length - 300);
     if (p.y < minY) minY = p.y;
-    camY += (p.y - H * 0.62 - camY) * Math.min(1, dt * 4); camR = even(camY);
+    camY += (p.y - H * 0.62 - camY) * Math.min(1, dt * 4); camR = pxSnap(camY);
     const o = Math.random; try { generate(); } finally { Math.random = o; }
     ents = ents.filter(e => !['shield', 'magnet', 'ruby'].includes(e.type));
     if ((D.foeT = (D.foeT || 0) - dt) <= 0 && ents.filter(e => activeEnemy(e) && e.y > camY - 100 && e.y < camY + H).length < (D.allyDef ? 4 : 3)) {   // в ролике всегда есть враги этой карты
@@ -7725,7 +7733,7 @@ function reset0() {
   poles = [first]; path = first; pathPrev = null;
   p = newHero(first);
   birds = []; ents = []; parts = []; leaves = []; clone = null; pmenu = false; ally = null; ninjaT = 14;
-  camY = -H + 150; camR = even(camY);
+  camY = -H + 150; camR = pxSnap(camY);
   minY = p.y;
   coinsRun = 0; gemsRun = 0; rubiesRun = 0; kicks = 0; flips = 0; combo = 0; comboT = 0;
   shake = 0; deadT = 0; zoneIdx = 0; banner = null; paused = false; overSkip = false; overConf = []; overTick = -1; overDone = false; overFx = []; overStage = 0; overTickAt = 0; overPunch = [0, 0, 0];
@@ -8020,7 +8028,7 @@ function bushTile(z, T, k, lazy) {
   return tc;
 }
 function drawBushColumn(b) {
-  const off = even(camR * 0.85), k = cv.width / W;
+  const off = pxSnap(camR * 0.85), k = cv.width / W;
   bushTile.made = false; bushTile.fb = false;
   const layer = (z, a, lazy) => {
     ctx.globalAlpha = a;
@@ -10033,7 +10041,7 @@ function update(dt) {
     const target = p.y - H * 0.58;
     if (target < camY) camY += (target - camY) * Math.min(1, dt * 6);
   } else if (mp.active && state === 'dead' && !mp.mode) { const s = mpSpec(); if (s) camY += (s.g.y - H * 0.58 - camY) * Math.min(1, dt * 6); }
-  camR = even(camY);
+  camR = pxSnap(camY);
   const m = heightM();
   const zi = zoneIdxAt(m);
   if (zi !== zoneIdx) {
@@ -10983,7 +10991,7 @@ function drawHero0() {
   const put = (x, y, rot, a, main) => {
     ctx.save();
     ctx.globalAlpha = a * skA(sk) * (p.ghost > 0 && !dead ? 0.45 + Math.sin(time * 8) * 0.1 : 1);
-    ctx.translate(rot ? x : even(x), rot ? y : even(y));
+    ctx.translate(rot ? x : pxSnap(x), rot ? y : pxSnap(y));
     if (rot) ctx.rotate(rot);
     if (main && emM) { ctx.translate(emM.x || 0, emM.y || 0); if (emM.rot) ctx.rotate(emM.rot * p.face); ctx.scale(emM.sx || 1, emM.sy || 1); if (emM.a != null) ctx.globalAlpha *= emM.a; }   // движение эмоции
     const sq = p.squash;
@@ -11662,19 +11670,20 @@ const PXB = document.createElement('canvas'); PXB.width = W / 2; PXB.height = H 
 const pxg = PXB.getContext('2d');
 let pxbBand = [0, 0];   // полоса буфера, где в прошлом кадре что-то было, — её и очищаем
 function drawEntsPx() {
+  const cE = even(camR);   // буфер половинного размера — на сетке 2 единицы (камера теперь двигается по точкам экрана)
   // полоса экрана, где сейчас есть враги и монеты (с запасом на размах и эффекты); пусто — буфер не трогаем
   let y0 = 1e9, y1 = -1e9;
   for (const e of ents) { const a = e.y - 110, b = e.y + (e.type === 'cloud' ? 300 : 110); if (b > camY && a < camY + H) { if (a < y0) y0 = a; if (b > y1) y1 = b; } }
-  const s0 = Math.max(0, Math.floor((y0 - camR) / 2) & ~1), s1 = Math.min(PXB.height, Math.ceil((y1 - camR) / 2) + 2);
+  const s0 = Math.max(0, Math.floor((y0 - cE) / 2) & ~1), s1 = Math.min(PXB.height, Math.ceil((y1 - cE) / 2) + 2);
   const c0 = Math.min(s0, pxbBand[0]), c1 = Math.max(s1, pxbBand[1]);
   pxg.setTransform(1, 0, 0, 1, 0, 0); if (c1 > c0) pxg.clearRect(0, c0, PXB.width, c1 - c0);
   pxbBand = s1 > s0 ? [s0, s1] : [0, 0];
   if (s1 <= s0) return;
   const main = ctx;
-  pxg.imageSmoothingEnabled = false; pxg.setTransform(0.5, 0, 0, 0.5, 0, -camR * 0.5); pxg.globalAlpha = 1;
+  pxg.imageSmoothingEnabled = false; pxg.setTransform(0.5, 0, 0, 0.5, 0, -cE * 0.5); pxg.globalAlpha = 1;
   ctx = pxg;
   try { drawEnts(); } finally { ctx = main; }
-  ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; ctx.drawImage(PXB, 0, s0, PXB.width, s1 - s0, 0, camR + s0 * 2, W, (s1 - s0) * 2); ctx.restore();
+  ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; ctx.drawImage(PXB, 0, s0, PXB.width, s1 - s0, 0, cE + s0 * 2, W, (s1 - s0) * 2); ctx.restore();
 }
 function drawWorld() {
   drawWeather();
@@ -14441,7 +14450,7 @@ function cloneTakeover() {
   p.x = c.x; p.y = c.y; p.vx = 0; p.vy = 0; p.spin = 0; p.rot = 0; p.jet = 0; p.rocket = 0; p.inv = 1.5; p.dj = true; p.holdT = 0; p.trail = [];
   if (c.st === 'wall' && poles.includes(c.pole)) { p.state = 'wall'; p.pole = c.pole; p.side = c.side; p.face = -c.side; p.stick = 0.4; }
   else { p.state = 'air'; p.pole = null; p.stand = null; p.vy = -300; }
-  camY = p.y - H * 0.58; camR = even(camY);
+  camY = p.y - H * 0.58; camR = pxSnap(camY);
   burst(p.x, p.y, 20, '#7ad8ff', 180, 0.6, 4, 0, 'star'); flashT = 0.25;
   swapT = 2.2; swapK = 'cloneSwap';
 }
@@ -15680,7 +15689,7 @@ function draw() {
 // ---------- Цикл ----------
 // непрозрачное окно поверх игры (знакомство, профиль, Pass, рейтинг…) — рисовать мир под ним незачем
 function screenCovered() { return obOpen() || (!!moUi && moUi.style.display !== 'none' && moStack.length > 0); }
-let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0, perfSlow = 0, perfDownAt = -1e9, frameDebt = 0;
+let last = performance.now(), perfAcc = 0, perfN = 0, perfLow = 0, perfSlow = 0, perfDownAt = -1e9, refMs = 16.7, refMin = 1e9, refN = 0;
 // ---------- Восстановление графики: телефон долго держал игру в фоне и выбросил память картинок ----------
 // после этого холст «сбрасывается» (сглаживание включается — хомяк размытый, масштаб слетает), а готовые картинки
 // (овалы кнопок, монеты, герои, фон) становятся пустыми — остаётся только текст. Тогда всё перерисовываем заново.
@@ -15718,9 +15727,11 @@ function frame(now) {
 function frame0(now) {
   // экраны 90–144 Гц (в Chrome на телефоне они включены, во встроенных окнах обычно нет): рисуем не чаще ~60 раз в секунду —
   // работы меньше, телефон не греется и не сбрасывает частоту
+  // рисуем с частотой экрана (90, 120, 144 Гц), выше ~165 кадров/с смысла нет
   const step = now - last;
-  if (step < 10 || (frameDebt + step < 15.5 && step < 15.5)) { requestAnimationFrame(frame); return; }
-  frameDebt = Math.min(8, Math.max(0, frameDebt + step - 16.67));
+  if (step < 5.5) { requestAnimationFrame(frame); return; }
+  // частота экрана: самый короткий промежуток между кадрами за последние ~2 с
+  refMin = Math.min(refMin, step); if (++refN >= 120) { refMs = clamp(refMin, 6, 34); refMin = 1e9; refN = 0; }
   const t0 = performance.now(), gap = now - last;
   let dt = gap / 1000; last = now;
   if (dt > 0.05) dt = 0.05;
@@ -15737,12 +15748,13 @@ function frame0(now) {
   // идёт смена карты (два фона сразу) — кадры тяжелее обычного, но это ненадолго: в расчёт резкости их не берём,
   // иначе холст пересоздавался прямо посреди перехода и потом ещё долго оставался мутным
   const inBlend = state === 'play' && zoneBlend().t > 0;
-  if (!inBlend) { perfAcc += performance.now() - t0; perfN++; if (gap > 27 && gap < 100) perfSlow++; }   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
+  if (!inBlend) { perfAcc += performance.now() - t0; perfN++; if (gap > refMs * 1.6 && gap < 100) perfSlow++; }   // пропущен кадр экрана — тормоз   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
   if (perfN >= 90) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
-    if ((avg > 13 || slow > 0.25) && dprLvl < (gq ? 1 : 0)) { dprLvl++; perfLow = 0; perfDownAt = now; ch = true; }
-    else if (avg < 6 && slow < 0.03 && dprLvl > 0 && now - perfDownAt > 20000 && ++perfLow >= 4) { dprLvl--; perfLow = 0; ch = true; }
+    if ((avg > Math.min(13, refMs * 0.8) || slow > 0.2) && dprLvl < (gq ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже
+      { dprLvl++; perfLow = 0; perfDownAt = now; ch = true; }
+    else if (avg < Math.min(6, refMs * 0.4) && slow < 0.03 && dprLvl > 0 && now - perfDownAt > 20000 && ++perfLow >= 4) { dprLvl--; perfLow = 0; ch = true; }
     if (ch) { resize(); draw(); }   // сразу перерисовать: после смены размера холст пустой — без чёрной вспышки
   }
   requestAnimationFrame(frame);
@@ -17474,7 +17486,7 @@ function tutRewindStep(dt) {
   if (R.t < 1) { PK.x += (W - 30 - PK.x) * Math.min(1, dt * 6); PK.y += (BAR_Y + 4 - PK.y) * Math.min(1, dt * 6); PK.pose = 'fist'; }
   else if (R.t < 2.8) {   // тянем ползунок назад: мир едет назад
     const q = clamp((R.t - 1) / 1.6, 0, 1), e = q * q * (3 - 2 * q), idx = Math.round(R.from - R.back * e), h2 = TUT.hist[idx];
-    if (h2) { p.x = h2.x; p.y = h2.y; p.face = h2.face; camY = h2.cam; camR = even(camY); }
+    if (h2) { p.x = h2.x; p.y = h2.y; p.face = h2.face; camY = h2.cam; camR = pxSnap(camY); }
     R.idx = idx; p.rot = 0; p.spin = 0;
     const sx = 30 + (W - 60) * (R.dur > 0 ? (idx / Math.max(1, TUT.hist.length - 1)) : 0);
     PK.x += (sx - PK.x) * Math.min(1, dt * 10); PK.y = BAR_Y + 4; PK.pose = 'fist';
@@ -17493,7 +17505,7 @@ function tutRewindStep(dt) {
     const chain = []; for (let q = poles[0], n = 0; q && n < 400; q = q.next, n++) if (q.kind === 'log' && !q.thorn && q.y1 - q.y0 >= 80) chain.push(q);
     let c = null; for (const q of chain) if ((q.y0 + q.y1) / 2 >= R.dy - 40 && (!c || (q.y0 + q.y1) / 2 < (c.y0 + c.y1) / 2)) c = q;
     if (!c && h && h.pole) c = h.pole;
-    if (c) { if (!poles.includes(c)) poles.push(c); camY = Math.min(-H + 150, (c.y0 + c.y1) / 2 - H * 0.55); camR = even(camY); putOnPole(c); }
+    if (c) { if (!poles.includes(c)) poles.push(c); camY = Math.min(-H + 150, (c.y0 + c.y1) / 2 - H * 0.55); camR = pxSnap(camY); putOnPole(c); }
     p.inv = 3; TUT.guard = true; TUT.rw = null; TUT.hist = [];
     burst(p.x, p.y, 20, '#bff4ff', 220, 0.6, 4, 0, 'diamond');
     pkSay(tutSay());
@@ -17823,6 +17835,7 @@ async function frPoll() {   // письма: заявки в друзья и о�
   try {
     await fbAuth();
     const rq = await fbReq('GET', 'freq/' + FB.uid);
+    const was = JSON.stringify([FR.inbox, FR.list]);   // окно перерисовываем, только если письма или список друзей правда изменились
     FR.inbox = [];
     for (const [u, q] of Object.entries(rq || {})) {
       if (!q || typeof q !== 'object') continue;
@@ -17837,7 +17850,7 @@ async function frPoll() {   // письма: заявки в друзья и о�
       } else if (q.ok) fbReq('DELETE', 'freq/' + FB.uid + '/' + u).catch(() => {});   // «принято» без нашего приглашения — подделка, убираем
       else FR.inbox.push(e);
     }
-    if (frOpenNow()) moRefresh();
+    if (frOpenNow() && JSON.stringify([FR.inbox, FR.list]) !== was) moRefresh();
   } catch (e) {}
 }
 async function frPresAll() {
@@ -17871,7 +17884,11 @@ setInterval(() => {
   if (!frLive() || document.hidden) return;
   const now = Date.now(), open = frOpenNow();
   if (now - FR.presT > 30000) { FR.presT = now; frPresence(); }
-  if (now - FR.pollT > (open ? 4000 : 10000) && (state === 'menu' || open)) { FR.pollT = now; frPoll(); if (open) frPresAll().then(() => { if (frOpenNow()) moRefresh(); }); }
+  if (now - FR.pollT > (open ? 4000 : 20000) && (state === 'menu' || open)) {
+    FR.pollT = now; frPoll();
+    // «в сети» друзья обновляют раз в 30 с: опрашивать каждого чаще чем раз в 15 с бесполезно (было — каждые 4 с, по запросу на друга)
+    if (open && now - (FR.presAllT || 0) > 15000) { FR.presAllT = now; const was = JSON.stringify([FR.pres, FR.list]); frPresAll().then(() => { if (frOpenNow() && (JSON.stringify([FR.pres, FR.list]) !== was || Date.now() - (FR.refT || 0) > 60000)) { FR.refT = Date.now(); moRefresh(); } }); }   // раз в минуту — всё равно: «в сети» гаснет по времени
+  }
 }, 1000);
 
 // карточка «код друга» для профиля: свой код и поле, куда вписать код друга
@@ -18530,7 +18547,7 @@ function arRespawn() {   // появляешься внизу того экра�
   if (!best2) best2 = poles[0];
   state = 'play'; deadT = 0; p.dk = null; p.vanish = false; p.vanishLater = false; p.zapT = 0; p.rot = 0; p.spin = 0; p.revive = false; p.md = null;
   p.stunT = 0; p.jet = 0; p.rocket = 0; p.vx = 0; p.vy = 0; coinsRun = 0;
-  camY = Math.min(-H + 150, (best2.y0 + best2.y1) / 2 - H * 0.58); camR = even(camY);
+  camY = Math.min(-H + 150, (best2.y0 + best2.y1) / 2 - H * 0.58); camR = pxSnap(camY);
   putOnPole(best2); p.inv = 1.2;
   burst(p.x, p.y + 20, 22, '#9be7ff', 220, 0.6, 4, -200, 'star'); try { sfx.portal(); } catch (e) {}
   mpSendState(true);
@@ -19093,13 +19110,13 @@ function arQuestsCard() {
   if (!mp.mode || !mp.active) return;
   if (AR.phase === 'intro' && mp.go) { AR.phase = 'play'; AR.goT = 0; try { sfx.ach(); } catch (e) {} }
   if (AR.goT != null) AR.goT += dt;
-  if (AR.phase === 'res') { AR.resT += dt; const wp = arPos(AR.winCam); if (wp) { camY += (wp.y - H * 0.5 - camY) * Math.min(1, dt * 3); camR = even(camY); } return; }
+  if (AR.phase === 'res') { AR.resT += dt; const wp = arPos(AR.winCam); if (wp) { camY += (wp.y - H * 0.5 - camY) * Math.min(1, dt * 3); camR = pxSnap(camY); } return; }
   if (AR.phase !== 'play') return;
   if (arHost()) arBotsTick(dt);
   if (AR.mode === 'king') arKgTick(dt);
   if (AR.mode === 'race') {
     if (!AR.meFin && state === 'play' && p.y <= AR_FIN_Y) arFinish(arMe(), mp.clock);
-    if (AR.meFin) { AR.finFx = (AR.finFx || 0) + dt; const l = arSpecList(); if (!l.some(e => e.id === AR.spec) && l.length) AR.spec = l[0].id; const sp = arPos(AR.spec); if (sp && AR.finFx > 2.6) { camY += (sp.y - H * 0.58 - camY) * Math.min(1, dt * 5); camR = even(camY); } }
+    if (AR.meFin) { AR.finFx = (AR.finFx || 0) + dt; const l = arSpecList(); if (!l.some(e => e.id === AR.spec) && l.length) AR.spec = l[0].id; const sp = arPos(AR.spec); if (sp && AR.finFx > 2.6) { camY += (sp.y - H * 0.58 - camY) * Math.min(1, dt * 5); camR = pxSnap(camY); } }
     if (arHost() && mp.clock >= AR_TIME) arEnd();
   }
   if (!arHost() && mp.clock > AR_TIME + 4) arEnd();   // хост пропал — итог считаем сами
@@ -19129,7 +19146,7 @@ function arQuestsCard() {
     time += rd;
     const el = Date.now() - AR.t0, panEnd = AR.mode === 'race' ? 3000 : 1600, k = clamp(el / panEnd, 0, 1), ez = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
     const top = AR.mode === 'race' ? AR_FIN_Y - 120 : -H - 600, bottom = -H + 150;
-    camY = top + (bottom - top) * ez; camR = even(camY);
+    camY = top + (bottom - top) * ez; camR = pxSnap(camY);
   }
   d0.apply(this, arguments);
 }; }
@@ -19305,7 +19322,7 @@ function mdTick(dt) {
   // ты призрак или спасён в «Царе горы» — камера следит за другими
   if (M.meGh || (M.k === 'inf' && M.safe[me] != null && AR.mode === 'king')) {
     const l = arSpecList().filter(e => !(M.gh[e.id] != null)); if (l.length && !l.some(e => e.id === AR.spec)) AR.spec = l[0].id;
-    const sp = arPos(AR.spec); if (sp && (!M.meGh || mp.clock - M.gh[me] > 2.2)) { camY += (sp.y - H * 0.58 - camY) * Math.min(1, dt * 4); camR = even(camY); }
+    const sp = arPos(AR.spec); if (sp && (!M.meGh || mp.clock - M.gh[me] > 2.2)) { camY += (sp.y - H * 0.58 - camY) * Math.min(1, dt * 4); camR = pxSnap(camY); }
   }
 }
 // ---------- бот под модификацией: зомби гонится, люди бегут к базе, убийца охотится ----------
@@ -19724,7 +19741,7 @@ function rpOpen(rec) {
   RP.rec = rec; RP.t = 0; RP.play = true; RP.spd = 1; RP.follow = true; RP.drag = null; RP.len = rec.len || 1;
   RP.on = false; mp.seed = rec.seed; mp.mode = rec.mode; const was = mp.active; mp.active = true;   // та же карта, что была в раунде: тот же генератор и то же зерно
   try { reset(); } finally { mp.active = was; mp.mode = ''; }
-  RP.on = true; p.x = -999; p.y = 999; state = 'replay'; camY = -H + 150; camR = even(camY);
+  RP.on = true; p.x = -999; p.y = 999; state = 'replay'; camY = -H + 150; camR = pxSnap(camY);
 }
 function rpClose() { RP.on = false; RP.rec = null; reset(); state = 'menu'; menuAt = time; sfx.click(); openReplays(); }
 function rpFrame(t) {   // два ближайших снимка и доля между ними
@@ -19742,7 +19759,7 @@ function rpTick(dt) {
   if (!RP.on) return;
   if (RP.play && !RP.drag) { RP.t += dt * RP.spd; if (RP.t >= RP.len) { RP.t = RP.len; RP.play = false; } }
   if (RP.follow && !(RP.drag && RP.drag.k === 'pan')) { const me = rpPeople(RP.t).find(e => e.me); if (me) camY += (me.y - H * 0.58 - camY) * Math.min(1, dt * 5); }
-  camY = clamp(camY, -PX_PER_M * 950, -H + 150); camR = even(camY);
+  camY = clamp(camY, -PX_PER_M * 950, -H + 150); camR = pxSnap(camY);
 }
 function rpDrawWorld() {   // герои повтора — поверх мира
   if (!RP.on) return;
@@ -19782,7 +19799,7 @@ function rpDown(pt) {
 function rpMove(pt) {
   if (!RP.drag) return;
   if (RP.drag.k === 'bar') RP.t = clamp((pt.x - RP_BAR.x) / RP_BAR.w, 0, 1) * RP.len;
-  else { camY = clamp(RP.drag.c - (pt.y - RP.drag.y), -PX_PER_M * 950, -H + 150); camR = even(camY); }
+  else { camY = clamp(RP.drag.c - (pt.y - RP.drag.y), -PX_PER_M * 950, -H + 150); camR = pxSnap(camY); }
 }
 
 // ---------- КОНСТРУКТОР КАРТ: своя лесная карта до 90 м — столбы, враги, монеты, старт и финиш ----------
@@ -19847,7 +19864,7 @@ const ED_BAR_Y = H - 104, ED_PLAY = { x: W - 92, y: 12, w: 80, h: 34 }, ED_NAME 
 const edToolRect = i => ({ x: 6 + (i % 6) * 58, y: ED_BAR_Y + 6 + Math.floor(i / 6) * 48, w: 54, h: 44 });
 function edOpen(m) {
   ED.on = true; ED.m = edClean(m); ED.tool = 'log'; ED.drag = null; ED.sel = null; ED.dirty = false;
-  reset(); edBuild(ED.m); p.x = -999; p.y = 999; state = 'edit'; camY = -H + 150; camR = even(camY);
+  reset(); edBuild(ED.m); p.x = -999; p.y = 999; state = 'edit'; camY = -H + 150; camR = pxSnap(camY);
 }
 function edSave() { const L = edMaps(), i = L.findIndex(x => x.id === ED.m.id); ED.m.d = Date.now(); if (i >= 0) L[i] = ED.m; else L.push(ED.m); edSaveAll(L); ED.dirty = false; }
 function edClose() { edSave(); ED.on = false; reset(); state = 'menu'; menuAt = time; sfx.click(); openMaps(); }
@@ -19881,7 +19898,7 @@ function edDown(pt) {
 }
 function edMove(pt) {
   const d = ED.drag; if (!d) return;
-  if (d.k === 'pan') { camY = clamp(d.c - (pt.y - d.y), ED_TOP - 200, -H + 150); camR = even(camY); return; }
+  if (d.k === 'pan') { camY = clamp(d.c - (pt.y - d.y), ED_TOP - 200, -H + 150); camR = pxSnap(camY); return; }
   d.a[1] = clamp(even(pt.x + d.dx), 20, W - 20); d.a[2] = clamp(even(pt.y + camY + d.dy), ED_TOP, -10); d.moved = true; edBuild(ED.m);
 }
 function edUp() { if (ED.drag && ED.drag.moved) edSave(); ED.drag = null; }
@@ -19924,7 +19941,7 @@ function cmStart(m, from) {
   CM.keep = { bank, gems, rubies, best, tro: { ...META.tro }, ach: achieved.slice() };   // за свои карты ничего не дают — всё вернём как было
   ED.on = false; reset(); edBuild(m);
   let sp = null, bd = 1e9; for (const q of poles) { const d = Math.hypot(q.cx - m.st[0], (q.y0 + q.y1) / 2 - m.st[1]); if (d < bd) { bd = d; sp = q; } }
-  camY = Math.min(-H + 150, m.st[1] - H * 0.58); camR = even(camY);
+  camY = Math.min(-H + 150, m.st[1] - H * 0.58); camR = pxSnap(camY);
   p = newHero(sp && bd < 140 ? sp : makePole(-999, -10, 0, 'log', 1, 0)); minY = p.y;
   if (sp && bd < 140) putOnPole(sp); else { p.x = m.st[0]; p.y = -PH / 2; p.state = 'ground'; p.pole = null; }
   state = 'play'; paused = false; held = false; coinsRun = 0; gemsRun = 0;
