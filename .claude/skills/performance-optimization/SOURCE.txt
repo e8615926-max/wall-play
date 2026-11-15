@@ -1,0 +1,2 @@
+Source: https://github.com/rampstackco/claude-skills/tree/0590510/skills/performance-optimization
+Copied unchanged on 2026-11-15. Inspected: Markdown only, no scripts, hooks or tool permissions. License: MIT (LICENSE.txt).

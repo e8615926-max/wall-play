@@ -1,0 +1,2 @@
+Source: https://github.com/MadAppGang/claude-code/tree/6097ad4/plugins/dev/skills/optimize
+Copied unchanged on 2026-11-15. Inspected: Markdown only, no scripts, hooks or tool permissions. License: MIT (LICENSE.txt).
