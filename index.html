@@ -1570,11 +1570,13 @@ function resize() {
   const ww = document.body.clientWidth || window.innerWidth, wh = document.body.clientHeight || window.innerHeight;
   scale = Math.min(ww / W, wh / H);
   const dpr = Math.min(2, window.devicePixelRatio || 1);   // пиксель-арт: больше 2× не видно, а заливать в 2,25 раза больше точек — лаги на телефонах
+  const nw = Math.floor(W * scale * dpr), nh = Math.floor(H * scale * dpr);
+  if (nw === cv.width && nh === cv.height && Math.abs(RR - scale * dpr) < 1e-9) return;   // размер не изменился — холст и кэши не трогаем
   RR = scale * dpr; gfxEpoch++;
   cv.style.width = Math.floor(W * scale) + 'px';
   cv.style.height = Math.floor(H * scale) + 'px';
-  cv.width = Math.floor(W * scale * dpr);
-  cv.height = Math.floor(H * scale * dpr);
+  cv.width = nw;
+  cv.height = nh;
   mainCtx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   mainCtx.imageSmoothingEnabled = false;
 }
@@ -8924,7 +8926,15 @@ function draw() {
 
 // ---------- Цикл ----------
 let last = performance.now();
+let frameErrs = 0;
 function frame(now) {
+  requestAnimationFrame(frame);   // сначала — следующий кадр: ошибка в одном кадре больше не замораживает игру навсегда
+  try { frameBody(now); } catch (e) {
+    if (frameErrs++ < 3) console.error(e);
+    ctx = mainCtx; ctx.setTransform(RR, 0, 0, RR, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
+  }
+}
+function frameBody(now) {
   let dt = (now - last) / 1000; last = now;
   frameStartT = performance.now(); loadStepsThisFrame = 0; pellNew = 0;
   if (dt > 0.05) dt = 0.05;
@@ -8932,7 +8942,6 @@ function frame(now) {
   const ts = state === 'play' && p && p.slow > 0 && !pmenu ? 0.45 : 1;   // замедление времени
   for (let i = 0; i < steps; i++) update(dt / steps * ts);
   if (!(state === 'load' && window.__introOn)) draw();   // под непрозрачной заставкой рисовать нечего
-  requestAnimationFrame(frame);
 }
 reset();
 window.__game = { get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; } };
