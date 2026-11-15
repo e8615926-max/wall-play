@@ -25,7 +25,7 @@
 <!-- Заставка ELDAR STUDIOS: играет сразу при запуске, потом начинается загрузка -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
   /* Layout: one black cinematic screen, emblem + wordmark stacked in the centre, particles behind */
   #intro {
@@ -1563,18 +1563,22 @@ const vib = ms => { if (SET.vibe && navigator.vibrate) try { navigator.vibrate(m
 
 // ---------- Канвас ----------
 const cv = document.getElementById('game');
-const ctx = cv.getContext('2d');
-let scale = 1;
+const mainCtx = cv.getContext('2d');
+let ctx = mainCtx;   // stamp() временно направляет рисование в кэш-холст
+let scale = 1, RR = 1, gfxEpoch = 0;   // RR — точек экрана на единицу игры; gfxEpoch меняется при смене размера (кэши картинок пересобираются)
 function resize() {
   const ww = document.body.clientWidth || window.innerWidth, wh = document.body.clientHeight || window.innerHeight;
   scale = Math.min(ww / W, wh / H);
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);   // пиксель-арт: больше 2× не видно, а заливать в 2,25 раза больше точек — лаги на телефонах
+  const nw = Math.floor(W * scale * dpr), nh = Math.floor(H * scale * dpr);
+  if (nw === cv.width && nh === cv.height && Math.abs(RR - scale * dpr) < 1e-9) return;   // размер не изменился — холст и кэши не трогаем
+  RR = scale * dpr; gfxEpoch++;
   cv.style.width = Math.floor(W * scale) + 'px';
   cv.style.height = Math.floor(H * scale) + 'px';
-  cv.width = Math.floor(W * scale * dpr);
-  cv.height = Math.floor(H * scale * dpr);
-  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
-  ctx.imageSmoothingEnabled = false;
+  cv.width = nw;
+  cv.height = nh;
+  mainCtx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  mainCtx.imageSmoothingEnabled = false;
 }
 window.addEventListener('resize', resize);
 resize();
@@ -2034,7 +2038,7 @@ function scheduleStep(s, t) {
 setInterval(() => {
   if (!ac || !musicOn || ac.state !== 'running' || window.__introOn) return;
   if (mTime < ac.currentTime) mTime = ac.currentTime + 0.05;
-  while (mTime < ac.currentTime + 0.25) { scheduleStep(mStep, mTime); mTime += STEP; mStep = (mStep + 1) % 64; }
+  while (mTime < ac.currentTime + 0.4) { scheduleStep(mStep, mTime); mTime += STEP; mStep = (mStep + 1) % 64; }
 }, 40);
 function startMusic() { musicOn = true; audio(); }
 function toggleMute() { muted = !muted; store.set('muted', muted); applyVolumes(); }
@@ -2066,7 +2070,64 @@ function prect(c, x, y, w, h, col) {
   const x0 = even(x), y0 = even(y), x1 = even(x + w), y1 = even(y + h);
   if (x1 > x0 && y1 > y0) { c.fillStyle = col; c.fillRect(x0, y0, x1 - x0, y1 - y0); }
 }
+// Кэш эллипсов: большой эллипс — это десятки fillRect, а из кэша — один drawImage
+const pellCache = new Map();
+let pellEpoch = -1, pellBytes = 0, pellNew = 0;   // pellNew — сколько новых картинок создано в этом кадре
+function gfxCanvas(w, h) {   // холст в точках экрана: w×h единиц игры
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(w * RR)); c.height = Math.max(1, Math.ceil(h * RR));
+  const g = c.getContext('2d'); g.setTransform(RR, 0, 0, RR, 0, 0); g.imageSmoothingEnabled = false;
+  return [c, g];
+}
+const blit = (c, x, y) => ctx.drawImage(c, x, y, c.width / RR, c.height / RR);
+const plainT = () => { const m = ctx.getTransform(); return m.b === 0 && m.c === 0 && Math.abs(m.a - RR) < 1e-6 && Math.abs(m.d - RR) < 1e-6; };
+// Штамп: картинку из многих вызовов рисуем один раз в кэш и потом ставим одним drawImage.
+// fn(X, Y) рисует вокруг (X, Y) через ctx; hw, hh — полуразмеры с запасом
+const stampCache = new Map();
+let stampEpoch = -1;
+function stamp(key, x, y, hw, hh, fn) {
+  if (ctx !== mainCtx || !plainT()) { fn(x, y); return; }
+  if (stampEpoch !== gfxEpoch || stampCache.size > 600) { stampCache.clear(); stampEpoch = gfxEpoch; }
+  x = Math.round(x * 2) / 2; y = Math.round(y * 2) / 2;
+  const ox = Math.floor((x - hw) / 2) * 2, oy = Math.floor((y - hh) / 2) * 2, lx = x - ox, ly = y - oy;
+  const k = key + '|' + lx + '|' + ly;
+  let c = stampCache.get(k);
+  if (!c) {
+    const [sc, g] = gfxCanvas(lx + hw + 2, ly + hh + 2);
+    const keepA = ctx.globalAlpha; ctx = g;
+    try { fn(lx, ly); } finally { ctx = mainCtx; ctx.globalAlpha = keepA; }
+    c = sc; stampCache.set(k, c);
+  }
+  blit(c, ox, oy);
+}
 function pell(c, cx, cy, rx, ry, col) {
+  if (c === mainCtx && ctx === mainCtx && ry >= 4 && rx >= 2 && typeof col === 'string' && col[0] !== 'h') {   // hsl(...) почти всегда переливается — не кэшируем
+    const m = ctx.getTransform();
+    if (m.b === 0 && m.c === 0 && Math.abs(m.a - RR) < 1e-6 && Math.abs(m.d - RR) < 1e-6) {
+      if (pellEpoch !== gfxEpoch) { pellCache.clear(); pellBytes = 0; pellEpoch = gfxEpoch; }
+      cx = Math.round(cx * 2) / 2; cy = Math.round(cy * 2) / 2; rx = Math.round(rx * 4) / 4; ry = Math.round(ry * 4) / 4;
+      const ox = Math.floor((cx - rx) / 2) * 2 - 2, oy = Math.floor((cy - ry) / 2) * 2 - 2;
+      const lx = cx - ox, ly = cy - oy;
+      let byCol = pellCache.get(col);
+      if (!byCol) { byCol = new Map(); pellCache.set(col, byCol); }
+      const key = ((rx * 4) * 8192 + ry * 4) * 64 + (lx - rx - 2) * 4 * 8 + (ly - ry - 2) * 4;   // lx−rx и ly−ry лежат в [2, 4) с шагом 0,25
+      let spr = byCol.get(key);
+      if (!spr && pellNew >= 24) { pellRaw(c, cx, cy, rx, ry, col); return; }   // цвет меняется каждый кадр — кэш не поможет
+      if (!spr) {
+        pellNew++;
+        if (pellBytes > 40e6) { pellCache.clear(); pellBytes = 0; byCol = new Map(); pellCache.set(col, byCol); }
+        const [sc, sg] = gfxCanvas(lx + rx + 4, ly + ry + 4);
+        pellRaw(sg, lx, ly, rx, ry, col);
+        spr = sc; byCol.set(key, spr); pellBytes += sc.width * sc.height * 4;
+      }
+      c.fillStyle = col;
+      blit(spr, ox, oy);
+      return;
+    }
+  }
+  pellRaw(c, cx, cy, rx, ry, col);
+}
+function pellRaw(c, cx, cy, rx, ry, col) {
   c.fillStyle = col;
   const g0 = Math.floor((cy - ry) / 2), g1 = Math.ceil((cy + ry) / 2);
   for (let g = g0; g < g1; g++) {
@@ -2112,7 +2173,22 @@ const GUMMY = [['#ff5a7a', '#c02a4a', '#ffb0c0', '#5a0a1a'], ['#ff9a2a', '#c0600
   ['#5ae05a', '#2a9a2a', '#c8ffc0', '#0a3a0a'], ['#3ab0ff', '#1a70c0', '#c0e8ff', '#0a2a5a'], ['#a64aff', '#6a1ac0', '#e0c0ff', '#2a0a4a']];
 const mkCanvas = () => { const c = document.createElement('canvas'); c.width = 32; c.height = 40; return c; };
 const gcv = mkCanvas(), xcv = [mkCanvas(), mkCanvas()];
+// Кэш кадров героя: спрайт 32×40 собирается из сотен fillRect; анимацию квантуем до 30 кадров/с (для пиксель-арта незаметно)
+const heroIds = new WeakMap(), heroCache = new Map();
+let heroIdN = 0;
 function heroSprite(sk, pose, t, blink) {
+  let id = heroIds.get(sk);
+  if (id == null) { id = ++heroIdN; heroIds.set(sk, id); }
+  const tq = Math.floor(t * 30);
+  const key = id + '|' + pose + '|' + (blink ? 1 : 0) + '|' + tq;
+  const hit = heroCache.get(key);
+  if (hit) { hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, 32, 40); hctx.drawImage(hit, 0, 0); return; }
+  heroSpriteGen(sk, pose, tq / 30, blink);
+  if (heroCache.size >= 400) heroCache.clear();
+  const c = mkCanvas(); c.getContext('2d').drawImage(hcv, 0, 0);
+  heroCache.set(key, c);
+}
+function heroSpriteGen(sk, pose, t, blink) {
   if (!sk.gummy) return heroSpriteRaw(sk, pose, t, blink);
   const n = GUMMY.length, i = Math.floor(t / 5) % n, ph = (t % 5) / 1.6;
   const col = j => { const [body, dark, light, ol] = GUMMY[j]; return { ...sk, body, dark, light, ear: body, ol }; };
@@ -3592,9 +3668,12 @@ function generate() {
 }
 
 // ---------- Фон ----------
-const farTiles = {};
+// Дальний фон карты: рисуется по требованию, в памяти держим несколько последних (67 холстов по ~1 МБ — тяжело для телефона)
+const farTiles = new Map();
 function farTile(zi) {
-  if (farTiles[zi]) return farTiles[zi];
+  const hit = farTiles.get(zi);
+  if (hit) { farTiles.delete(zi); farTiles.set(zi, hit); return hit; }
+  if (farTiles.size >= 6) farTiles.delete(farTiles.keys().next().value);
   const z = ZONES[zi], th = 640, kind = z.farKind || 'tree';
   const c = document.createElement('canvas'); c.width = W; c.height = th;
   const g = c.getContext('2d');
@@ -3637,7 +3716,7 @@ function farTile(zi) {
       }
     }
   }
-  farTiles[zi] = c;
+  farTiles.set(zi, c);
   return c;
 }
 
@@ -3653,27 +3732,60 @@ const zc = (b, key) => b.t > 0 ? mix(b.z[key], b.n[key], b.t) : b.z[key];
 function colAt(wy) {
   return { c: W / 2 + Math.sin(wy * 0.004) * 40 + Math.sin(wy * 0.011) * 18, hw: 92 + Math.sin(wy * 0.007) * 28 + Math.sin(wy * 0.019) * 10 };
 }
-function drawBushColumn(b, skyCol) {
-  const bush = zc(b, 'bush'), bushD = zc(b, 'bushD'), bushL = zc(b, 'bushL');
-  const off = even(camR * 0.85);
-  const step = 14, first = Math.floor((off - 40) / step), lastK = Math.ceil((off + H + 40) / step);
+// Крона рисуется кусками по BUSH_CH единиц высоты и кэшируется для каждой карты: раньше это было ~4000 fillRect за кадр
+const BUSH_CH = 320, bushChunks = new Map();
+let bushEpoch = -1;
+function bushChunk(zi, j) {
+  if (bushEpoch !== gfxEpoch) { bushChunks.clear(); bushEpoch = gfxEpoch; }
+  const key = zi * 100000 + j;
+  let c = bushChunks.get(key);
+  if (c) { bushChunks.delete(key); bushChunks.set(key, c); return c; }   // LRU: свежий — в конец
+  if (bushChunks.size >= 14) bushChunks.delete(bushChunks.keys().next().value);
+  const z = ZONES[zi], y0 = j * BUSH_CH, step = 14;
+  const [cv2, g] = gfxCanvas(W, BUSH_CH);
+  const first = Math.floor((y0 - 40) / step), lastK = Math.ceil((y0 + BUSH_CH + 40) / step);
   for (let k = first; k <= lastK; k++) {
-    const wy = k * step, { c, hw } = colAt(wy), sy = wy - off;
-    for (const s of [-1, 1]) { const r = 9 + hash2(k, s + 3) * 7; pell(ctx, c + s * (hw + hash2(k, s) * 6) + s * 2, sy + 3, r + 2, r + 2, bushD); }
+    const wy = k * step, { c: cc, hw } = colAt(wy), sy = wy - y0;
+    for (const s of [-1, 1]) { const r = 9 + hash2(k, s + 3) * 7; pellRaw(g, cc + s * (hw + hash2(k, s) * 6) + s * 2, sy + 3, r + 2, r + 2, z.bushD); }
   }
-  ctx.fillStyle = bush; ctx.beginPath();
-  for (let sy = -8; sy <= H + 8; sy += 8) { const { c, hw } = colAt(sy + off); ctx.lineTo(even(c - hw), sy); }
-  for (let sy = H + 8; sy >= -8; sy -= 8) { const { c, hw } = colAt(sy + off); ctx.lineTo(even(c + hw), sy); }
-  ctx.fill();
+  g.fillStyle = z.bush; g.beginPath();
+  for (let sy = -8; sy <= BUSH_CH + 8; sy += 8) { const { c: cc, hw } = colAt(sy + y0); g.lineTo(even(cc - hw), sy); }
+  for (let sy = BUSH_CH + 8; sy >= -8; sy -= 8) { const { c: cc, hw } = colAt(sy + y0); g.lineTo(even(cc + hw), sy); }
+  g.fill();
   for (let k = first; k <= lastK; k++) {
-    const wy = k * step, { c, hw } = colAt(wy), sy = wy - off;
+    const wy = k * step, { c: cc, hw } = colAt(wy), sy = wy - y0;
     for (const s of [-1, 1]) {
-      const r = 9 + hash2(k, s + 3) * 7, ex = c + s * (hw + hash2(k, s) * 6);
-      pell(ctx, ex, sy, r, r, bush);
-      if (hash2(k, s + 21) < 0.45) pell(ctx, ex + s * 2, sy - 4, r * 0.5, r * 0.35, bushL);
+      const r = 9 + hash2(k, s + 3) * 7, ex = cc + s * (hw + hash2(k, s) * 6);
+      pellRaw(g, ex, sy, r, r, z.bush);
+      if (hash2(k, s + 21) < 0.45) pellRaw(g, ex + s * 2, sy - 4, r * 0.5, r * 0.35, z.bushL);
     }
-    if (hash2(k, 11) < 0.25) pell(ctx, c + (hash2(k, 12) - 0.5) * hw * 1.3, sy, 8, 6, bushL);
-    if (hash2(k, 13) < 0.07) { const hx = c + (hash2(k, 14) - 0.5) * hw; pell(ctx, hx, sy, 11, 9, bushD); pell(ctx, hx, sy, 8, 6, skyCol); }
+    if (hash2(k, 11) < 0.25) pellRaw(g, cc + (hash2(k, 12) - 0.5) * hw * 1.3, sy, 8, 6, z.bushL);
+    if (hash2(k, 13) < 0.07) pellRaw(g, cc + (hash2(k, 14) - 0.5) * hw, sy, 11, 9, z.bushD);   // дупло; его «небо» рисуется поверх каждый кадр
+  }
+  bushChunks.set(key, cv2);
+  return cv2;
+}
+function drawBushColumn(b, skyCol) {
+  const off = even(camR * 0.85), step = 14;
+  const j0 = Math.floor(off / BUSH_CH), j1 = Math.floor((off + H) / BUSH_CH);
+  const layer = (zi, a) => {
+    ctx.globalAlpha = a;
+    for (let j = j0; j <= j1; j++) blit(bushChunk(zi, j), 0, j * BUSH_CH - off);
+  };
+  layer(b.i, 1);
+  if (b.t > 0 && b.n !== b.z) layer(b.i + 1, b.t);   // плавный переход цветов = наложение двух карт с прозрачностью
+  ctx.globalAlpha = 1;
+  // заранее и по одному куску за кадр: следующий кусок над камерой и куски следующей карты незадолго до перехода
+  if (bushEpoch === gfxEpoch) {
+    const want = [[b.i, j0 - 1]], nz = ZONES[b.i + 1];
+    if (nz && b.t === 0 && (state === 'play' || state === 'dead') && nz.m - 30 - heightM() < 25) for (let j = j0 - 1; j <= j1; j++) want.push([b.i + 1, j]);
+    for (const [zi, j] of want) if (!bushChunks.has(zi * 100000 + j)) { bushChunk(zi, j); break; }
+  }
+  const first = Math.floor((off - 40) / step), lastK = Math.ceil((off + H + 40) / step);
+  for (let k = first; k <= lastK; k++) {
+    if (hash2(k, 13) >= 0.07) continue;
+    const wy = k * step, { c, hw } = colAt(wy);
+    pell(ctx, c + (hash2(k, 14) - 0.5) * hw, wy - off, 8, 6, skyCol);
   }
 }
 
@@ -5316,7 +5428,7 @@ function updateParts(dt) {
 }
 
 const LOAD_STEPS = [
-  ...ZONES.map((z, i) => () => farTile(i)),
+  ...[0, 1, 2].map(i => () => farTile(i)),
   ...SKINS.map(k => () => heroSprite(k, 'idle', 0, false)),
   () => { for (const n of T('zones')) textCanvas(n, 2, '#ffffff', OL); },
   () => { for (const t of T('tips')) textCanvas(t, 2, '#ffffff', OL); },
@@ -5365,11 +5477,13 @@ function finishLoad() {
 }
 const LOAD_MIN = 2.4;
 const loadProgress = () => Math.min(loadStep / LOAD_STEPS.length, loadT / LOAD_MIN);
+let loadStepsThisFrame = 0, frameStartT = 0;
 function updateLoad(dt) {
   if (window.__introOn) return;   // загрузка начинается после заставки ELDAR STUDIOS
   loadT += dt;
 
-  if (loadStep < LOAD_STEPS.length) LOAD_STEPS[loadStep++]();
+  // шаги загрузки — не больше ~8 мс за кадр (раньше на слабом телефоне до 6 шагов за кадр — рывки до полсекунды)
+  if (loadStep < LOAD_STEPS.length && (!loadStepsThisFrame || performance.now() - frameStartT < 8)) { LOAD_STEPS[loadStep++](); loadStepsThisFrame++; }
   if (loadProgress() >= 1 && loadT > LOAD_MIN + 0.3 && !loadReady) {
     loadReady = true; loadDoneT = time;   // ждём касания: хомяк радуется, пока игрок не нажмёт
   }
@@ -5410,6 +5524,7 @@ function update(dt) {
   const zi = zoneIdxAt(m);
   if (zi !== zoneIdx) {
     zoneIdx = zi; banner = { zi, t: 2.6 }; sfx.zone();
+    if (ZONES[zi + 1]) setTimeout(() => farTile(zi + 1), 300);   // фон следующей карты — заранее, а не в момент перехода
     zonesSeen++; if (zonesSeen >= 5) unlock('zone5');
   }
   if (m >= 100) unlock('m100');
@@ -5563,8 +5678,17 @@ function drawPoleBody(pl) {
   }
 }
 
+let groundCv = null, groundEpoch = -1;
 function drawGround() {
   if (-camR > H + 20) return;
+  if (groundEpoch !== gfxEpoch) {   // земля не меняется: рисуем один раз (раньше ~1700 fillRect за кадр)
+    const [c, g] = gfxCanvas(W, H + 24);
+    g.translate(0, 6); drawGroundTo(g);
+    groundCv = c; groundEpoch = gfxEpoch;
+  }
+  blit(groundCv, 0, -6);
+}
+function drawGroundTo(ctx) {
   const z = ZONES[0];
   prect(ctx, 0, 12, W, H, '#b8552e');
   for (let gy = 0; gy < 8; gy++) for (let gx = -1; gx < 11; gx++) {
@@ -5589,10 +5713,12 @@ function drawHeightMarks() {
   for (let k = Math.max(1, first); k < first + 5; k++) {
     const y = even(-PH / 2 - k * step);
     if (y < camY + 90 || y > camY + H + 10) continue;
-    ctx.fillStyle = 'rgba(42,20,8,0.45)';
-    for (let x = 0; x < W; x += 12) ctx.fillRect(x, y, 8, 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    for (let x = 0; x < W; x += 12) ctx.fillRect(x, y - 2, 8, 2);
+    stamp('hmark', W / 2, y, W / 2, 2, (X, Y) => {
+      ctx.fillStyle = 'rgba(42,20,8,0.45)';
+      for (let x = 0; x < W; x += 12) ctx.fillRect(x + X - W / 2, Y, 8, 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      for (let x = 0; x < W; x += 12) ctx.fillRect(x + X - W / 2, Y - 2, 8, 2);
+    });
     text(String(k * 10), 8, y - 6, 2, '#ffe24a', 'left');
   }
   if (best > 0) {
@@ -6271,6 +6397,10 @@ function drawWorld() {
 
 // ---------- Интерфейс ----------
 function coinIcon(x, y, r = 8, sx = 1) {   // одна монета везде; sx — поворот при вращении
+  sx = Math.round(sx * 20) / 20;
+  stamp('coin' + r + '|' + sx, x, y, r + 4, r + 4, (X, Y) => coinRaw(X, Y, r, sx));
+}
+function coinRaw(x, y, r, sx) {
   const rx = Math.max(1.5, r * sx);
   pell(ctx, x, y, rx + 2, r + 2, OL); pell(ctx, x, y, rx, r, '#c8820a'); pell(ctx, x, y, Math.max(1, rx - 2.5), r - 2.5, '#ffd23a');
   if (sx > 0.45) { prect(ctx, x - 1, y - r + 4, 2, Math.max(2, r * 2 - 8), '#e8a820'); prect(ctx, x - rx * 0.55, y - r + 4, 2, Math.max(2, r - 3), '#fff6a0'); }
@@ -6422,7 +6552,8 @@ function badge(x, y) {
   pell(ctx, x, y, 11 + s, 11 + s, OL); pell(ctx, x, y, 9 + s, 9 + s, '#ff3a3a');
   text('!', x + 1, y + 7, 2, '#ffffff', 'center', null);
 }
-function gemIcon(x, y, s = 1) {   // гранёный кристалл с полным контуром при любом размере
+function gemIcon(x, y, s = 1) { stamp('gem' + s, x, y, 15 * s + 4, 14 * s + 4, (X, Y) => gemRaw(X, Y, s)); }
+function gemRaw(x, y, s) {   // гранёный кристалл с полным контуром при любом размере
   const poly = (pts, col) => { ctx.beginPath(); pts.forEach(([px, py], i) => i ? ctx.lineTo(x + px * s, y + py * s) : ctx.moveTo(x + px * s, y + py * s)); ctx.closePath(); if (col) { ctx.fillStyle = col; ctx.fill(); } };
   ctx.lineJoin = 'round'; ctx.strokeStyle = OL; ctx.lineWidth = Math.max(2, 3.2 * s);
   poly([[-7, -9], [7, -9], [12, -3], [0, 11], [-12, -3]]); ctx.stroke(); ctx.fillStyle = '#3ab0ff'; ctx.fill();
@@ -8163,7 +8294,12 @@ function cloneTakeover() {
   swapT = 2.2; swapK = 'cloneSwap';
 }
 // значки сил
+const PW_ANIM = new Set(['bomb', 'clone', 'ghost', 'jet', 'mega', 'rain', 'revive', 'rocket', 'star', 'tele', 'wings']);
 function powerIcon(id, x, y, s = 1) {
+  if (PW_ANIM.has(id)) powerIconRaw(id, x, y, s);
+  else stamp('pw' + id + s, x, y, 18 * s + 4, 18 * s + 4, (X, Y) => powerIconRaw(id, X, Y, s));
+}
+function powerIconRaw(id, x, y, s) {
   const P = (dx, dy, w, h, col) => prect(ctx, x + dx * s, y + dy * s, w * s, h * s, col), E = (dx, dy, r, col) => pell(ctx, x + dx * s, y + dy * s, r * s, r * s, col);
   if (id === 'magnet') { P(-10, -10, 8, 16, OL); P(2, -10, 8, 16, OL); P(-10, 2, 20, 8, OL); P(-8, -8, 4, 14, '#e8261a'); P(4, -8, 4, 14, '#e8261a'); P(-8, 4, 16, 4, '#e8261a'); P(-8, -8, 4, 4, '#ffffff'); P(4, -8, 4, 4, '#ffffff'); }
   else if (id === 'tele') { E(0, 0, 11, OL); E(0, 0, 9, '#5a2aa0'); E(0, 0, 6, '#a06ae0'); E(0, 0, 3, '#e0c0ff'); for (let k = 0; k < 4; k++) { const an = time * 4 + k * 1.57; P(Math.cos(an) * 9 - 1, Math.sin(an) * 9 - 1, 2, 2, '#ffffff'); } }
@@ -8761,6 +8897,7 @@ function drawLoad() {
 
 function draw() {
   if (state === 'load') { drawLoad(); return; }
+  if (state === 'shop' || state === 'tent' || state === 'allies') { drawMenus(); return; }   // эти экраны непрозрачные: мир под ними не рисуем
   ctx.save();
   if (shake > 0) ctx.translate(even(rand(-1, 1) * shake * 14), even(rand(-1, 1) * shake * 14));
   drawBackground();
@@ -8773,6 +8910,9 @@ function draw() {
   if (state === 'play' && p.slow > 0) { ctx.globalAlpha = 0.14; ctx.fillStyle = '#3a6aff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   if (flashT > 0) { ctx.globalAlpha = clamp(flashT * 2.5, 0, 0.8); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
   drawHUD();
+  drawMenus();
+}
+function drawMenus() {
   if (state === 'menu') drawMenu();
   if (state === 'shop') drawShop();
   if (state === 'ach') drawAch();
@@ -8790,14 +8930,22 @@ function draw() {
 
 // ---------- Цикл ----------
 let last = performance.now();
+let frameErrs = 0;
 function frame(now) {
+  requestAnimationFrame(frame);   // сначала — следующий кадр: ошибка в одном кадре больше не замораживает игру навсегда
+  try { frameBody(now); } catch (e) {
+    if (frameErrs++ < 3) console.error(e);
+    ctx = mainCtx; ctx.setTransform(RR, 0, 0, RR, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
+  }
+}
+function frameBody(now) {
   let dt = (now - last) / 1000; last = now;
+  frameStartT = performance.now(); loadStepsThisFrame = 0; pellNew = 0;
   if (dt > 0.05) dt = 0.05;
   const steps = Math.ceil(dt / (1 / 120));
   const ts = state === 'play' && p && p.slow > 0 && !pmenu ? 0.45 : 1;   // замедление времени
   for (let i = 0; i < steps; i++) update(dt / steps * ts);
-  draw();
-  requestAnimationFrame(frame);
+  if (!(state === 'load' && window.__introOn)) draw();   // под непрозрачной заставкой рисовать нечего
 }
 reset();
 window.__game = { get state() { return state; }, get p() { return p; }, get poles() { return poles; }, press, release, heightM, setLang(l) { lang = l; } };
