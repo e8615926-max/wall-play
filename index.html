@@ -2935,16 +2935,33 @@ function textCanvas(s, k, color, outline) {
   return c;
 }
 // y — нижняя линия букв; если не влезает — шрифт уменьшается
+const TXT_NORM = new Map();   // строка → как её рисует пиксельный шрифт (без кавычек, заглавными); раньше — 3 новые строки на каждый вызов
+function txtNorm(s) {
+  let v = TXT_NORM.get(s); if (v !== undefined) return v;
+  v = String(s).replace(/…/g, '...').replace(/[«»"“”]/g, '').toUpperCase();
+  if (TXT_NORM.size > 3000) TXT_NORM.clear();
+  TXT_NORM.set(s, v); return v;
+}
+// картинка надписи: str → [k, color, outline, canvas, …] — поиск без склейки ключа
+const TXT_FAST = new Map();
+function textCanvasFast(str, k, color, outline) {
+  let a = TXT_FAST.get(str);
+  if (a) for (let i = 0; i < a.length; i += 4) if (a[i] === k && a[i + 1] === color && a[i + 2] === outline) return a[i + 3];
+  const c = textCanvas(str, k, color, outline);
+  if (!a) { if (TXT_FAST.size > 1500) TXT_FAST.clear(); TXT_FAST.set(str, a = []); }
+  if (a.length < 64) a.push(k, color, outline, c);
+  return c;
+}
 function text(s, x, y, k, color = '#fff', align = 'center', outline = OL, maxW = W - 12) {
-  const str = String(s).replace(/…/g, '...').replace(/[«»"“”]/g, '').toUpperCase();   // кавычек и многоточия в пиксельном шрифте нет
+  const str = txtNorm(s);   // кавычек и многоточия в пиксельном шрифте нет
   if (str.length > 1 && str.length < 12 && k === Math.floor(k) && /^[0-9:+\-\/ .%]+$/.test(str)) {   // числа меняются каждый кадр — собираем из готовых цифр, а не рисуем новую картинку
     const o = outline ? k : 0, w = str.length * 6 * k - k + o * 2;
     if (w > maxW && k > 1) return text(s, x, y, k - 1, color, align, outline, maxW);
     let dx = Math.round(align === 'center' ? x - w / 2 : align === 'right' ? x - w : x);
-    for (const ch of str) { if (ch !== ' ') { const c = textCanvas(ch, k, color, outline), hd = c.hd || 1; ctx.drawImage(c, dx, Math.round(y - c.height / hd + 2 * k), c.width / hd, c.height / hd); } dx += 6 * k; }
+    for (const ch of str) { if (ch !== ' ') { const c = textCanvasFast(ch, k, color, outline), hd = c.hd || 1; ctx.drawImage(c, dx, Math.round(y - c.height / hd + 2 * k), c.width / hd, c.height / hd); } dx += 6 * k; }
     return w;
   }
-  let c = textCanvas(str, k, color, outline);
+  let c = textCanvasFast(str, k, color, outline);
   const hd = c.hd || 1, cw = c.width / hd, chh = c.height / hd;
   if (cw > maxW && k > 1) return text(s, x, y, k - 1, color, align, outline, maxW);
   const dx = align === 'center' ? x - cw / 2 : align === 'right' ? x - cw : x;
@@ -3516,21 +3533,34 @@ for (const prop of ['fillStyle', 'strokeStyle']) {   // и заливка, и о
 }
 // кэш готовых спрайтов: тот же герой в той же позе перерисовывается не чаще 20 раз в секунду (магазин, колёса, меню),
 // между кадрами берётся готовая картинка; у каждого объекта героя — свой номер (копии с другими цветами не путаются)
-const SPR_FPS = 20, SPR_MAX = 280, SPR_CACHE = new Map(), SPR_IDS = new WeakMap();
+// кэш кадров героя. LRU: часто нужные кадры (19 соперников по кругу, герои в витрине) не вытесняются
+// неповторяющимися кадрами своего героя. Ключ — число, без склейки строк на каждый вызов
+const SPR_FPS = 20, SPR_MAX = 640, SPR_CACHE = new Map(), SPR_POSE = new Map();
+let SPR_IDS = new WeakMap();
 let sprN = 0;
-function heroSprite(sk, pose, t, blink) {
-  let id = SPR_IDS.get(sk); if (!id) SPR_IDS.set(sk, id = ++sprN);
+// готовый кадр героя (холст SPR_W×SPR_H, как hcv). Если кадр уже был — без перерисовки
+function heroSpriteGet(sk, pose, t, blink) {
+  let id = SPR_IDS.get(sk);
+  if (!id) { if (sprN >= 8000) { sprN = 0; SPR_IDS = new WeakMap(); SPR_CACHE.clear(); } SPR_IDS.set(sk, id = ++sprN); }   // номера героев влезают в ключ; кончились — начинаем заново
+  let pi = SPR_POSE.get(pose); if (pi === undefined) SPR_POSE.set(pose, pi = SPR_POSE.size);
   const fps = state === 'play' ? 30 : SPR_FPS, tq = Math.floor(t * fps),   // в игре героев на экране мало — анимация плавнее (30 кадров/с)
-        key = id + '|' + pose + '|' + (blink ? 1 : 0) + '|' + fps + ':' + tq;
+        key = (((tq * 2 + (fps === 30 ? 1 : 0)) * 2 + (blink ? 1 : 0)) * 64 + (pi & 63)) * 8192 + id;
   let c = SPR_CACHE.get(key);
+  if (c) { SPR_CACHE.delete(key); SPR_CACHE.set(key, c); return c; }   // LRU: свежий — в конец
   hctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (c) { hctx.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(hctx, c, 0, 0); hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y); return; }
   hueNow = sk.hue || 0;
   try { heroSprite0(sk, pose, tq / fps, blink); } finally { hueNow = 0; }
   if (SPR_CACHE.size >= SPR_MAX) { const old = SPR_CACHE.keys().next().value; c = SPR_CACHE.get(old); SPR_CACHE.delete(old); }
   else { c = document.createElement('canvas'); c.width = SPR_W; c.height = SPR_H; }
-  const g = c.getContext('2d'); g.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(g, hcv, 0, 0);
+  const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(g, hcv, 0, 0);
   SPR_CACHE.set(key, c);
+  hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y);
+  return c;
+}
+// старый путь: кадр кладётся в hcv (его дорисовывают и красят другие места)
+function heroSprite(sk, pose, t, blink) {
+  const c = heroSpriteGet(sk, pose, t, blink);
+  hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(hctx, c, 0, 0); hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y);
 }
 function heroSprite0(sk, pose, t, blink) {
   if (!sk.gummy) return heroSpriteRaw(sk, pose, t, blink);
@@ -6532,7 +6562,7 @@ function mpRender() {
   if (mp.role && mp.tx) mpStatus((mp.role === 'host' ? tr('Код комнаты: ', 'Room code: ') + mp.code + '\n' : '') + tr('Игроки: ', 'Players: ') + [mp.nick].concat(mpIds().map(i => mp.pl[i].nick)).join(', '));
 }
 function mpSend(d) { d.i = mp.id; if (mp.tx) mp.tx(d); }
-function mpHi() { mp.ss = skinId; mp.sn = mp.nick; mpSend({ t: 'hi', n: mp.nick || 'PLAYER', s: skinId, rd: mp.active ? 1 : 0 }); }
+function mpHi() { mp.ss = skinId; mp.sn = mp.nick; mpSend({ t: 'hi', n: mp.nick || 'PLAYER', s: skinId, rd: mp.active ? 1 : 0, b: 1 }); }   // b: 1 — понимаю пачки
 function mpLeave() { try { mpSend({ t: 'bye' }); } catch (e) {} try { mp.close && mp.close(); } catch (e) {} mp.tx = mp.close = null; mp.conns = []; mp.pl = {}; mp.link = mp.active = mp.ready = false; mp.role = ''; mp.rng = null; mpStatus(''); mpRender(); }
 function mpGoStart() { const seed = Math.floor(Math.random() * 2147483647); mpSend({ t: 'go', seed, d: 2500 }); mpBegin(seed, 2500, 0); }
 function mpCheck() { const ids = mpIds(); if (mp.role === 'host' && mp.link && mp.ready && !mp.active && ids.length && ids.every(i => mp.pl[i].ready)) mpGoStart(); }
@@ -6541,6 +6571,7 @@ function mpAfter() { if (!mp.active) return; mp.active = false; mp.rng = null; m
 function mpDrop(id) { const q = mp.pl[id]; if (!q) return; if (mp.tr && mp.tr.with === id) trEnd(tr('Партнёр вышел, обмен отменён', 'Partner left, trade cancelled')); if (mp.active) q.gone = 1; else delete mp.pl[id]; mp.link = mpIds().length > 0; mpNote(q.nick + tr(' вышел', ' left')); mpRender(); mpCheck(); }
 function mpGot(m) {
   if (!m || typeof m !== 'object') return;
+  if (m.t === 'B' && Array.isArray(m.l)) { for (let i = 0; i < m.l.length && i < 64; i++) mpGot(m.l[i]); return; }   // пачка от хоста
   const id = String(m.i || '').slice(0, 8); if (!id || id === mp.id) return;
   let q = mp.pl[id];
   if (m.t === 'hi') {
@@ -6593,11 +6624,19 @@ function mpStart(role, code) {
   if (fbOn() && window.RTCPeerConnection) mpPeer(FirePeer, same, viaPeerJs); else viaPeerJs();   // с Firebase — свой поиск соперников, без него — PeerJS
 }
 function mpWait() { mpStatus(mp.role === 'host' ? tr('Код комнаты: ', 'Room code: ') + mp.code + tr('\nСкажи его друзьям (до 5) и жди…', '\nTell your friends (up to 5) and wait…') : tr('Ищу комнату ', 'Looking for room ') + mp.code + '…'); }
+// пересылка хостом: частые снимки (движение, боты, ниндзя, зомби) копятся и уходят одной пачкой; события — сразу.
+// Пачки понимают только новые версии игры (в «hi» у них b: 1) — старым всё уходит по-прежнему по одному
+const MP_BATCH = { s: 1, bs: 1, nb: 1, zm: 1 };
+function mpRelay(o, d) {
+  if (o.__b && MP_BATCH[d.t]) { (o.__q || (o.__q = [])).push(d); return; }
+  try { o.send(d); } catch (e) {}
+}
+setInterval(() => { if (mp.role !== 'host' || !mp.conns || !mp.conns.length) return; for (const o of mp.conns) if (o.__q && o.__q.length) { const l = o.__q; o.__q = []; if (o.open) try { o.send(l.length === 1 ? l[0] : { t: 'B', l }); } catch (e) {} } }, 33);
 function mpPeer(P, same, next) {
   const id = 'wallplay-' + mp.code.toLowerCase(); let opened = false, peer;
   const fall = () => { if (opened || !same()) return; opened = true; try { peer.destroy(); } catch (e) {} (next || (() => mpRoom(same)))(); };
   const hook = c => {
-    c.on('data', d => { if (!d || typeof d !== 'object') return; if (mp.role === 'host') { c.__i = d.i; mpGot(d); for (const o of mp.conns) if (o !== c && o.open) try { o.send(d); } catch (e) {} } else mpGot(d); });
+    c.on('data', d => { if (!d || typeof d !== 'object') return; if (mp.role === 'host') { c.__i = d.i; if (d.t === 'hi') c.__b = d.b === 1; mpGot(d); for (const o of mp.conns) if (o !== c && o.open) mpRelay(o, d); } else mpGot(d); });
     c.on('close', () => { if (mp.role === 'host') { mp.conns = mp.conns.filter(o => o !== c); if (c.__i) { mpGot({ t: 'bye', i: c.__i }); for (const o of mp.conns) try { o.send({ t: 'bye', i: c.__i }); } catch (e) {} } } else if (same()) { mpLeave(); mpNote(tr('Хост закрыл комнату', 'Host closed the room')); } });
     if (mp.role === 'host') mp.conns.push(c); else mp.tx = d => { if (c.open) try { c.send(d); } catch (e) {} };
     mpHi();
@@ -6637,11 +6676,20 @@ setInterval(() => { if (mp.tx && (!mp.link || skinId !== mp.ss || mp.nick !== mp
 // ---- синхронизация: точные снимки движения, способности, союзники, враги ----
 function mpSendState(force) {
   if (!mp.active || !mp.tx || !p) return;
-  const now = Date.now(); if (!force && now - (mp.lastS || 0) < 30) return; mp.lastS = now;
+  const now = Date.now(); if (!force && now - (mp.lastS || 0) < 30) return;
   const fx = (p.shield > 0 ? 1 : 0) | (p.jet > 0 ? 2 : 0) | (p.rocket > 0 ? 4 : 0) | (p.ghost > 0 ? 8 : 0) | (p.star > 0 ? 16 : 0) | (p.wings > 0 ? 32 : 0) | (p.magnet > 0 ? 64 : 0) | (p.freeze > 0 ? 128 : 0) | (p.mega > 0 ? 256 : 0) | (p.stunT > 0 ? 512 : 0) | (p.throwT > 0 ? 1024 : 0) | (ZB.sh > 0 ? 4096 : 0) | (ZB.rage > 0 ? 8192 : 0);
-  mpSend({ t: 's', ts: now, x: +p.x.toFixed(1), y: +p.y.toFixed(1), vx: Math.round(p.vx || 0), vy: Math.round(p.vy || 0), f: p.face, st: p.state, sp: p.spin > 0 ? 1 : 0, rot: +(p.rot || 0).toFixed(2), u: p.vy < 0 ? 1 : 0, d: state === 'play' ? 0 : 1, h: heightM(), s: skinId, pi: p.pole && p.pole.id !== undefined ? p.pole.id : -1, fx, z: ZB.on ? 1 : 0, ai: (() => { const d = aim && aim.moved ? pieDir() : null; return d ? [Math.round(d.dx * 100), Math.round(d.dy * 100), Math.round(d.k * 100)] : 0; })(),
-    al: ally ? [Math.round(ally.x), Math.round(ally.y), ally.st, ally.face, +(ally.rot || 0).toFixed(2), ally.kick ? (ally.kick.kind === 'spin' ? 2 : 1) : 0, ALLIES.indexOf(ally.def)] : 0,
-    cl: clone ? [Math.round(clone.x), Math.round(clone.y), clone.st, clone.face, +(clone.rot || 0).toFixed(2)] : 0 });
+  const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100;
+  const m = { t: 's', ts: now, x: r1(p.x), y: r1(p.y), vx: Math.round(p.vx || 0), vy: Math.round(p.vy || 0), f: p.face, st: p.state, sp: p.spin > 0 ? 1 : 0, rot: r2(p.rot || 0), u: p.vy < 0 ? 1 : 0, d: state === 'play' ? 0 : 1, h: heightM(), s: skinId, pi: p.pole && p.pole.id !== undefined ? p.pole.id : -1, fx, z: ZB.on ? 1 : 0, ai: (() => { const d = aim && aim.moved ? pieDir() : null; return d ? [Math.round(d.dx * 100), Math.round(d.dy * 100), Math.round(d.k * 100)] : 0; })(),
+    al: ally ? [Math.round(ally.x), Math.round(ally.y), ally.st, ally.face, r2(ally.rot || 0), ally.kick ? (ally.kick.kind === 'spin' ? 2 : 1) : 0, ALLIES.indexOf(ally.def)] : 0,
+    cl: clone ? [Math.round(clone.x), Math.round(clone.y), clone.st, clone.face, r2(clone.rot || 0)] : 0 };
+  // меньше трафика: скин — раз в секунду или когда сменился; пустые поля не шлём (у получателя их отсутствие = 0);
+  // стоишь на месте — не шлём одно и то же 25 раз в секунду, а раз в 250 мс (чтобы видели, что ты на связи)
+  if (m.s === mp.sentS && now - (mp.sentST || 0) < 1000) delete m.s; else { mp.sentS = m.s; mp.sentST = now; }
+  for (const f of ['al', 'cl', 'ai', 'z']) if (!m[f]) delete m[f];
+  const sig = m.x + ',' + m.y + ',' + m.st + ',' + m.f + ',' + m.sp + ',' + m.rot + ',' + m.d + ',' + m.fx + ',' + m.h + ',' + (m.ai || '') + ',' + (m.al || '') + ',' + (m.cl || '') + ',' + m.pi;
+  if (!force && sig === mp.sentSig && now - (mp.lastS || 0) < 250) return;
+  mp.sentSig = sig; mp.lastS = now;
+  mpSend(m);
 }
 setInterval(() => mpSendState(false), 40);
 setInterval(() => { if (mp.active && mp.tx && ZB.on && (ZB.ms.length || ZB.sent)) { mpSend({ t: 'zm', l: ZB.ms.map(z => [z.i, Math.round(z.x), Math.round(z.y), z.face, z.hp, ZB.rage > 0 ? 1 : 0]) }); ZB.sent = ZB.ms.length; } }, 50);
@@ -6658,16 +6706,16 @@ function mpSample(q, m) {
   const T = ts + q.off, b = q.buf || (q.buf = []), l = b[b.length - 1];
   if (l && T <= l.T) return;
   if (l && Math.hypot(m.x - l.x, m.y - l.y) > 220 && T - l.T < 200) b.length = 0;   // телепорт — без скольжения
-  b.push({ T, x: m.x, y: m.y, vx: m.vx || 0, vy: m.vy || 0 }); if (b.length > 40) b.shift();
+  const e = b.length >= 40 ? b.shift() : {}; e.T = T; e.x = m.x; e.y = m.y; e.vx = m.vx || 0; e.vy = m.vy || 0; b.push(e);   // старая запись идёт на новую — без мусора
 }
 function mpGhostPos(q) {
   const b = q.buf; if (!b || !b.length) return null;
-  const rt = Date.now() - 100, l = b[b.length - 1];
-  if (rt <= b[0].T) return b[0];
-  if (rt >= l.T) { const dt = Math.min(0.15, (rt - l.T) / 1000); return { x: l.x + l.vx * dt, y: l.y + l.vy * dt }; }
+  const rt = Date.now() - 100, l = b[b.length - 1], o = q.gpos || (q.gpos = { x: 0, y: 0 });
+  if (rt <= b[0].T) { o.x = b[0].x; o.y = b[0].y; return o; }
+  if (rt >= l.T) { const dt = Math.min(0.15, (rt - l.T) / 1000); o.x = l.x + l.vx * dt; o.y = l.y + l.vy * dt; return o; }
   let i = b.length - 1; while (i > 0 && b[i - 1].T > rt) i--;
   const a = b[i - 1], c = b[i], k = (rt - a.T) / (c.T - a.T);
-  return { x: a.x + (c.x - a.x) * k, y: a.y + (c.y - a.y) * k };
+  o.x = a.x + (c.x - a.x) * k; o.y = a.y + (c.y - a.y) * k; return o;
 }
 function nearTgt(x, y) {
   let b = state === 'play' && !ZB.on ? { x: p.x, y: p.y } : null, bd = b ? Math.hypot(p.x - x, p.y - y) : 1e9;
@@ -7070,6 +7118,17 @@ const emoWheel = () => EMO_BASE.map(e => e.id).concat(emSel);   // в раунд
 // пиксельная мордочка хомяка 18×14 клеток; c — размер клетки в единицах игры
 const HF_BASE = ['..OO..........OO..', '.OPPO........OPPO.', '.OPPOOOOOOOOOOPPO.', '..OHHHHHHHHHHHHO..', '.OHHHHHHHHHHHHHHO.', 'OHHBBBBBBBBBBBBHHO', 'OBBBBBBBBBBBBBBBBO', 'OBBBBBBBBBBBBBBBBO', 'OBBCCCCBBBBCCCCBBO', 'OBCCCCCCCCCCCCCCBO', 'OBCCCCCCCCCCCCCCBO', '.OCCCCCCCCCCCCCCO.', '..OCCCCCCCCCCCCO..', '...OOOOOOOOOOOO...'];
 const HF_COL = { O: '#2a1408', P: '#ff9ab0', H: '#ffc070', B: '#f5a03a', C: '#fff0d8' }, HF_MAD = { O: '#2a0808', P: '#ff7a7a', H: '#ff8a5a', B: '#e8502a', C: '#ffd0b8' };
+const HF_PIC = new Map();
+function hamBase(mad, c, F, col) {
+  const draw = () => HF_BASE.forEach((row, y) => { let x = 0; while (x < 18) { const ch = row[x]; if (ch === '.') { x++; continue; } let e = x + 1; while (e < 18 && row[e] === ch) e++; F(x, y, e - x, 1, col[ch]); x = e; } });
+  if (perfNoCache || !(ctx.canvas === cv || ctx.canvas.__hfOk)) { draw(); return; }
+  const key = (mad ? 1 : 0) + '|' + c; let pic = HF_PIC.get(key);
+  if (!pic || pic.__gen !== GFX_GEN) {
+    pic = gfxPic(null, -9 * c, -7 * c, 18 * c, 14 * c, () => { const F2 = (x, y, w, h, k) => { ctx.fillStyle = k; ctx.fillRect((x - 9) * c, (y - 7) * c, w * c, h * c); }; HF_BASE.forEach((row, y) => { let x = 0; while (x < 18) { const ch = row[x]; if (ch === '.') { x++; continue; } let e = x + 1; while (e < 18 && row[e] === ch) e++; F2(x, y, e - x, 1, col[ch]); x = e; } }); });
+    if (HF_PIC.size > 40) HF_PIC.clear(); HF_PIC.set(key, pic);
+  }
+  drawRaw.call(ctx, pic, -9 * c, -7 * c, 18 * c, 14 * c);
+}
 function hamFace(id, cx, cy, c, t) {
   const O = '#2a1408', mad = id === 'hmad', col = mad ? HF_MAD : HF_COL;
   let ox = 0, oy = 0, sx = 1, sy = 1, rot = 0;
@@ -7080,7 +7139,7 @@ function hamFace(id, cx, cy, c, t) {
   const F = (x, y, w, h, k) => { ctx.fillStyle = k; ctx.fillRect((x - 9) * c, (y - 7) * c, w * c, h * c); };
   if (mad) { ctx.globalAlpha = 0.35 + Math.sin(t * 14) * 0.15; ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(0, 0, 13 * c, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
   if (id === 'hhappy') { ctx.globalAlpha = 0.3; ctx.fillStyle = '#fff6a0'; ctx.beginPath(); ctx.arc(0, 0, 12 * c, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
-  HF_BASE.forEach((row, y) => { let x = 0; while (x < 18) { const ch = row[x]; if (ch === '.') { x++; continue; } let e = x + 1; while (e < 18 && row[e] === ch) e++; F(x, y, e - x, 1, col[ch]); x = e; } });
+  hamBase(mad, c, F, col);
   F(5, 3, 3, 1, '#ffffff'); F(4, 4, 1, 1, '#ffffff');   // блик на макушке
   if (id === 'hhappy') {
     for (const [x0, d] of [[4, 1], [11, 1]]) { F(x0, 7, 1, 1, O); F(x0 + 1, 6, 1, 1, O); F(x0 + 2, 7, 1, 1, O); }   // глаза-дуги ^ ^
@@ -7979,7 +8038,7 @@ function spawnEnemy(type, cur, pl, d, look) {
   }
 }
 
-function generate() { if (!mp.rng) return generate0(); const o = Math.random; Math.random = mp.rng; const n0 = ents.length; try { generate0(); for (const q of poles) { if (q.t0 === undefined) q.t0 = q.t; if (q.id === undefined) q.id = mp.pid++; } } finally { Math.random = o; } for (let i = n0; i < ents.length; i++) if (ents[i].id === undefined) ents[i].id = 'g' + (mp.eid++);
+function generate() { if (!mp.rng) return generate0(); const o = Math.random; Math.random = mp.rng; const n0 = ents.length; try { generate0(); const st = mp.genP === poles && mp.genN <= poles.length && mp.genN > 0 && poles[mp.genN - 1] === mp.genL ? mp.genN : 0; for (let i = st; i < poles.length; i++) { const q = poles[i]; if (q.t0 === undefined) q.t0 = q.t; if (q.id === undefined) q.id = mp.pid++; } mp.genP = poles; mp.genN = poles.length; mp.genL = poles[poles.length - 1]; } finally { Math.random = o; } for (let i = n0; i < ents.length; i++) if (ents[i].id === undefined) ents[i].id = 'g' + (mp.eid++);
   for (let i = ents.length - 1; i >= n0; i--) { const t = ents[i].type; if (t === 'coin' || t === 'gem' || t === 'ruby') ents.splice(i, 1); } }   // в играх по сети монет, кристаллов и рубинов на карте нет
 function generate0() {
   while (path.y0 > camY - 900) addPathPole();
@@ -8812,11 +8871,15 @@ function drawDyn(z, a, front) {
 }
 
 // ---------- Частицы ----------
+const PART_POOL = [];
+let perfFx = 1;   // доля необязательных частиц: 1 — все; на слабом телефоне под нагрузкой адаптивно снижается (не ниже 0,5)
 function burst(x, y, n, color, spd = 150, life = 0.5, size = 4, grav = 600, shape) {
   if (!SET.fx) n = Math.ceil(n / 3);
+  else if (perfFx < 1) n = Math.max(1, Math.round(n * perfFx));   // слабый телефон под нагрузкой — чуть меньше искр
   for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, s = rand(spd * 0.3, spd);
-    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life, max: life, color, size, grav, shape });
+    const a = Math.random() * Math.PI * 2, s = rand(spd * 0.3, spd), q = PART_POOL.pop() || { __pool: 1 };
+    q.x = x; q.y = y; q.vx = Math.cos(a) * s; q.vy = Math.sin(a) * s; q.life = life; q.max = life; q.color = color; q.size = size; q.grav = grav; q.shape = shape;
+    parts.push(q);
   }
 }
 function dust(x, y, dir) {
@@ -9687,9 +9750,12 @@ function onScreen(pl) { return pl.y1 > camY && pl.y0 < camY + H; }
 function updatePoles(dt) {
   for (let i = poles.length - 1; i >= 0; i--) {
     const pl = poles[i];
+    if (pl.__pc && (pl.y1 < camY - 1400 || pl.y0 > camY + H + 1400)) pl.__pc = null;   // картинка далёкого столба больше не нужна — память освобождается
+    // в сетевом раунде столбы не удаляются (их сотни), а время у них считается от часов матча: далёкий столб, у которого
+    // ничего не идёт по таймеру, обновлять незачем — время посчитается, когда он подъедет к экрану
+    if (mp.rng && pl.t0 !== undefined && (pl.y1 < camY - 700 || pl.y0 > camY + H + 700) && pl.kind !== 'rotor' && !(pl.crT >= 0) && !(pl.wob > 0)) continue;
     if (mp.rng && pl.t0 !== undefined) pl.t = pl.t0 + mp.clock; else pl.t += dt;
-    if (pl.wob > 0) pl.wob = Math.max(0, pl.wob - dt * 2);
-    if (mp.rng && (pl.kind === 'move' || pl.kind === 'movev' || pl.kind === 'blink' || pl.kind === 'electric') && (pl.y1 < camY - 700 || pl.y0 > camY + H + 700)) continue;
+    if (pl.wob > 0) pl.wob = Math.max(0, pl.wob - dt * 2);;
     if (pl.kind === 'move') {
       const nx = pl.baseX + Math.sin(pl.t * pl.spd) * pl.amp, dx = nx - pl.cx;
       pl.cx = nx; pl.x0 = nx - 7; pl.x1 = nx + 7;
@@ -10016,15 +10082,18 @@ function spawnWeather(fx, cols) {
   leaves.push(w);
 }
 function updateParts(dt) {
-  for (let i = parts.length - 1; i >= 0; i--) {
+  let j = 0;
+  for (let i = 0; i < parts.length; i++) {
     const q = parts[i];
     q.life -= dt;
-    if (q.life <= 0) { parts.splice(i, 1); continue; }
+    if (q.life <= 0) { if (q.__pool && PART_POOL.length < 600) PART_POOL.push(q); continue; }   // порядок сохраняется, мёртвые — в пул
     q.vy += q.grav * dt; q.x += q.vx * dt; q.y += q.vy * dt; if (q.vr) q.rot += q.vr * dt;
+    parts[j++] = q;
   }
+  parts.length = j;
   const z = ZONES[zoneIdxAt(state === 'play' || state === 'dead' || state === 'over' ? heightM() : 0)];
   const rate = z.fx === 'rain' ? 30 : z.fx === 'sand' ? 14 : z.fx === 'star' ? 6 : z.fx === 'bubble' ? 5 : z.fx === 'firefly' ? 4 : 3;
-  if (SET.fx && Math.random() < dt * rate) spawnWeather(z.fx, z.leaf);
+  if (SET.fx && Math.random() < dt * rate * perfFx) spawnWeather(z.fx, z.leaf);
   for (let i = leaves.length - 1; i >= 0; i--) {
     const l = leaves[i];
     l.t += dt; l.life -= dt;
@@ -10213,7 +10282,7 @@ function drawPoleBody(pl) {
   const x0 = pl.x0;
   if (pl.kind === 'portal' || pl.kind === 'exit') { ctx.globalAlpha = 0.25 + Math.sin(pl.t * 4) * 0.1; pell(ctx, cx, (pl.y0 + pl.y1) / 2, 22, h / 2 + 10, '#c080ff'); ctx.globalAlpha = 1; }
   if (pl.kind === 'electric' && pl.zap) { ctx.globalAlpha = 0.3; pell(ctx, cx, (pl.y0 + pl.y1) / 2, 20, h / 2 + 8, '#fff6a0'); ctx.globalAlpha = 1; }
-  poleBodyInner(pl, base, dk, lt, h, cx, x0);
+  poleBodyCached(pl, base, dk, lt, h, cx, x0);
   ctx.restore();
   if (pl.kind === 'rotor') {
     const tY = pl.y0 - 18, warn = pl.flipA < 0 && pl.timer < 1;
@@ -10231,6 +10300,33 @@ function poleShades(base, dk, lt) {
   const key = base + dk + lt; let s = poleShadeCache.get(key);
   if (!s) { s = { rim: mix(base, dk, 0.45), mid: mix(base, dk, 0.5), deep: mix(dk, OL, 0.35), hi: mix(base, lt, 0.55), grain: mix(base, dk, 0.72), ring: mix(base, lt, 0.3) }; poleShadeCache.set(key, s); }
   return s;
+}
+// Готовая картинка в точках экрана: fn рисует через ctx в единицах игры, (ox, oy) — левый верхний угол области.
+// Холст рисуется один раз, дальше ставится одним drawImage (раньше — сотни fillRect каждый кадр)
+let GFX_GEN = 0, perfNoCache = false;
+function gfxPic(c, ox, oy, w, h, fn) {
+  const K = cv.width / W;
+  const cw = Math.max(1, Math.ceil(w * K)), ch = Math.max(1, Math.ceil(h * K));
+  if (!c) c = document.createElement('canvas');
+  if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; }
+  const g = c.getContext('2d'), old = ctx;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch); g.setTransform(K, 0, 0, K, -ox * K, -oy * K); g.imageSmoothingEnabled = false; g.globalAlpha = 1;
+  ctx = g; try { fn(); } finally { ctx = old; }
+  c.__gen = GFX_GEN;
+  return c;
+}
+// неподвижный столб — картинкой; анимированные (лифт, мёд, портал, ток, пружина в движении) рисуются как раньше
+const POLE_STATIC = { log: 1, thorn: 1, crumble: 1, ice: 1, rotor: 1, blink: 1, electric: 1, spring: 1, move: 1, movev: 1 };
+function poleBodyCached(pl, base, dk, lt, h, cx, x0) {
+  if (ctx.canvas !== cv || !POLE_STATIC[pl.kind] || (pl.kind === 'electric' && pl.zap) || (pl.kind === 'spring' && pl.wob > 0) || perfNoCache) return poleBodyInner(pl, base, dk, lt, h, cx, x0);
+  // ключ — всё, от чего зависит вид столба; положение не входит: двигающийся столб едет готовой картинкой
+  const key = base + dk + lt + '|' + h + '|' + pl.thorn + '|' + pl.zone + '|' + pl.kind;
+  if (pl.__pk !== key || !pl.__pc || pl.__pc.__gen !== GFX_GEN) {
+    const X0 = even(x0) - 18, Y0 = even(pl.y0) - 10;
+    pl.__pc = gfxPic(pl.__pc, X0, Y0, 52, h + 22, () => poleBodyInner(pl, base, dk, lt, h, cx, x0));
+    pl.__pk = key; pl.__px = X0 - x0; pl.__py = Y0 - pl.y0;
+  }
+  drawRaw.call(ctx, pl.__pc, x0 + pl.__px, pl.y0 + pl.__py, 52, h + 22);
 }
 function poleBodyInner(pl, base, dk, lt, h, cx, x0) {
   const S = poleShades(base, dk, lt), z = ZONES[pl.zone] || ZONES[0];
@@ -10893,7 +10989,16 @@ function drawNewEnt(e, x, y) {
   }
 }
 
+const BIRD_PIC = new Map();
 function drawBird(b) {
+  if (ctx.canvas !== cv || perfNoCache) return drawBird0(b);
+  const hop = b.st === 'perch' && Math.sin(b.t * 6) > 0.85 ? 2 : 0, f = b.st === 'fly' ? (Math.sin(b.t * 30) > 0 ? 1 : 0) : 2;
+  const key = (b.dir > 0 ? 1 : 0) * 8 + hop * 2 + (f === 2 ? 0 : 4 + f);
+  let c = BIRD_PIC.get(key);
+  if (!c || c.__gen !== GFX_GEN) { c = gfxPic(null, 0, 0, 28, 26, () => drawBird0({ x: 14, y: 22, dir: b.dir, st: b.st, t: b.st === 'fly' ? (f ? 0.02 : 0.12) : (hop ? Math.asin(0.9) / 6 : 0) })); BIRD_PIC.set(key, c); }
+  drawRaw.call(ctx, c, even(b.x) - 14, even(b.y) - 22, 28, 26);
+}
+function drawBird0(b) {
   const x = b.x, y = b.y, d = b.dir;
   const hop = b.st === 'perch' && Math.sin(b.t * 6) > 0.85 ? 2 : 0;
   const by = y - 8 - hop;
@@ -15911,8 +16016,8 @@ function gfxProbeLost() {
   try { const g = GFX_PROBE.getContext('2d'); if (g.isContextLost && g.isContextLost()) return true; const d = g.getImageData(150, 150, 1, 1).data; return d[3] === 0 || d[0] !== 255; } catch (e) { return false; }
 }
 function gfxReset() {
-  for (const m of [textCache, PELL_CACHE, SPR_CACHE, WING_CACHE, EYE_WING_CACHE, farTiles, bushSets, AV_PIX, CARD_CACHE]) m.clear();
-  groundCv = null; mp.icons = {}; if (sv) sv.bg = null; ALLY_CC.key = ''; ALLY_DC.c = null; SRING_CACHE.clear();
+  for (const m of [textCache, TXT_FAST, PELL_CACHE, SPR_CACHE, WING_CACHE, EYE_WING_CACHE, farTiles, bushSets, AV_PIX, CARD_CACHE]) m.clear();
+  GFX_GEN++; BIRD_PIC.clear(); groundCv = null; mp.icons = {}; if (sv) sv.bg = null; ALLY_CC.key = ''; ALLY_DC.c = null; SRING_CACHE.clear();
   try { const g = GFX_PROBE.getContext('2d'); g.fillStyle = '#ff00ff'; g.fillRect(0, 0, 300, 300); } catch (e) {}
   const k = cv.width / (W * scale || 1); ctx.setTransform(scale * k, 0, 0, scale * k, 0, 0); ctx.imageSmoothingEnabled = false;
   perfAcc = 0; perfN = 0; perfSlow = 0; perfGrace = 3;   // перерисовка кэшей тяжёлая — не считаем это тормозами и не мылим картинку
@@ -15936,6 +16041,21 @@ function frame(now) {
     last = performance.now(); requestAnimationFrame(frame);
   }
 }
+// счётчик для проверки на телефоне: открой игру с ?perf в адресе — в углу кадры в секунду, время кадра и JS, адаптация, память
+const PERF_HUD = /[?&]perf\b/.test(location.search);
+const PFH = { n: 0, t: 0, fps: 0, js: 0, jsMax: 0, worst: 0, last: 0, acc: 0, mx: 0, wf: 0 };
+function perfHudTick(now, t0) {
+  const gap = PFH.last ? now - PFH.last : 0; PFH.last = now; PFH.n++; if (gap > PFH.wf) PFH.wf = gap;
+  if (now - PFH.t >= 1000) { PFH.fps = Math.round(PFH.n * 1000 / (now - PFH.t)); PFH.js = PFH.n ? PFH.acc / PFH.n : 0; PFH.jsMax = PFH.mx; PFH.worst = PFH.wf; PFH.n = 0; PFH.t = now; PFH.acc = 0; PFH.mx = 0; PFH.wf = 0; }
+  PFH.cur = t0;
+}
+function drawPerfHud() {
+  const d = performance.now() - PFH.cur; PFH.acc += d; if (d > PFH.mx) PFH.mx = d;
+  const mem = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) + 'MB' : '';
+  const l1 = PFH.fps + ' FPS  JS ' + PFH.js.toFixed(1) + '/' + PFH.jsMax.toFixed(0) + 'MS', l2 = 'WORST ' + Math.round(PFH.worst) + 'MS  Q' + gq + ' D' + dprLvl + ' FX' + Math.round(perfFx * 100) + ' ' + mem;
+  ctx.save(); ctx.setTransform(cv.width / W, 0, 0, cv.width / W, 0, 0); ctx.globalAlpha = 0.75; ctx.fillStyle = '#000'; ctx.fillRect(4, H - 36, 220, 30); ctx.globalAlpha = 1;
+  text(l1, 8, H - 22, 1, PFH.fps >= 55 ? '#7cf08a' : PFH.fps >= 40 ? '#ffd23a' : '#ff6a6a', 'left', null, 214); text(l2, 8, H - 10, 1, '#ffffff', 'left', null, 214); ctx.restore();
+}
 function frame0(now) {
   // экраны 90–144 Гц (в Chrome на телефоне они включены, во встроенных окнах обычно нет): рисуем не чаще ~60 раз в секунду —
   // работы меньше, телефон не греется и не сбрасывает частоту
@@ -15953,7 +16073,8 @@ function frame0(now) {
   else for (let i = 0; i < steps; i++) update(dt / steps * ts);
   if (ctx.isContextLost && ctx.isContextLost()) { last = performance.now(); requestAnimationFrame(frame); return; }   // холст потерян — ждём, пока браузер вернёт
   if (ctx.imageSmoothingEnabled !== false) gfxReset();   // холст сброшен браузером (масштаб и резкость слетели)
-  if (!screenCovered()) { try { draw(); } catch (e) { if (!frame.errN || frame.errN++ < 3) { frame.errN = frame.errN || 1; console.error(e); } } }   // ошибка рисования не останавливает игру
+  if (PERF_HUD) perfHudTick(now, t0);
+  if (!screenCovered()) { try { draw(); if (PERF_HUD) drawPerfHud(); } catch (e) { if (!frame.errN || frame.errN++ < 3) { frame.errN = frame.errN || 1; console.error(e); } } }   // ошибка рисования не останавливает игру
   if (perfGrace > 0) { perfGrace -= gap / 1000; perfAcc = 0; perfN = 0; perfSlow = 0; }
   // телефон не успевает (кадры приходят реже 45 в секунду или кадр считается долго) — разрешение холста на ступень ниже;
   // долго всё легко — обратно выше, но не раньше чем через 20 с после понижения, чтобы не качаться туда-сюда
@@ -15964,9 +16085,12 @@ function frame0(now) {
   if (perfN >= 90) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
-    if ((avg > Math.min(13, refMs * 0.8) || slow > 0.2) && dprLvl < (gq ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже
+    const heavy = avg > Math.min(13, refMs * 0.8) || slow > 0.2, easy = avg < Math.min(6, refMs * 0.4) && slow < 0.03;
+    if (heavy && dprLvl < (gq ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже
       { dprLvl++; perfLow = 0; perfDownAt = now; ch = true; }
-    else if (avg < Math.min(6, refMs * 0.4) && slow < 0.03 && dprLvl > 0 && now - perfDownAt > 20000 && ++perfLow >= 4) { dprLvl--; perfLow = 0; ch = true; }
+    else if (heavy && perfFx > 0.5) { perfFx = Math.max(0.5, perfFx - 0.25); perfDownAt = now; }   // резкость уже снижена — меньше необязательных искр и погодных частиц
+    else if (easy && perfFx < 1 && now - perfDownAt > 8000) { perfFx = Math.min(1, perfFx + 0.25); perfDownAt = now; }   // стало легко — эффекты возвращаются
+    else if (easy && dprLvl > 0 && now - perfDownAt > 20000 && ++perfLow >= 4) { dprLvl--; perfLow = 0; ch = true; }
     if (ch) { resize(); draw(); }   // сразу перерисовать: после смены размера холст пустой — без чёрной вспышки
   }
   requestAnimationFrame(frame);
@@ -16766,18 +16890,21 @@ function moOpen(title, render, keep) {
   moStack.push({ title, render });
   moShow();
 }
+// живые картинки в окнах рисуются, только пока видны (прокрученные за край — стоят и не тратят кадр)
+const MO_IO = typeof IntersectionObserver === 'function' ? new IntersectionObserver(es => { for (const e of es) e.target.__vis = e.isIntersecting; }, { rootMargin: '40px' }) : null;
+function moVis(c) { if (!MO_IO) return true; if (!c.__io) { c.__io = 1; c.__vis = true; MO_IO.observe(c); } return c.__vis !== false; }
 function moShow() {
   const top = moStack[moStack.length - 1]; if (!top) { moClose(); return; }
-  moAnim = []; moUi.innerHTML = ''; moUi.dataset.th = '';   // своё оформление окна (например, «Новости») ставит само окно
+  moAnim = []; if (MO_IO) MO_IO.disconnect(); moUi.innerHTML = ''; moUi.dataset.th = '';   // старые картинки не держим в наблюдателе — без утечки   // своё оформление окна (например, «Новости») ставит само окно
   const hd = moEl('div', 'hd'), bk = moTxt('button', 'bk', '‹'), tt = moTxt('div', 'ttl', top.title);
   bk.onclick = () => { sfx.click(); moBack(); };
   hd.append(bk, tt, moEl('div', 'sp')); moUi.appendChild(hd);
   const bd = moEl('div', 'bd'); moUi.appendChild(bd);
   moUi.style.display = 'flex'; top.render(bd, top);
-  if (!moShow.loop) { moShow.loop = true; (function loop(ts) { if (moUi.style.display !== 'flex') { moShow.loop = false; return; } for (const a of moAnim) if (a.c.isConnected) a.paint(ts / 1000); requestAnimationFrame(loop); })(performance.now()); }
+  if (!moShow.loop) { moShow.loop = true; (function loop(ts) { if (moUi.style.display !== 'flex') { moShow.loop = false; return; } for (const a of moAnim) if (a.c.isConnected && moVis(a.c)) a.paint(ts / 1000); requestAnimationFrame(loop); })(performance.now()); }
 }
 function moBack() { moStack.pop(); if (moStack.length) moShow(); else moClose(); }
-function moClose() { if (moUi) { moUi.style.display = 'none'; moUi.innerHTML = ''; } moStack = []; moAnim = []; menuAt = time; }
+function moClose() { if (MO_IO) MO_IO.disconnect(); if (moUi) { moUi.style.display = 'none'; moUi.innerHTML = ''; } moStack = []; moAnim = []; menuAt = time; }
 const moRefresh = () => { const bd = moUi && moUi.querySelector('.bd'), y = bd ? bd.scrollTop : 0; moShow(); const b2 = moUi.querySelector('.bd'); if (b2) b2.scrollTop = y; };
 // салют и всплывающее окно получения награды
 function moConfetti(host, n = 60) {
@@ -18886,16 +19013,19 @@ function arBotRespawn(b) {
   const P = AR.chain[ci]; b.burn = 0; b.zapT = 0; b.wait = 0; if (!P) { b.st = 'ground'; b.x = 60; b.y = -PH / 2; b.ci = -1; return; }
   b.ci = ci; b.face = arFace(P, ci); b.x = arHangX(P, b.face); b.y = arHangY(P, P.y0 + (P.y1 - P.y0) * 0.35); b.st = 'wall'; b.w = 0.4; b.t = 0; b.rot = 0;
 }
-function arBotSample(b) {
-  return { x: b.x, y: b.y, vx: b.vx, vy: b.vy, f: b.face, st: b.st === 'air' || b.st === 'fall' || b.st === 'dead' ? 'air' : b.st, sp: b.sp, rot: b.rot, u: b.vy < 0 ? 1 : 0, d: b.st === 'dead' || b.st === 'fall' ? 1 : 0, h: b.h | 0, s: mp.pl[b.id] ? mp.pl[b.id].skin : 'hamster', fx: AR.mode === 'king' && AR.king === b.id && AR.sh > 0 ? 1 : 0 };
+function arBotSample(b, o) {
+  o = o && o.__bot ? o : { __bot: 1 };
+  o.x = b.x; o.y = b.y; o.vx = b.vx; o.vy = b.vy; o.f = b.face; o.st = b.st === 'air' || b.st === 'fall' || b.st === 'dead' ? 'air' : b.st; o.sp = b.sp; o.rot = b.rot; o.u = b.vy < 0 ? 1 : 0; o.d = b.st === 'dead' || b.st === 'fall' ? 1 : 0; o.h = b.h | 0; o.s = mp.pl[b.id] ? mp.pl[b.id].skin : 'hamster'; o.fx = AR.mode === 'king' && AR.king === b.id && AR.sh > 0 ? 1 : 0;
+  return o;
 }
+const BOT_SMP = { ts: 0, x: 0, y: 0, vx: 0, vy: 0 };
 function arBotsTick(dt) {
   const now = Date.now();
   for (const id in AR.bots) {
     const b = AR.bots[id]; arBotTick(b, dt);
     if (b.st !== 'dead') b.h = Math.max(b.h, Math.floor((-PH / 2 - b.y) / PX_PER_M));
     const q = mp.pl[id]; if (!q) continue;
-    q.r = arBotSample(b); mpSample(q, { ts: now, x: b.x, y: b.y, vx: b.vx, vy: b.vy });
+    q.r = arBotSample(b, q.r); BOT_SMP.ts = now; BOT_SMP.x = b.x; BOT_SMP.y = b.y; BOT_SMP.vx = b.vx; BOT_SMP.vy = b.vy; mpSample(q, BOT_SMP);
     if (b.st === 'dead' && q.buf) q.buf.length = 0;
     if (AR.mode === 'race' && !b.fin && b.y <= AR_FIN_Y) { b.fin = 1; arFinish(id, mp.clock); }
     if ((mp.role === 'host' || !mp.tx) && (!q.em || time - q.em.t0 > 8) && Math.random() < dt * (b.st === 'dead' || b.fin ? 0.25 : 0.02)) {
@@ -18905,7 +19035,7 @@ function arBotsTick(dt) {
   }
   if (mp.tx && mp.role === 'host' && now - AR.lastBs > 50) {   // хост рассылает ботов остальным одним сообщением
     AR.lastBs = now;
-    mpSend({ t: 'bs', l: Object.values(AR.bots).map(b => { const r = arBotSample(b); return [b.id, Math.round(r.x), Math.round(r.y), Math.round(r.vx), Math.round(r.vy), r.f, r.st === 'wall' ? 1 : r.st === 'ground' ? 2 : 0, +r.rot.toFixed(2), r.sp, r.d, r.h, r.fx]; }) });
+    mpSend({ t: 'bs', l: Object.values(AR.bots).map(b => { const r = (mp.pl[b.id] && mp.pl[b.id].r && mp.pl[b.id].r.__bot) ? mp.pl[b.id].r : arBotSample(b); return [b.id, Math.round(r.x), Math.round(r.y), Math.round(r.vx), Math.round(r.vy), r.f, r.st === 'wall' ? 1 : r.st === 'ground' ? 2 : 0, +r.rot.toFixed(2), r.sp, r.d, r.h, r.fx]; }) });
   }
 }
 
@@ -18952,10 +19082,10 @@ function arCrown(x, y, k = 1) {
 function arGhostLite(q, g, r) {
   const k = mpSkin(q.skin), pose = r.d ? 'fall' : r.sp ? 'tuck' : r.st === 'wall' ? 'cling' : r.st === 'ground' ? 'idle' : 'jump';
   const ph = (q.ph = q.ph || Math.random() * 3);
-  heroSprite(k, pose, (Math.floor((time + ph) * 5) / 5) % 1.2, false);   // 6 кадров по кругу — после первой секунды всё берётся из кэша
+  const spr = heroSpriteGet(k, pose, (Math.floor((time + ph) * 5) / 5) % 1.2, false);   // 6 кадров по кругу — после первой секунды всё берётся из кэша
   ctx.save(); ctx.translate(even(g.x), even(g.y)); if (r.rot) ctx.rotate(r.rot); ctx.scale(r.f || 1, 1);
   if (r.d) ctx.globalAlpha = 0.55;
-  ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore(); ctx.globalAlpha = 1;
+  ctx.drawImage(spr, -32, -52, 64, 80); ctx.restore(); ctx.globalAlpha = 1;
   if ((r.fx | 0) & 1) { ctx.globalAlpha = 0.25; pell(ctx, g.x, g.y, 26, 30, '#9be7ff'); ctx.globalAlpha = 1; }
 }
 // поверх других игроков: корона, щит, свой ник
@@ -19408,6 +19538,7 @@ function arTopTimer(sec, sub) {
   text(arClock(sec), x + w / 2, y + 20, 2, '#ffffff', 'center', OL);
   if (sub) text(sub, x + w / 2, y + 40, 1, '#ffe680', 'center', OL);
 }
+const AR_HEADS = new Map();
 function arRaceBar() {   // полоска справа: высота каждого игрока — его голова
   const X = W - 20, Y0 = 92, Y1 = H - 120, L = Y1 - Y0;
   ctx.fillStyle = OL; ctx.fillRect(X - 6, Y0 - 6, 12, L + 12); ctx.fillStyle = '#2a1a4a'; ctx.fillRect(X - 3, Y0, 6, L);
@@ -19419,9 +19550,10 @@ function arRaceBar() {   // полоска справа: высота каждо
   for (const e of ppl) {
     let y = Y1 - L * e.h / AR_FIN_M; if (Math.abs(y - lastY) < 12 && !e.me) side = 1 - side; else side = 0; lastY = y;
     const hx = X - 26 - side * 22, s = e.me ? 22 : 18;
-    ctx.fillStyle = e.me ? '#ffd23a' : e.fin ? '#3ce06a' : OL; ctx.fillRect(hx - s / 2 - 2, y - s / 2 - 2, s + 4, s + 4);
-    ctx.fillStyle = '#2a1a4a'; ctx.fillRect(hx - s / 2, y - s / 2, s, s);
-    ctx.drawImage(mpIcon(e.skin), 5, 4, 22, 20, hx - s / 2, y - s / 2, s, s * 20 / 22);
+    const bc = e.me ? '#ffd23a' : e.fin ? '#3ce06a' : OL, hk = e.skin + '|' + bc + '|' + s;   // голова в рамке — готовой картинкой
+    let hc = AR_HEADS.get(hk);
+    if (!hc || hc.__gen !== GFX_GEN) { hc = gfxPic(null, 0, 0, s + 4, s + 4, () => { ctx.fillStyle = bc; ctx.fillRect(0, 0, s + 4, s + 4); ctx.fillStyle = '#2a1a4a'; ctx.fillRect(2, 2, s, s); ctx.drawImage(mpIcon(e.skin), 5, 4, 22, 20, 2, 2, s, s * 20 / 22); }); if (AR_HEADS.size > 120) AR_HEADS.clear(); AR_HEADS.set(hk, hc); }
+    drawRaw.call(ctx, hc, hx - s / 2 - 2, y - s / 2 - 2, s + 4, s + 4);
     if (e.me) { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.moveTo(hx + s / 2 + 2, y - 4); ctx.lineTo(hx + s / 2 + 8, y); ctx.lineTo(hx + s / 2 + 2, y + 4); ctx.fill(); }
   }
   const order = arOrder(), my = order.indexOf(arMe()) + 1;
