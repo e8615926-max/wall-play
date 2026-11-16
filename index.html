@@ -3551,7 +3551,7 @@ function heroSpriteGet(sk, pose, t, blink) {
   hueNow = sk.hue || 0;
   try { heroSprite0(sk, pose, tq / fps, blink); } finally { hueNow = 0; }
   if (SPR_CACHE.size >= SPR_MAX) { const old = SPR_CACHE.keys().next().value; c = SPR_CACHE.get(old); SPR_CACHE.delete(old); }
-  else { c = document.createElement('canvas'); c.width = SPR_W; c.height = SPR_H; }
+  else { c = document.createElement('canvas'); c.width = SPR_W; c.height = SPR_H; c.__spr = true; }   // __spr: drawImage сам переводит координаты «32×40» в большой холст, как у hcv
   const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(g, hcv, 0, 0);
   SPR_CACHE.set(key, c);
   hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y);
@@ -19019,6 +19019,7 @@ function arBotSample(b, o) {
   return o;
 }
 const BOT_SMP = { ts: 0, x: 0, y: 0, vx: 0, vy: 0 };
+const botEmoN = () => { let n = 0; for (const id in AR.bots) { const q = mp.pl[id]; if (q && q.em && time - q.em.t0 < EMO_DUR) n++; } return n; };
 function arBotsTick(dt) {
   const now = Date.now();
   for (const id in AR.bots) {
@@ -19028,7 +19029,7 @@ function arBotsTick(dt) {
     q.r = arBotSample(b, q.r); BOT_SMP.ts = now; BOT_SMP.x = b.x; BOT_SMP.y = b.y; BOT_SMP.vx = b.vx; BOT_SMP.vy = b.vy; mpSample(q, BOT_SMP);
     if (b.st === 'dead' && q.buf) q.buf.length = 0;
     if (AR.mode === 'race' && !b.fin && b.y <= AR_FIN_Y) { b.fin = 1; arFinish(id, mp.clock); }
-    if ((mp.role === 'host' || !mp.tx) && (!q.em || time - q.em.t0 > 8) && Math.random() < dt * (b.st === 'dead' || b.fin ? 0.25 : 0.02)) {
+    if ((mp.role === 'host' || !mp.tx) && (!q.em || time - q.em.t0 > 8) && Math.random() < dt * (b.st === 'dead' || b.fin ? 0.06 : 0.008) && botEmoN() < 3) {   // не больше трёх эмоций ботов сразу — без завала экрана
       const eid = b.fin ? 'hhappy' : b.st === 'dead' ? (Math.random() < 0.5 ? 'hcry' : 'hmad') : EMO_BASE[Math.floor(Math.random() * 3)].id;
       q.em = { id: eid, t0: time }; if (mp.tx) mpSend({ t: 'em', e: eid, b: id });
     }
