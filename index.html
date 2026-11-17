@@ -2809,7 +2809,7 @@ const GQ = [1, 2, 3];
 // частота кадров по качеству: низкое и нормальное — не чаще 60 в секунду (телефон не греется, батарея живёт дольше), высокое — с частотой экрана (90/120/144 Гц)
 const gqCap = () => gq < 2;
 let gq = (() => { try { const v = JSON.parse(localStorage.getItem('wk3_gq')); return v === 0 || v === 1 || v === 2 ? v : 1; } catch (e) { return 1; } })();
-let dprLvl = (() => { try { const v = JSON.parse(localStorage.getItem('wp_dprLvl')); return v && v.q === gq && v.l >= 0 && v.l <= 3 ? v.l : 0; } catch (e) { return 0; } })();   // подобранная резкость — с прошлого раза
+let dprLvl = (() => { try { const v = JSON.parse(localStorage.getItem('wp_dprLvl')); return v && v.q === gq && v.l >= 0 && v.l <= 4 ? v.l : 0; } catch (e) { return 0; } })();   // подобранная резкость — с прошлого раза
 function resize() {
   const ww = document.body.clientWidth || window.innerWidth, wh = document.body.clientHeight || window.innerHeight;
   scale = Math.min(ww / W, wh / H);
@@ -9542,7 +9542,8 @@ function modalClick(pt) {
 // Настройки
 const SET_KEYS = ['music', 'sfx', 'shake', 'fx', 'vibe', 'hints'].concat(DEV_HOST ? ['inf'] : []);
 const setRow = i => ({ x: 20, y: 76 + i * 33, w: W - 40, h: 28 });   // переключатели, за ними строка «Качество»
-const GQ_ROW = () => setRow(SET_KEYS.length);   // 7 строк — последняя не налезает на заголовок «язык»
+const GQ_ROW = () => setRow(SET_KEYS.length);
+const FPS_BTN = () => { const r = GQ_ROW(); return { x: r.x, y: r.y + r.h + 1, w: 100, h: 18 }; };   // переключатель счётчика кадров под строкой качества   // 7 строк — последняя не налезает на заголовок «язык»
 const langRect = i => ({ x: 20 + (i % 2) * 164, y: 360 + Math.floor(i / 2) * 32, w: 156, h: 28 });   // 11 языков — 6 рядов, ряды чуть плотнее
 const RESET_BTN = { x: 40, y: 562, w: W - 80, h: 34 };
 const PAUSE_BTNS = [{ x: 80, y: 270, w: 200, h: 44 }, { x: 80, y: 330, w: 200, h: 44 }, { x: 80, y: 390, w: 200, h: 44 }];
@@ -9594,6 +9595,7 @@ function setClick(pt) {
     if (k === 'vibe' && SET.vibe) vib(30);
     return;
   }
+  if (inRect(pt, FPS_BTN())) { PERF_HUD = !PERF_HUD; try { localStorage.setItem('wp_perfHud', PERF_HUD ? '1' : '0'); } catch (e) {} sfx.click(); return; }
   if (inRect(pt, GQ_ROW())) { const r = GQ_ROW(), x0 = r.x + r.w - 213; gq = pt.x >= x0 ? clamp(Math.floor((pt.x - x0) / 71), 0, 2) : (gq + 1) % 3; store.set('gq', gq); dprLvl = 0; perfLow = 0; perfGrace = 2; resize(); try { gfxReset(); } catch (e) {} sfx.click(); vib(10); return; }
   for (let i = 0; i < LANGS.length; i++) if (inRect(pt, langRect(i))) {
     lang = LANGS[i]; store.set('lang', lang); sfx.click(); return;
@@ -15777,7 +15779,9 @@ function drawSettings() {
     for (let i = 0; i < 3; i++) { const bx = r.x + r.w - 213 + i * 71, on = gq === i; ctx.fillStyle = OL; ctx.fillRect(bx, r.y + 2, 69, r.h - 4); ctx.fillStyle = on ? cols[i] : '#6a5446'; ctx.fillRect(bx + 2, r.y + 4, 65, r.h - 8); if (on) { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(bx + 2, r.y + 4, 65, 3); }
       text(names[i], bx + 35, r.y + 19, 1, on ? '#ffffff' : '#c8b8a8', 'center', on ? OL : null, 62); }
     const info = [tr('ЭКОНОМИЯ БАТАРЕИ - 60 К/С', 'BATTERY SAVER - 60 FPS'), tr('ЧЁТКО - 60 К/С', 'SHARP - 60 FPS'), tr('МАКС. РЕЗКОСТЬ И КАДРЫ', 'MAX SHARPNESS AND FPS')][gq];
-    text(info, r.x + r.w - 2, r.y + r.h + 11, 1, '#ffd23a', 'right', OL, r.w - 10); }
+    text(info, r.x + r.w - 2, r.y + r.h + 11, 1, '#ffd23a', 'right', OL, r.w - 110);
+    const fb = FPS_BTN(); ctx.fillStyle = OL; ctx.fillRect(fb.x, fb.y, fb.w, fb.h); ctx.fillStyle = PERF_HUD ? '#3ce06a' : '#a0503a'; ctx.fillRect(fb.x + 2, fb.y + 2, fb.w - 4, fb.h - 4);
+    text(tr('СЧЁТЧИК FPS: ', 'FPS METER: ') + (PERF_HUD ? T('on') : T('off')), fb.x + fb.w / 2, fb.y + 13, 1, '#ffffff', 'center', OL, fb.w - 6); }
   text(T('language'), W / 2, 352, 2, '#ffd23a');
   LANGS.forEach((code, i) => {
     const r = langRect(i), on = code === lang;
@@ -16063,7 +16067,7 @@ function frame(now) {
   }
 }
 // счётчик для проверки на телефоне: открой игру с ?perf в адресе — в углу кадры в секунду, время кадра и JS, адаптация, память
-const PERF_HUD = /[?&]perf\b/.test(location.search);
+let PERF_HUD = /[?&]perf\b/.test(location.search) || (() => { try { return localStorage.getItem('wp_perfHud') === '1'; } catch (e) { return false; } })();
 const PFH = { n: 0, t: 0, fps: 0, js: 0, jsMax: 0, worst: 0, last: 0, acc: 0, mx: 0, wf: 0 };
 function perfHudTick(now, t0) {
   const gap = PFH.last ? now - PFH.last : 0; PFH.last = now; PFH.n++; if (gap > PFH.wf) PFH.wf = gap;
@@ -16108,7 +16112,7 @@ function frame0(now) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
     const heavy = avg > Math.min(13, refMs * 0.8) || slow > 0.2, easy = avg < Math.min(6, refMs * 0.4) && slow < 0.03;
-    if (heavy && dprLvl < (gq === 1 ? 3 : gq === 2 ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже (на «нормальном» — до 1,25×: телефон упирается в число точек)
+    if (heavy && dprLvl < (gq === 1 ? 4 : gq === 2 ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже (на «нормальном» — до 1,25×: телефон упирается в число точек)
       { dprLvl++; perfLow = 0; perfDownAt = now; ch = true; }
     else if (heavy && perfFx > 0.5) { perfFx = Math.max(0.5, perfFx - 0.25); perfDownAt = now; }   // резкость уже снижена — меньше необязательных искр и погодных частиц
     else if (easy && perfFx < 1 && now - perfDownAt > 8000) { perfFx = Math.min(1, perfFx + 0.25); perfDownAt = now; }   // стало легко — эффекты возвращаются
