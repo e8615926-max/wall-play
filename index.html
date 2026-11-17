@@ -9242,6 +9242,7 @@ function uiClick(pt) {
     if (inRect(pt, BTN.store)) return open(1);
     if (inRect(pt, BTN.wheel)) return open(2);
     if (inRect(pt, BTN.ach)) { audio(); startMusic(); state = 'ach'; acScroll = 0; sfx.click(); return true; }
+    if (inRect(pt, { x: DWIN_BOX.x, y: DWIN_BOX.y - 14, w: DWIN_BOX.w, h: DWIN_BOX.h + 14 })) { audio(); startMusic(); sfx.click(); openDayWins(); return true; }
     if (inRect(pt, BTN.menuB)) { audio(); startMusic(); sfx.click(); openSideMenu(); return true; }
     if (inRect(pt, BTN.mp)) { audio(); startMusic(); sfx.click(); mpOpen(); return true; }
     if (inRect(pt, BTN.friends)) { audio(); startMusic(); sfx.click(); openFriends(); return true; }
@@ -12258,11 +12259,12 @@ function drawMenu() {
   drawNewsBtn();
   const hint = (IDLE[curSkin().id] ? clamp(1 - (idleT - 9.5) * 2, 0, 1) : 1) * (1 - menuMoreT);   // во время сценки и при открытых кнопках подсказка уходит
   ctx.globalAlpha = hint;
-  text(T('tap1'), W / 2 + 10, 492, 2, '#ffffff');
-  text(T('tap2'), W / 2 - 14, 516, 2, '#ffffff', 'center', OL, W - 100);
+  text(T('tap1'), W / 2 + 10, 470, 2, '#ffffff');
+  text(T('tap2'), W / 2 - 14, 494, 2, '#ffffff', 'center', OL, W - 100);
   ctx.globalAlpha = 1;
-  if (hint > 0.05) drawPkTap(W - 56, 548);
+  if (hint > 0.05) drawPkTap(W - 56, 505);
   ctx.globalAlpha = 1;
+  drawDayWins();
   drawMenuMsg();
 }
 // «Сеть» — большая жёлтая кнопка внизу справа: дышит, по ней бежит блик, два скрещённых меча
@@ -12281,6 +12283,28 @@ function drawPlayBtn() {
   for (const d of [-1, 1]) { ctx.save(); ctx.translate(ix, iy); ctx.rotate(d * 0.78); prect(ctx, -3, -15, 6, 22, OL); prect(ctx, -1, -13, 2, 18, '#ffffff'); prect(ctx, -7, 5, 14, 4, OL); prect(ctx, -2, 7, 4, 8, OL); prect(ctx, -5, 6, 10, 2, '#c8820a'); ctx.restore(); }
   text(tr('СЕТЬ', 'ONLINE'), x + w / 2 + 18, y + 30, 3, '#ffffff', 'center', OL, w - 56);
   text(tr('ИГРАТЬ ПО СЕТИ', 'PLAY ONLINE'), x + w / 2 + 18, y + h - 7, 1, '#7a3a00', 'center', null, w - 56);
+}
+// «Победы дня» в меню над кнопкой «Сеть»: 10 клеток, первая — особая; готовая награда подпрыгивает
+const DWIN_BOX = { x: 12, y: 540, w: 336, h: 34 };
+function drawDayWins() {
+  const g = dayWins(), b = DWIN_BOX, pop = clamp(1 - (time - dwinPop) / 0.6, 0, 1);
+  // ярлык сверху
+  const tl = tr('ПОБЕДЫ ДНЯ', 'DAILY WINS'), tw = 104; ctx.fillStyle = OL; ctx.fillRect(b.x + b.w / 2 - tw / 2 - 2, b.y - 14, tw + 4, 16); ctx.fillStyle = '#1a1030'; ctx.fillRect(b.x + b.w / 2 - tw / 2, b.y - 12, tw, 13);
+  text(tl, b.x + b.w / 2, b.y - 2, 1, '#ffd23a', 'center', OL, tw - 4);
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4); ctx.fillStyle = '#2a50c8'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.fillStyle = '#4a7aff'; ctx.fillRect(b.x, b.y, b.w, 3);
+  let x = b.x + 2;
+  for (let i = 0; i < DWIN_N; i++) {
+    const w = i === 0 ? 44 : 30, got = i < g.cl, can = !got && i < g.n, cx = x + w / 2, cy = b.y + b.h / 2;
+    const bob = can ? Math.round(Math.abs(Math.sin(time * 5 + i)) * -2) : 0;
+    ctx.fillStyle = can ? '#9affb0' : got ? '#1a2a6a' : '#3a62d8'; ctx.fillRect(x, b.y + 2, w - 2, b.h - 4);
+    if (can) { ctx.globalAlpha = 0.4 + Math.sin(time * 6) * 0.2; ctx.fillStyle = '#ffffff'; ctx.fillRect(x, b.y + 2, w - 2, b.h - 4); ctx.globalAlpha = 1; }
+    ctx.globalAlpha = got ? 0.35 : (!can ? 0.75 : 1);
+    if (i === 0) chestIcon(cx, cy + 4 + bob, false, 0, true); else { ctx.save(); ctx.translate(cx, cy + bob); ctx.scale(0.62, 0.62); giftIcon(0, 6, 1); ctx.restore(); }
+    ctx.globalAlpha = 1;
+    if (got) text('✓', cx, cy + 5, 2, '#3ce06a', 'center', OL);
+    if (i === g.n - 1 && pop > 0) { ctx.globalAlpha = pop; pell(ctx, cx, cy, 16 + (1 - pop) * 14, 16 + (1 - pop) * 14, '#fff6a0'); ctx.globalAlpha = 1; }
+    x += w;
+  }
 }
 // короткое сообщение в меню (например, «клубы откроются с 1000 кубков»)
 let menuMsgS = '', menuMsgT = 0;
@@ -16633,9 +16657,9 @@ const PBOX = [
   { nm: ['ЭПИЧЕСКИЙ', 'EPIC'], col: '#c04aff', dk: '#6a1ab0', up: 0.12, rw: () => (Math.random() < 0.5 ? { k: 'gems', n: 6 } : { k: 'power', n: 3 }) },
   { nm: ['ЛЕГЕНДАРНЫЙ', 'LEGENDARY'], col: '#ffb02a', dk: '#c06a00', up: 0, rw: () => (Math.random() < 0.7 ? { k: 'gems', n: 20 } : { k: 'ruby', n: 1 }) },
 ];
-function passBoxOpen(free) {
+function passBoxOpen(free, startLv) {
   const v = passData(); if (!free) { if (!(v.bx > 0)) return; v.bx--; store.set('pass', v); }
-  let lv = 0, done = false;
+  let lv = startLv || 0, done = false;
   const pop = moEl('div', 'pop'); pop.appendChild(moEl('div', 'rays'));
   const t = moTxt('div', 'ol', tr('ТАПАЙ ПО ЯЩИКУ!', 'TAP THE BOX!')); t.style.cssText = 'font-size:22px;color:#ffd23a;letter-spacing:2px;position:relative;text-align:center';
   const box = moEl('div'); box.style.cssText = 'position:relative;width:150px;height:130px;border:5px solid #2a1408;border-radius:18px;cursor:pointer;transition:transform .08s;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 0 #2a1408';
@@ -16668,7 +16692,18 @@ const DAYG = [{ need: 1, rw: { k: 'xp', n: 60 } }, { need: 2, rw: { k: 'coins', 
 function dayGames() { let g = store.get('dayG', null); if (!g || g.d !== dayNum() || !Array.isArray(g.cl)) { g = { d: dayNum(), n: 0, cl: [] }; store.set('dayG', g); } g.n = Math.min(99, nat(g.n)); return g; }
 function dayGameAdd() { if (quiet) return; const g = dayGames(); g.n++; store.set('dayG', g); try { pigAdd(1); } catch (e) {} }
 const dayGReady = () => { const g = dayGames(); return DAYG.some((s, i) => g.n >= s.need && !g.cl.includes(i)); };
-const passReady = memo(() => { const v = passData(), lv = passLevel(); return v.cf < lv || (v.prem && v.cp < lv) || v.bx > 0 || dayGReady(); });
+// «Победы дня»: 10 наград за день. Победа — забег выше 50 м или топ-3 в раунде «Сети». Первая — особый ящик (сразу эпический)
+const DWIN_N = 10;
+function dayWins() { let g = store.get('dwin', null); if (!g || g.d !== dayNum()) { g = { d: dayNum(), n: 0, cl: 0 }; store.set('dwin', g); } g.n = Math.min(DWIN_N, nat(g.n)); g.cl = Math.min(g.n, nat(g.cl)); return g; }
+function dayWinAdd() { if (quiet) return; const g = dayWins(); if (g.n >= DWIN_N) return; g.n++; store.set('dwin', g); dwinPop = time; }
+const dayWinReady = () => { const g = dayWins(); return g.cl < g.n; };
+let dwinPop = -9;
+function dayWinClaim(from) {   // забрать следующую награду: ящик, который на тапы может стать лучше
+  const g = dayWins(); if (g.cl >= g.n) return false;
+  const first = g.cl === 0; g.cl++; store.set('dwin', g);
+  passBoxOpen(true, first ? 2 : 0); return true;
+}
+const passReady = memo(() => { const v = passData(), lv = passLevel(); return v.cf < lv || (v.prem && v.cp < lv) || v.bx > 0 || dayWinReady(); });
 
 // ---- конец забега: кубки герою, опыт пропуска, задания ----
 function metaRunEnd() {
@@ -16677,7 +16712,7 @@ function metaRunEnd() {
   const raw = heightM(), m = legitM(raw), id = skinId;
   if (m > troOf(id)) { META.troGain = { id, n: Math.min(99999, m) - troOf(id), t: Date.now() }; META.tro[id] = Math.min(99999, m); }   // кубки = рекорд высоты этим героем: дают только за новый рекорд
   if (m > 0) META.stat.totM = (META.stat.totM || 0) + m;
-  META.stat.runs = (META.stat.runs || 0) + 1; dayGameAdd();
+  META.stat.runs = (META.stat.runs || 0) + 1; dayGameAdd(); if (m >= 50) dayWinAdd();
   META.lastXp = 0;   // опыт Pass теперь только за задания
   questAdd('climb', m); questAdd('best', m, 'max'); questAdd('flips', flips); questAdd('coins', coinsRun); questAdd('runs', 1); questAdd('gems', gemsRun);
   questAdd('jumps', kicks); questAdd('zones', zonesSeen, 'max'); questAdd('rubies', rubiesRun); questAdd('flipsRun', flips, 'max');
@@ -16777,6 +16812,12 @@ function moCss() {
 #mo .bmid b{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;border:3px solid #1a0a04;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 40% 35%,#6a5aa0,#2a1a5a);font-size:14px}
 #mo .bmid.done b{background:radial-gradient(circle at 40% 35%,#fff6a0,#e8a010)}
 #mo .bmid.next b{box-shadow:0 0 0 3px #fff6a0,0 0 16px #ffd23a;animation:moPulse 1.2s ease-in-out infinite}
+#mo .dwrow{display:flex;gap:4px;margin-top:8px;position:relative;z-index:1;align-items:stretch}
+#mo .dw{flex:1;min-width:0;height:44px;border:3px solid #1a0a04;border-radius:9px;background:linear-gradient(#5a8aff,#2a4ab8);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:inset 0 2px 0 #ffffff55}
+#mo .dw.big{flex:1.6;background:linear-gradient(#ffe27a,#c87a00)}
+#mo .dw canvas{image-rendering:pixelated} #mo .dw.lock{filter:saturate(.4) brightness(.7)} #mo .dw.got>canvas{opacity:.35}
+#mo .dw.cur{cursor:pointer;animation:bsBob .9s ease-in-out infinite;box-shadow:0 0 0 2px #3ce06a,0 0 12px #3ce06a}
+#mo .dw .ck{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#3ce06a;font-size:20px;text-shadow:0 2px 0 #1a0a04}
 #mo .dgrow{display:flex;justify-content:space-between;gap:6px;margin-top:8px;position:relative;z-index:1}
 #mo .dgcol{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
 #mo .dgn{font-size:10px;color:#ffe680}
@@ -17456,28 +17497,24 @@ function passTile(rw, opt) {
   return c;
 }
 // «Награды за игры»: сыграл раунд или забег — ближе к награде
+function openDayWins() { moOpen(tr('ПОБЕДЫ ДНЯ', 'DAILY WINS'), bd => { bd.appendChild(dayGamesCard()); }); if (dayWinReady()) setTimeout(() => dayWinClaim(), 250); }
 function dayGamesCard() {
-  const g = dayGames(), card = moEl('div', 'card dayg' + (dayGReady() ? ' glow' : ''));
+  const g = dayWins(), card = moEl('div', 'card dayg' + (dayWinReady() ? ' glow' : ''));
   const hd = moEl('div', 'row'); hd.style.cssText = 'justify-content:space-between;gap:8px';
-  hd.append(moTxt('div', 'ol', '⚔ ' + tr('НАГРАДЫ ЗА ИГРЫ', 'GAME REWARDS')), moTxt('span', 'chip', '⏳ ' + timeToMidnight()));
+  hd.append(moTxt('div', 'ol', '⚔ ' + tr('ПОБЕДЫ ДНЯ', 'DAILY WINS') + ' ' + g.n + '/' + DWIN_N), moTxt('span', 'chip', '⏳ ' + timeToMidnight()));
   card.appendChild(hd);
-  card.appendChild(moTxt('div', 'sm', trf('СЫГРАНО СЕГОДНЯ: {n}. ЗАБЕГ ИЛИ РАУНД В «СЕТИ» — ЭТО ИГРА', 'PLAYED TODAY: {n}. A RUN OR AN ONLINE ROUND COUNTS', { n: g.n })));
-  const row = moEl('div', 'dgrow');
-  DAYG.forEach((s, i) => {
-    const got = g.cl.includes(i), can = !got && g.n >= s.need, col = moEl('div', 'dgcol');
-    const t = passTile(s.rw, { small: 1, got, can, lock: !got && !can });
-    if (can) t.onclick = () => {
-      const g2 = dayGames(); if (g2.cl.includes(i)) return; g2.cl.push(i); store.set('dayG', g2);
-      if (s.rw.k === 'xp') { xpFly(t, s.rw.n, () => moRefresh()); return; }
-      if (s.rw.k === 'coins') { bank += s.rw.n; saveMoney(); domCoinFly(t, s.rw.n, 'c'); passSfx(false); moRefresh(); return; }
-      if (s.rw.k === 'box') { moRefresh(); passBoxOpen(true); }
-    };
-    const need = moTxt('div', 'dgn ol', trf('{n} ИГР.', '{n} GAMES', { n: s.need }).replace(/^1 ИГР\./, '1 ИГРА').replace(/^1 GAMES/, '1 GAME'));
-    col.append(t, need); row.appendChild(col);
-  });
-  const f = moEl('div', 'dgline'); f.innerHTML = `<i style="width:${Math.min(100, g.n / DAYG[DAYG.length - 1].need * 100)}%"></i>`; card.append(row, f);
+  card.appendChild(moTxt('div', 'sm', tr('ПОБЕДА — ЗАБЕГ ВЫШЕ 50 М ИЛИ ТОП-3 В «СЕТИ». ЗА КАЖДУЮ — ЯЩИК, ПЕРВЫЙ — ОСОБЫЙ', 'A WIN IS A RUN ABOVE 50 M OR A TOP 3 ONLINE. EACH GIVES A BOX, THE FIRST ONE IS SPECIAL')));
+  const row = moEl('div', 'dwrow');
+  for (let i = 0; i < DWIN_N; i++) {
+    const got = i < g.cl, can = !got && i < g.n, c = moEl('div', 'dw' + (i === 0 ? ' big' : '') + (got ? ' got' : '') + (can ? ' cur' : '') + (!got && !can ? ' lock' : ''));
+    c.appendChild(iconCnv(i === 0 ? 'chest' : 'gift', i === 0 ? 1 : 0, i === 0 ? 34 : 24)); if (got) c.appendChild(moTxt('div', 'ck', '✓'));
+    if (can) c.onclick = () => dayWinClaim();   // окно ящика само обновит экран после «OK»
+    row.appendChild(c);
+  }
+  card.appendChild(row);
   return card;
 }
+
 // бонусный сундук — один, посередине окна: после 60 уровня каждые 500 опыта дают ящик
 function passBonusCard(v, lv) {
   const c = moEl('div', 'card pbox' + (v.bx > 0 ? ' glow' : ''));
@@ -19172,7 +19209,7 @@ function arEnd(order) {
   if (arHost() && mp.tx) mpSend({ t: 'ke', o: order, fin: AR.fin, kt: AR.kt });
   AR.phase = 'res'; AR.res = order; AR.resT = 0; AR.winCam = order[0];
   const place = order.indexOf(arMe()) + 1;
-  if (!AR.given) { AR.given = true; AR.rew = arReward(place); dayGameAdd(); }
+  if (!AR.given) { AR.given = true; AR.rew = arReward(place); dayGameAdd(); if (place >= 1 && place <= 3) dayWinAdd(); }
   try { if (place === 1) sfx.achieve(); else sfx.zone(); } catch (e) {}
 }
 const AR_TRO = [20, 15, 11, 8, 6, 5, 4, 3, 2, 1];
