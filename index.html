@@ -2224,7 +2224,7 @@ async function fbBoardPush(e) {
     clearTimeout(fbBoardPush.later); fbBoardPush.later = setTimeout(boardPush, 20000);
   }
   let map = null; try { const pm = edMaps().find(m => m.pub); if (pm) map = { ...pm, it: pm.it.slice(0, 120) }; } catch (x) {}   // открытая карта — в «Карты недели» других игроков
-  const pj = JSON.stringify({ own, ic, ach, show, tro, map });
+  const pj = JSON.stringify({ own, ic, ach, show, tro, map, cl: myClubInfo() });   // клуб — в профиле (в рейтинге новых полей правила базы не пропускают)
   if (FB.uid + pj === fbBoardPush.lastPj) return;   // профиль (до 30 КБ) тот же, что уже в базе — не отправляем заново
   await fbReq('PUT', 'profiles/' + FB.uid, { p: pj.length <= 30000 ? pj : JSON.stringify({ own, ic, ach, show, tro }).slice(0, 30000), t: FB_NOW });
   fbBoardPush.lastPj = FB.uid + pj;
@@ -7118,7 +7118,11 @@ EMO.push({ id: 'wave', ru: 'ПРИВЕТ', en: 'HELLO', p: 300, r: 0 }, { id: 'c
   { id: 'rocket', ru: 'РАКЕТА', en: 'ROCKET', p: 5000, r: 3 }, { id: 'rainbow', ru: 'РАДУГА', en: 'RAINBOW', p: 12000, r: 4 });
 EMO.sort((a, b) => a.r - b.r || a.p - b.p);
 const EMO_BASE = [{ id: 'hhappy', ru: 'РАДОСТЬ', en: 'HAPPY', p: 0, r: 0, base: 1 }, { id: 'hcry', ru: 'ПЛАЧ', en: 'CRY', p: 0, r: 0, base: 1 }, { id: 'hmad', ru: 'ЗЛОСТЬ', en: 'ANGRY', p: 0, r: 0, base: 1 }];
-const EMO_ALL = EMO.concat(EMO_BASE), isBaseEmo = id => EMO_BASE.some(e => e.id === id);
+// новые эмоции-мордочки хомяка — покупаются в «Эмоциях», ими можно и в раунде, и в чате клуба
+EMO.push({ id: 'hsleep', ru: 'СОНЯ', en: 'SLEEPY', p: 400, r: 0, hf: 1 }, { id: 'hlove', ru: 'ЛЮБОВЬ', en: 'LOVE', p: 500, r: 1, hf: 1 }, { id: 'hshock', ru: 'ШОК', en: 'SHOCK', p: 600, r: 1, hf: 1 },
+  { id: 'hcool', ru: 'ЧЁТКИЙ', en: 'COOL', p: 700, r: 1, hf: 1 }, { id: 'hlol', ru: 'УГАР', en: 'LMAO', p: 900, r: 2, hf: 1 }, { id: 'hwink', ru: 'ПОДМИГ', en: 'WINK', p: 1200, r: 2, hf: 1 });
+EMO.sort((a, b) => a.r - b.r || a.p - b.p);
+const EMO_ALL = EMO.concat(EMO_BASE), isBaseEmo = id => EMO_BASE.some(e => e.id === id) || ['hsleep', 'hlove', 'hshock', 'hcool', 'hlol', 'hwink'].includes(id);   // «мордочка» хомяка (рисуется hamFace)
 const emoWheel = () => EMO_BASE.map(e => e.id).concat(emSel);   // в раунде: 3 базовые + до 5 своих
 // пиксельная мордочка хомяка 18×14 клеток; c — размер клетки в единицах игры
 const HF_BASE = ['..OO..........OO..', '.OPPO........OPPO.', '.OPPOOOOOOOOOOPPO.', '..OHHHHHHHHHHHHO..', '.OHHHHHHHHHHHHHHO.', 'OHHBBBBBBBBBBBBHHO', 'OBBBBBBBBBBBBBBBBO', 'OBBBBBBBBBBBBBBBBO', 'OBBCCCCBBBBCCCCBBO', 'OBCCCCCCCCCCCCCCBO', 'OBCCCCCCCCCCCCCCBO', '.OCCCCCCCCCCCCCCO.', '..OCCCCCCCCCCCCO..', '...OOOOOOOOOOOO...'];
@@ -7150,6 +7154,25 @@ function hamFace(id, cx, cy, c, t) {
     for (const [x0, d] of [[4, 1], [11, 1]]) { F(x0, 7, 1, 1, O); F(x0 + 1, 6, 1, 1, O); F(x0 + 2, 7, 1, 1, O); }   // глаза-дуги ^ ^
     F(6, 9, 6, 1, O); F(6, 10, 1, 1, O); F(11, 10, 1, 1, O); F(7, 10, 4, 1, '#7a1a2a'); F(8, 10, 2, 1, '#ff6a8a'); F(7, 11, 4, 1, O);   // улыбка до ушей
     const bl = 0.6 + Math.sin(t * 8) * 0.4; ctx.globalAlpha = bl; F(2, 8, 2, 1, '#ff7a90'); F(14, 8, 2, 1, '#ff7a90'); ctx.globalAlpha = 1;
+  } else if (id === 'hlove') {
+    for (const x0 of [4, 11]) { const k = 1 + Math.max(0, Math.sin(t * 9)) * 0.15; F(x0, 6, 1, 1, '#e8264a'); F(x0 + 2, 6, 1, 1, '#e8264a'); F(x0, 7, 3, 1, '#e8264a'); F(x0 + 1, 8, 1, 1, '#e8264a'); F(x0, 6, 1, 1, '#ff8aa0'); }   // глаза-сердечки
+    F(7, 10, 1, 1, O); F(10, 10, 1, 1, O); F(8, 11, 2, 1, O); ctx.globalAlpha = 0.8; F(2, 8, 2, 1, '#ff7a90'); F(14, 8, 2, 1, '#ff7a90'); ctx.globalAlpha = 1;
+  } else if (id === 'hcool') {
+    F(3, 6, 12, 1, O); F(4, 6, 4, 2, '#111'); F(10, 6, 4, 2, '#111'); F(5, 6, 1, 1, '#8ad8ff'); F(11, 6, 1, 1, '#8ad8ff');   // очки
+    F(8, 10, 4, 1, O); F(11, 9, 1, 1, O);   // ухмылка
+  } else if (id === 'hsleep') {
+    F(4, 7, 3, 1, O); F(11, 7, 3, 1, O); F(8, 10, 2, 2, O); F(8, 10, 1, 1, '#7a1a2a');
+    const b2 = 1 + Math.sin(t * 2) * 0.15; ctx.globalAlpha = 0.85; F(12 + Math.sin(t) * 0.5, 10, 2 * b2, 2 * b2, '#bfe8ff'); ctx.globalAlpha = 1;   // пузырь из носа
+  } else if (id === 'hshock') {
+    for (const x0 of [4, 11]) { F(x0, 5, 3, 3, '#ffffff'); F(x0 + 1, 6, 1, 1, O); }
+    F(7, 9, 4, 3, O); F(8, 10, 2, 1, '#7a1a2a');
+  } else if (id === 'hlol') {
+    F(4, 6, 1, 1, O); F(5, 7, 1, 1, O); F(4, 8, 1, 1, O); F(13, 6, 1, 1, O); F(12, 7, 1, 1, O); F(13, 8, 1, 1, O);   // глаза >  <
+    F(6, 9, 6, 1, O); F(6, 10, 1, 1, O); F(11, 10, 1, 1, O); F(7, 10, 4, 1, '#7a1a2a'); F(8, 10, 2, 1, '#ff6a8a'); F(7, 11, 4, 1, O);
+    for (const tx of [3, 14]) { const u = (t * 2 + tx * 0.1) % 1; ctx.globalAlpha = 1 - u; F(tx + (tx < 9 ? -u * 3 : u * 3), 7 - u * 2, 1, 1, '#7ad8ff'); ctx.globalAlpha = 1; }   // слёзы от смеха
+  } else if (id === 'hwink') {
+    F(5, 6, 2, 2, O); F(5, 6, 1, 1, '#ffffff'); F(11, 7, 1, 1, O); F(12, 6, 1, 1, O); F(13, 7, 1, 1, O);
+    F(7, 10, 1, 1, O); F(11, 10, 1, 1, O); F(8, 11, 3, 1, O); ctx.globalAlpha = 0.8; F(13, 8, 2, 1, '#ff7a90'); ctx.globalAlpha = 1;
   } else if (id === 'hcry') {
     F(4, 5, 2, 1, '#8a4a1a'); F(6, 4, 1, 1, '#8a4a1a'); F(12, 5, 2, 1, '#8a4a1a'); F(11, 4, 1, 1, '#8a4a1a');   // брови домиком
     F(4, 7, 1, 1, O); F(5, 7, 2, 1, O); F(6, 6, 1, 1, O); F(11, 6, 1, 1, O); F(11, 7, 2, 1, O); F(13, 7, 1, 1, O);   // зажмурился
@@ -7168,6 +7191,10 @@ function hamFace(id, cx, cy, c, t) {
   }
   ctx.restore();
   // вокруг: искры радости или пар из ушей
+  if (id === 'hlove') for (let i = 0; i < 3; i++) { const u = (t * 0.8 + i / 3) % 1; ctx.globalAlpha = 1 - u; emoHeart(cx + (i - 1) * 9 * c, cy - (9 + u * 8) * c, 0.9 * c, '#ff3d7f'); ctx.globalAlpha = 1; }
+  if (id === 'hsleep') for (let i = 0; i < 2; i++) { const u = (t * 0.6 + i / 2) % 1; ctx.globalAlpha = 1 - u; text('Z', cx + (8 + u * 6) * c, cy - (7 + u * 9) * c, 1, '#ffffff', 'center', OL); ctx.globalAlpha = 1; }
+  if (id === 'hshock') { const b = Math.abs(Math.sin(t * 8)); text('!', cx + 9 * c, cy - (9 + b * 2) * c, 2, '#ffd23a', 'center', OL); }
+  if (id === 'hcool' || id === 'hwink') { const ph = (t * 1.5) % 1; if (ph < 0.3) { const a2 = Math.sin(ph / 0.3 * Math.PI); ctx.globalAlpha = a2; emoStar(cx + 7 * c, cy - 6 * c, (1 + a2) * c, '#ffffff'); ctx.globalAlpha = 1; } }
   if (id === 'hhappy') for (let i = 0; i < 4; i++) { const a = t * 2.5 + i * Math.PI / 2, r = 13 * c, tw = Math.max(0, Math.sin(t * 8 + i * 1.7)); ctx.globalAlpha = 0.4 + tw * 0.6; emoStar(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.8, (1.2 + tw) * c, i % 2 ? '#ffffff' : '#ffd23a'); ctx.globalAlpha = 1; }
   if (id === 'hmad') for (let i = 0; i < 4; i++) { const u = (t * 1.4 + i / 4) % 1, sd = i % 2 ? 1 : -1; ctx.globalAlpha = (1 - u) * 0.85; ctx.fillStyle = '#e8e8f0'; ctx.beginPath(); ctx.arc(cx + sd * (7 + u * 4) * c, cy - (8 + u * 9) * c, (1.2 + u * 2) * c, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
 }
@@ -7209,6 +7236,7 @@ function emoHeart(x, y, s, c) { ctx.beginPath(); ctx.moveTo(x, y + 4 * s); ctx.b
 function emoMotion(id, t) {   // у каждой эмоции своё движение хомяка
   const sn = Math.sin;
   if (id === 'hhappy') return { pose: 'cheer', y: -Math.abs(sn(t * 6)) * 6 };
+  if (['hsleep', 'hlove', 'hshock', 'hcool', 'hlol', 'hwink'].includes(id)) return { pose: id === 'hsleep' ? 'sit' : 'idle', y: id === 'hsleep' ? 6 : -Math.abs(sn(t * 5)) * 3, x: id === 'hshock' || id === 'hlol' ? sn(t * 40) * 1 : 0 };
   if (id === 'hcry') return { pose: 'sit', y: 4, x: sn(t * 30) * 0.8 };
   if (id === 'hmad') return { pose: 'idle', x: sn(t * 50) * 1.5, y: -Math.abs(sn(t * 8)) * 3 };
   if (id === 'heart') { const b = Math.pow(Math.max(0, sn(t * 7)), 3); return { pose: 'idle', sx: 1 + b * 0.14, sy: 1 - b * 0.1 }; }
@@ -7286,7 +7314,8 @@ function emoPortrait(id, sk, x, y, w, h, t, round, s) {
   emoHamster(id, sk, x + w / 2, y + h / 2, s, t); ctx.restore();
 }
 const EMO_DUR = 3;
-const EMO_COL_BASE = { hhappy: ['#fff27a', '#ff9a1a'], hcry: ['#9ad8ff', '#2a5ab0'], hmad: ['#ff8a6a', '#a01008'] };
+const EMO_COL_BASE = { hhappy: ['#fff27a', '#ff9a1a'], hcry: ['#9ad8ff', '#2a5ab0'], hmad: ['#ff8a6a', '#a01008'], hsleep: ['#c8b0ff', '#3a2a7a'], hlove: ['#ffb0d0', '#c01f6a'], hshock: ['#e8f0ff', '#5a6a9a'], hcool: ['#7ad8ff', '#1a4a9a'], hlol: ['#fff27a', '#e06a1a'], hwink: ['#9affc8', '#1a8a5a'] };
+Object.assign(EMO_COL, EMO_COL_BASE);
 function emoTag(x, y, e) {   // эмоция играет на самом герое, над головой — маленький значок с её иконкой
   if (!e) return false; const t = time - e.t0; if (t > EMO_DUR || t < 0) return false;
   if (isBaseEmo(e.id)) {
@@ -7356,6 +7385,12 @@ function emoSnd(id) {   // у каждой эмоции свой звук
   else if (id === 'rocket') { noise(0.8, 0.08, 400); tone(200, 1600, 0.8, 'sawtooth', 0.025); }
   else if (id === 'rainbow') A([523, 587, 659, 784, 880, 1047, 1319], 0.06, 0.25, 'sine', 0.035);
   else if (id === 'hhappy') A([784, 988, 1175, 1568], 0.07, 0.14, 'triangle', 0.05);
+  else if (id === 'hlove') A([988, 1319, 1568], 0.1, 0.25, 'sine', 0.05);
+  else if (id === 'hsleep') { tone(260, 200, 0.7, 'sine', 0.05); tone(240, 180, 0.6, 'sine', 0.04, 0.8); }
+  else if (id === 'hshock') { tone(1200, 300, 0.25, 'square', 0.04); noise(0.12, 0.05, 3000); }
+  else if (id === 'hcool') { tone(300, 900, 0.18, 'triangle', 0.05); tone(1568, 1568, 0.15, 'sine', 0.03, 0.2); }
+  else if (id === 'hlol') A([660, 520, 700, 540, 740], 0.08, 0.08, 'square', 0.035);
+  else if (id === 'hwink') { tone(1047, 1568, 0.08, 'triangle', 0.05); tone(2093, 2093, 0.12, 'sine', 0.03, 0.1); }
   else if (id === 'hcry') { tone(740, 520, 0.35, 'sine', 0.05); tone(700, 480, 0.35, 'sine', 0.045, 0.38); tone(660, 440, 0.5, 'sine', 0.04, 0.76); }
   else if (id === 'hmad') { tone(180, 120, 0.3, 'sawtooth', 0.05); tone(190, 130, 0.3, 'square', 0.03, 0.12); noise(0.4, 0.05, 0, 1200, 0.1); }
   else { tone(700, 1100, 0.1, 'square', 0.05); tone(900, 1400, 0.12, 'triangle', 0.04, 0.08); }
@@ -16769,6 +16804,20 @@ function moCss() {
 @keyframes moFr{from{background-position:0 0}to{background-position:100% 0}}
 #mo .av{border-radius:12px;border:3px solid #2a1408;background:#1a1030;position:relative;overflow:hidden;flex:none}
 #mo .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+#mo .clubrow{display:flex;align-items:center;gap:6px;margin-top:4px;padding:3px 8px 3px 4px;border-radius:8px;background:rgba(20,10,40,.55);width:max-content;max-width:100%}
+#mo .clubrow.tap{cursor:pointer;box-shadow:0 0 0 2px #ffd23a inset}
+#mo .cchat{display:flex;flex-direction:column;gap:6px}
+#mo .cchat .cl{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:6px;background:rgba(10,6,30,.5);border-radius:10px}
+#mo .cchat .msg{align-self:flex-start;max-width:80%;background:#2e2a6a;border:3px solid #120a2a;border-radius:10px;padding:4px 8px}
+#mo .cchat .msg.me{align-self:flex-end;background:#2a7a3a}
+#mo .cchat .who{font-size:12px;color:#ffd23a}
+#mo .cchat .tx{word-break:break-word;text-transform:none}
+#mo .cchat .in{display:flex;gap:6px;align-items:center}
+#mo .cchat .in input{flex:1;min-width:0;margin:0}
+#mo .cchat .pk{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:6px;background:rgba(10,6,30,.6);border-radius:10px}
+#mo .cchat .st{position:relative;display:flex;justify-content:center;cursor:pointer;padding:3px;border-radius:8px;background:#3a2e7a}
+#mo .cchat .st.lock canvas{filter:grayscale(1) brightness(.6)}
+#mo .cchat .st .pr{position:absolute;bottom:0;font-size:11px;color:#9affc8}
 #mo .tab{flex:1;min-width:60px;font:inherit;font-size:10px;padding:8px 4px;border:3px solid #2a1408;border-radius:10px;background:#4a3a7a;color:#fff;cursor:pointer;box-shadow:0 3px 0 #2a1408}
 #mo .tab.on{background:linear-gradient(#ffe27a,#e8a010);color:#2a1408}
 @keyframes moSpin{to{transform:rotate(360deg)}}
@@ -17117,6 +17166,11 @@ function profStats(e) {   // e — данные игрока (свои или и
   return [['trophy', tr('КУБКИ', 'TROPHIES'), e.tr], ['trophy', tr('РЕКОРД', 'BEST'), e.b + T('m')], ['coins', tr('МОНЕТЫ', 'COINS'), e.c], ['gems', tr('КРИСТАЛЛЫ', 'GEMS'), e.g], ['ruby', tr('РУБИНЫ', 'RUBIES'), e.r],
     ['gift', tr('ГЕРОИ', 'HEROES'), e.sk + ' / ' + SKINS.length], ['chest', tr('УРОВЕНЬ PASS', 'PASS LEVEL'), e.pl]];
 }
+function myClubInfo() { if (!CLAN.in) return null; const c = clanGet(CLAN.in); return c ? { id: CLAN.in, nm: c.nm, bd: c.bd } : null; }
+const clubOk = v => v && typeof v === 'object' && typeof v.id === 'string' && /^(c\d{1,3}|my)$/.test(v.id) && typeof v.nm === 'string' && Array.isArray(v.bd) ? { id: v.id, nm: v.nm.replace(/[\u0000-\u001f<>]/g, '').slice(0, 18), bd: v.bd.slice(0, 3).map(x => clamp(nat(x), 0, 30)) } : null;
+// боты рейтинга тоже состоят в клубах (и видны в списке участников клуба)
+const botClubCi = i => botH(i, 701) < 0.72 ? Math.floor(botH(i, 700) * CLAN_N) : -1;
+function botClubInfo(i) { const ci = botClubCi(i); if (ci < 0) return null; const src = CLAN_LIST[ci]; return { id: 'c' + ci, nm: src.nm, bd: [Math.floor(clH(ci, 93, 11) * 10), Math.floor(clH(ci, 93, 12) * 10), Math.floor(clH(ci, 93, 13) * CL_EMBS.length)] }; }
 function myEntry() {
   const m = legitMoney();
   return { n: nickOut(), av: META.prof.av, fr: (frameHave(META.prof.frame) || META.prof.frame.startsWith('h:') ? META.prof.frame : 'basic') + '~' + myNc() + '~' + stkData().m + '~' + (META.prof.bg || ''), ti: META.prof.title, c: m.c, g: m.g, r: m.r, b: best, tr: Math.min(troTotal(), best * Math.max(1, legitOwned().length)), sk: legitOwned().length, pl: passLevel(),
@@ -17146,6 +17200,8 @@ function profHead(e, me) {
     col.appendChild(ch);
   }
   const trw = moEl('div', 'row'); trw.append(iconCnv('trophy', 0, 24), moTxt('span', 'ol', String(e.tr))); col.appendChild(trw);
+  const club = me ? myClubInfo() : e.cl;   // клуб игрока: видно всем, нажми — откроется клуб
+  if (club) { const cr = moEl('div', 'clubrow'); cr.append(clanBadgeCnv(club.bd, 22), moTxt('span', 'ol', club.nm)); if (/^c\d+$/.test(club.id)) { cr.classList.add('tap'); cr.onclick = () => { sfx.click(); clanPage(club.id); }; cr.appendChild(moTxt('span', 'ol', '›')); } col.appendChild(cr); }
   inner.appendChild(col); card.appendChild(inner); return card;
 }
 function profBody(bd, e, me) {
@@ -17616,7 +17672,7 @@ function boardClean(id, d) {
   return { id, bg: profBgOk(bg0), n: nickSan(d.n) || 'PLAYER', av: okAv(d.av) ? d.av : 'hamster', fr: okId(fr0) ? fr0 : 'basic', nc: nickColOk(nc0), stk: Math.min(999, nat(+st0)), ti: typeof d.ti === 'string' && d.ti !== 'abs' && (PASS_TITLES[d.ti] || skinById(d.ti)) ? d.ti : '',
     c: Math.min(nat(d.c), 1e9), g: Math.min(nat(d.g), 1e9), r: Math.min(nat(d.r), 1e7), b: Math.min(nat(d.b), 99999), tr: Math.min(nat(d.tr), 1e8), sk: Math.min(nat(d.sk), SKINS.length), pl: Math.min(nat(d.pl), PASS_TIERS),
     own: lst(d.own).filter(x => skinById(x)), ic: lst(d.ic).filter(x => skinById(x)).slice(0, 120), ach: lst(d.ach).filter(x => ACH.some(a => a.id === x)), show: lst(d.show).filter(x => ACH.some(a => a.id === x)).slice(0, 3),
-    tro: (Array.isArray(d.tro) ? d.tro : []).filter(q => Array.isArray(q) && skinById(q[0])).slice(0, 12).map(q => [q[0], Math.min(nat(q[1]), 99999)]) };
+    tro: (Array.isArray(d.tro) ? d.tro : []).filter(q => Array.isArray(q) && skinById(q[0])).slice(0, 12).map(q => [q[0], Math.min(nat(q[1]), 99999)]), cl: clubOk(d.cl) };
 }
 function crownCnv(size) {
   const c = document.createElement('canvas'); c.width = 24; c.height = 16; c.style.width = size + 'px'; c.style.height = size * 2 / 3 + 'px';
@@ -18824,7 +18880,7 @@ function botRow(i, trOv) {   // строка рейтинга бота — в т
   const nc = h(24) < 0.22 ? shim[Math.floor(h(25) * shim.length)] : h(24) < 0.5 ? sol[Math.floor(h(25) * sol.length)] : '';   // переливающиеся ники — только у части
   const stk = Math.floor(Math.pow(h(30), 2.2) * 45), stkH = k.id;
   return { id: 'bot' + i, bot: true, bi: i, n: botName(i), av, fr, ti, nc, stk, stkH, bg: h(32) < 0.4 ? PROF_BGS[1 + Math.floor(h(33) * (PROF_BGS.length - 1))].id : '', c: Math.floor(h(5) * tr0 * 40 + 200), g: Math.floor(h(6) * tr0 / 3), r: Math.floor(h(7) * tr0 / 150), b, tr: Math.min(tr0, b * sk), sk, pl: Math.min(PASS_TIERS, Math.floor(h(17) * 30)),
-    ...botKit(i, k, sk, b, tr0) };
+    ...botKit(i, k, sk, b, tr0), cl: botClubInfo(i) };
 }
 function botKit(i, k, sk, b, tr0) {   // у бота как у живого: свои герои, кубки по героям, достижения
   const pool = SKINS.filter(x => !x.gift && x.id !== 'zombie'), own = [k.id];
@@ -20840,11 +20896,14 @@ function clanRolesAt(ci, slots, now) {   // президент раз в пол�
   act.forEach((e, i) => r.set(e.s.idx, i < nv ? 2 : i < nv + ns ? 1 : 0));
   return { r, ep, t: (ep - clH(ci, 96, 7)) * 1296e5 };
 }
+let clubBots = null;
+const CLUB_BOTS = () => { if (!clubBots) { clubBots = {}; for (let i = 0; i < 300; i++) { const ci = botClubCi(i); if (ci >= 0) (clubBots[ci] || (clubBots[ci] = [])).push(i); } for (const k in clubBots) clubBots[k] = clubBots[k].slice(0, 6); } return clubBots; };
 function clanBotData(ci, now = Date.now()) {
   const src = CLAN_LIST[ci], n = clH(ci, 98, 4) > 0.62 ? CLAN_MAX : 9 + Math.floor(clH(ci, 98, 5) * 21);
   const slots = Array.from({ length: n }, (_, k) => clanSlot(ci, k, now)), roles = clanRolesAt(ci, slots, now);
   const tier = clanTier(ci), ty = clH(ci, 95, 9), dsl = CLAN_DS[src.lg];
   const mem = slots.map((s, k) => ({ idx: s.idx, r: roles.r.get(s.idx) || 0, tr: clanBotTro(ci, s.idx, k === 0), since: s.since, n: botName(s.idx) }));
+  for (const bi of (CLUB_BOTS()[ci] || [])) { const m = { idx: bi, r: 0, tr: botTro(bi), since: now - 864e5 * (3 + botH(bi, 702) * 60), n: botName(bi) }; if (mem.length < CLAN_MAX) mem.push(m); else mem[mem.length - 1] = m; }   // боты из рейтинга
   return { id: 'c' + ci, ci, nm: src.nm, lg: src.lg, ds: dsl[Math.floor(clH(ci, 94, 10) * dsl.length)], bd: [Math.floor(clH(ci, 93, 11) * 10), Math.floor(clH(ci, 93, 12) * 10), Math.floor(clH(ci, 93, 13) * CL_EMBS.length)],
     type: ty < 0.6 ? 0 : ty < 0.88 ? 1 : 2, req: CL_REQ.filter(v => v <= tier * 0.45).pop() || 0, mem, cap: n };
 }
@@ -21080,7 +21139,7 @@ function clanBody(bd, cl) {
     bd.appendChild(c);
   }
   // участники и события
-  const tb = moEl('div', 'tabs'), t1 = moTxt('button', 'tab on', tr('УЧАСТНИКИ', 'MEMBERS')), t2 = moTxt('button', 'tab', tr('СОБЫТИЯ', 'EVENTS')); tb.append(t1, t2); bd.appendChild(tb);
+  const tb = moEl('div', 'tabs'), t1 = moTxt('button', 'tab on', tr('УЧАСТНИКИ', 'MEMBERS')), t2 = moTxt('button', 'tab', tr('СОБЫТИЯ', 'EVENTS')), t3 = mine ? moTxt('button', 'tab', tr('ЧАТ', 'CHAT')) : null; tb.append(t1, t2); if (t3) tb.appendChild(t3); bd.appendChild(tb);
   const box = moEl('div'); bd.appendChild(box);
   const myR = mine ? (cl.id === 'my' ? 3 : CLAN.role) : -1;
   const members = () => {
@@ -21108,8 +21167,56 @@ function clanBody(bd, cl) {
       c.append(moTxt('div', '', txt), moTxt('div', 'sm', clAgo(e.t))); box.appendChild(c);
     });
   };
-  t1.onclick = () => { sfx.click(); t1.className = 'tab on'; t2.className = 'tab'; members(); }; t2.onclick = () => { sfx.click(); t2.className = 'tab on'; t1.className = 'tab'; events(); };
-  members();
+  const tabs = [t1, t2, t3].filter(Boolean), sel = t => tabs.forEach(x => { x.className = x === t ? 'tab on' : 'tab'; });
+  t1.onclick = () => { sfx.click(); sel(t1); members(); }; t2.onclick = () => { sfx.click(); sel(t2); events(); };
+  if (t3) t3.onclick = () => { sfx.click(); sel(t3); clubChat(box, cl); };
+  if (clubChatTab && t3) { clubChatTab = false; sel(t3); clubChat(box, cl); } else members();
+}
+// ===== чат клуба: пишешь текст и шлёшь смайлики-мордочки; участники отвечают
+let clubChatTab = false;
+const CCHAT_TXT = [['Всем привет!', 'Hi all!'], ['Кто в забег?', 'Who wants to race?'], ['Я поднял 50 кубков', 'Got +50 trophies'], ['Копилку добиваем!', "Let's fill the piggy!"], ['ГГ', 'GG'], ['Кто играет в сеть?', 'Anyone online?'],
+  ['Новый скин топ', 'New skin is great'], ['Ура, легендарка!', 'Got a legendary!'], ['Кто со мной в пару?', 'Who will team up?'], ['Сегодня 10 побед!', '10 wins today!'], ['Не сдавайтесь!', "Don't give up!"], ['Спокойной ночи', 'Good night'], ['Это было близко', 'That was close'], ['Лучший клуб!', 'Best club!']];
+const CCHAT_REP = [['Привет!', 'Hey!'], ['Го!', 'Go!'], ['Красава', 'Nice'], ['Согласен', 'Agreed'], ['ХАХА', 'LOL'], ['Я в деле', "I'm in"], ['Молодец!', 'Well done!']];
+const CCHAT_STK = ['hhappy', 'hcry', 'hmad', 'hlove', 'hcool', 'hlol', 'hwink', 'hshock', 'hsleep'];
+function emoCnv(id, size = 40) { const c = document.createElement('canvas'); c.width = c.height = 48; c.style.width = c.style.height = size + 'px'; withCtx(c, () => emoIcon(id, 24, 25, isBaseEmo(id) ? 1.7 : 1.4)); return c; }
+const emoHave = id => EMO_BASE.some(e => e.id === id) || emOwn.includes(id);
+function clubChatLoad(cl) {
+  let g = store.get('cchat', null); if (!g || g.id !== cl.id) g = { id: cl.id, l: [] };
+  const ci = /^c\d+$/.test(cl.id) ? +cl.id.slice(1) : 777, now = Date.now(), step = 3e5, mem = cl.mem.filter(m => !m.me);
+  if (!mem.length) return g;
+  const s0 = Math.floor((now - 8 * 36e5) / step), s1 = Math.floor(now / step), have = new Set(g.l.filter(m => m.k).map(m => m.k));
+  for (let s = s0; s <= s1; s++) {   // одинаковые сообщения у всех, кто в этом клубе: по слоту времени
+    const h = clH(ci, 200, s % 100000); if (h > 0.22) continue;
+    const k = 'b' + s; if (have.has(k)) continue;
+    const m = mem[Math.floor(clH(ci, 201, s % 100000) * mem.length)], h2 = clH(ci, 202, s % 100000), t = s * step + Math.floor(h2 * step);
+    if (t > now) continue;
+    g.l.push(h2 < 0.3 ? { k, t, n: m.n, e: CCHAT_STK[Math.floor(clH(ci, 203, s % 100000) * CCHAT_STK.length)] } : { k, t, n: m.n, m: tr(...CCHAT_TXT[Math.floor(clH(ci, 204, s % 100000) * CCHAT_TXT.length)]) });
+  }
+  g.l.sort((a, b) => a.t - b.t); g.l = g.l.slice(-40); store.set('cchat', g); return g;
+}
+function clubChat(box, cl) {
+  box.innerHTML = '';
+  const g = clubChatLoad(cl), wrap = moEl('div', 'cchat'), list = moEl('div', 'cl');
+  const bubble = m => { const r = moEl('div', 'msg' + (m.me ? ' me' : '')); if (!m.me) r.appendChild(moTxt('div', 'who ol', m.n));
+    if (m.e) r.appendChild(emoCnv(m.e, 46)); else r.appendChild(moTxt('div', 'tx', m.m));
+    r.appendChild(moTxt('div', 'sm', clAgo(m.t))); return r; };
+  const paint = () => { list.innerHTML = ''; if (!g.l.length) list.appendChild(moTxt('div', 'sm', tr('Тут пока тихо. Напиши первым!', 'Quiet here. Say hi first!'))); g.l.forEach(m => list.appendChild(bubble(m))); list.scrollTop = 1e6; };
+  const push = m => { g.l.push(m); g.l = g.l.slice(-40); store.set('cchat', g); if (box.isConnected && wrap.isConnected) paint(); };
+  let lastSend = 0;
+  const answer = () => { const mem = cl.mem.filter(x => !x.me); if (!mem.length || Math.random() < 0.25) return; const who = mem[Math.floor(Math.random() * mem.length)];
+    setTimeout(() => { const st = Math.random() < 0.4; push(st ? { t: Date.now(), n: who.n, e: CCHAT_STK[Math.floor(Math.random() * CCHAT_STK.length)] } : { t: Date.now(), n: who.n, m: tr(...CCHAT_REP[Math.floor(Math.random() * CCHAT_REP.length)]) }); if (wrap.isConnected) try { tone(988, 1319, 0.08, 'triangle', 0.03); } catch (e) {} }, 1800 + Math.random() * 3500); };
+  const send = msg => { const now = Date.now(); if (now - lastSend < 700) return; lastSend = now; push({ t: now, n: nickOut(), me: 1, ...msg }); try { tone(1319, 1760, 0.07, 'triangle', 0.04); } catch (e) {} answer(); };
+  const inRow = moEl('div', 'in'), inp = moEl('input'); inp.maxLength = 80; inp.placeholder = tr('Сообщение…', 'Message…'); inp.style.textTransform = 'none';
+  const sb = moTxt('button', 'btn', '➤'), eb = moTxt('button', 'btn gold', '☺');
+  const go = () => { const v = inp.value.replace(/[\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!v) return; inp.value = ''; sfx.click(); send({ m: v }); };
+  sb.onclick = go; inp.onkeydown = ev => { if (ev.key === 'Enter') go(); };
+  const pk = moEl('div', 'pk'), hint = moTxt('div', 'sm', ''); pk.hidden = true; hint.style.cssText = 'grid-column:1/-1;color:#ffd23a;min-height:12px';
+  CCHAT_STK.forEach(id => { const e = EMO_ALL.find(q => q.id === id), own = emoHave(id), b = moEl('div', 'st' + (own ? '' : ' lock')); b.appendChild(emoCnv(id, 40));
+    if (!own) b.appendChild(moTxt('div', 'pr ol', String(e.p)));
+    b.onclick = () => { if (!own) { sfx.no(); pxiSet(hint, trf('ЭТУ ЭМОЦИЮ КУПИ НА БАЗЕ В «ЭМОЦИЯХ» ЗА {n}', 'BUY THIS EMOTE IN THE EMOTES SHOP FOR {n}', { n: e.p })); return; } sfx.click(); pk.hidden = true; send({ e: id }); };
+    pk.appendChild(b); });
+  pk.appendChild(hint); eb.onclick = () => { sfx.click(); pk.hidden = !pk.hidden; };
+  inRow.append(eb, inp, sb); wrap.append(list, pk, inRow); box.appendChild(wrap); paint();
 }
 // что я могу сделать с участником: президент — всё; вице — повышать до ветерана, понижать и исключать младших; ветеран — исключать участников
 function clanMemberActs(bd, cl, m, myR) {
