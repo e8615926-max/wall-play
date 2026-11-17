@@ -2781,6 +2781,8 @@ const SET = { music: true, sfx: true, shake: true, fx: true, vibe: true, hints: 
 // бесконечные деньги — инструмент разработчика: переключатель есть только когда игра открыта с этого компьютера (localhost)
 const DEV_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 { const sv = store.get('set', {}); if (sv && typeof sv === 'object') for (const k of [...Object.keys(SET), 'inf']) if (typeof sv[k] === 'boolean') SET[k] = sv[k]; }
+// громкость музыки и звуковых эффектов: 0…1, ползунки в настройках
+const VOL = (() => { const v = store.get('vol', null); const c01 = x => Math.max(0, Math.min(1, x)); return { music: v && Number.isFinite(v.music) ? c01(v.music) : 1, sfx: v && Number.isFinite(v.sfx) ? c01(v.sfx) : 1 }; })();
 function guessLang() {   // язык устройства, а если его нет в игре — по стране (часовому поясу)
   const near = { be: 'ru', ky: 'ru', tg: 'ru', uz: 'ru', tk: 'ru', hy: 'ru', ka: 'ru', az: 'tr', gl: 'es', ca: 'es', eu: 'es', ro: 'it', mo: 'ru', rue: 'uk', lb: 'de', gsw: 'de' };
   const langs = [].concat(navigator.languages || [], navigator.language || []);
@@ -2974,8 +2976,8 @@ let ac = null, master = null, musicGain = null, sfxBus = null, noiseBuf = null;
 function applyVolumes() {
   if (!ac) return;
   master.gain.value = muted ? 0 : 1;
-  musicGain.gain.value = SET.music ? 0.55 : 0;
-  sfxBus.gain.value = SET.sfx ? 1 : 0;
+  musicGain.gain.value = SET.music ? 0.55 * VOL.music : 0;
+  sfxBus.gain.value = SET.sfx ? VOL.sfx : 0;
 }
 function audio() {
   if (!ac) {
@@ -3299,7 +3301,7 @@ const MEL = [
 ];
 const BASS = [48, 43, 41, 43, 45, 40, 41, 43];
 const STEP = 0.18;
-let mStep = 0, mTime = 0, musicOn = false;
+let mStep = 0, mTime = 0, musicOn = false, musKind = '';
 const midi = n => 440 * Math.pow(2, (n - 69) / 12);
 // мелодия палатки алхимика: таинственная, с колокольчиками
 const TENT_MEL = [
@@ -3352,6 +3354,15 @@ setInterval(() => {
   if (ac && musicOn && ac.state !== 'running' && ac.state !== 'closed' && !document.hidden && !window.__introOn) { try { ac.resume(); } catch (e) {} }   // звук прервали (системное окно, вход, звонок) — включаем обратно сами
   if (!ac || !musicOn || ac.state !== 'running' || window.__introOn) return;
   if (muted || !SET.music || document.hidden) { mTime = 0; return; }   // музыку не слышно — ноты не создаём (это сотни звуковых узлов в минуту)
+  // сменился экран (сеть ↔ меню ↔ палатка): ноты прошлой песни уже стоят в очереди на 0.7 с вперёд — глушим их сразу
+  const kind = arenaMusic() ? 'a' : state === 'tent' ? 't' : 'm';
+  if (musKind && kind !== musKind) {
+    const old = musicGain, now = ac.currentTime; musicGain = ac.createGain(); musicGain.connect(master); applyVolumes();
+    try { old.gain.cancelScheduledValues(now); old.gain.setValueAtTime(old.gain.value, now); old.gain.linearRampToValueAtTime(0, now + 0.08); } catch (e) {}
+    setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 300);
+    mTime = now + 0.04; mStep = 0;
+  }
+  musKind = kind;
   if (mTime < ac.currentTime) mTime = ac.currentTime + 0.05;
   // запас 0.7 с: пока игра занята загрузкой (экран, рейтинг, первый показ героев), ноты уже стоят в очереди
   while (mTime < ac.currentTime + 0.7) { scheduleStep(mStep, mTime); mTime += arenaMusic() ? ARENA_STEP : STEP; mStep = (mStep + 1) % 64; }
@@ -6536,6 +6547,13 @@ function mpBuild() {
   const st = document.createElement('style');
   st.textContent = '#mpw button{font:inherit;padding:11px 14px;border:3px solid #2a1408;border-radius:10px;background:#ffb02a;color:#fff;text-shadow:0 2px #2a1408;cursor:pointer}@keyframes mpf{0%{transform:translateY(0) scale(1);opacity:0}30%{opacity:.9}100%{transform:translateY(-160px) scale(1.7);opacity:0}}#mpw .d{position:absolute;border-radius:50%;animation:mpf linear infinite;pointer-events:none}#mpw .g{background:rgba(255,255,255,.09);border:2px solid rgba(122,216,255,.45);border-radius:18px;padding:16px;backdrop-filter:blur(8px);box-shadow:0 0 28px #7ad8ff44,inset 0 0 20px #ffffff10}#mpw button{box-shadow:0 4px 0 #2a1408}#mpw input{font:inherit;padding:10px;border:3px solid #2a1408;border-radius:10px;background:#fff6d8;color:#2a1408;width:100%;box-sizing:border-box;text-transform:uppercase}';
   document.head.appendChild(st);
+  // современный фон «Онлайн»: переливающееся сияние, светящаяся сетка-пол в перспективе, мягкие лучи
+  const st2 = document.createElement('style'); st2.textContent = `
+#mpw{background:#070b22 !important;isolation:isolate}
+#mpw::before{content:'';position:fixed;inset:-30%;z-index:-2;background:radial-gradient(35% 30% at 30% 30%,#7a3affaa,transparent 70%),radial-gradient(30% 28% at 70% 40%,#1ac8ff88,transparent 70%),radial-gradient(40% 30% at 50% 80%,#ff3ab088,transparent 70%);filter:blur(30px);animation:mpAur 14s ease-in-out infinite alternate}
+#mpw::after{content:'';position:fixed;left:-50%;right:-50%;bottom:-10%;height:55%;z-index:-1;background-image:linear-gradient(#7ad8ff55 2px,transparent 2px),linear-gradient(90deg,#7ad8ff55 2px,transparent 2px);background-size:60px 60px;transform:perspective(320px) rotateX(62deg);transform-origin:50% 100%;animation:mpGrid 2.2s linear infinite;mask-image:linear-gradient(transparent,#000 60%);-webkit-mask-image:linear-gradient(transparent,#000 60%)}
+@keyframes mpAur{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(4%,-3%) rotate(8deg)}100%{transform:translate(-4%,3%) rotate(-6deg)}}
+@keyframes mpGrid{to{background-position:0 60px}}`; document.head.appendChild(st2);
   mpUi = document.createElement('div'); mpUi.id = 'mpw';
   mpUi.style.cssText = 'position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 15% 8%,#4a1aaa 0,transparent 45%),radial-gradient(circle at 85% 92%,#0a8aaa 0,transparent 50%),linear-gradient(160deg,#1a0a40,#08142e);color:#fff;font:700 15px sans-serif;display:none;flex-direction:column;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 14px 14px;overflow:auto;user-select:text;-webkit-user-select:text;touch-action:manipulation;box-sizing:border-box';
   mpUi.innerHTML = '<div class=g0></div><div style="width:100%;max-width:380px;display:flex;align-items:center;gap:10px;position:relative"><button id=mpx style="background:#e8261a">✕</button><div style="flex:1;text-align:center;font-size:24px;letter-spacing:5px;text-shadow:0 0 14px #7ad8ff,0 3px #0a1a3a">' + tr('ОНЛАЙН', 'ONLINE') + '</div><div style="width:48px"></div></div>' +
@@ -7396,11 +7414,34 @@ function emoSnd(id) {   // у каждой эмоции свой звук
   else { tone(700, 1100, 0.1, 'square', 0.05); tone(900, 1400, 0.12, 'triangle', 0.04, 0.08); }
 }
 function emoDo(id) {
-  if (state !== 'play' || !emoWheel().includes(id)) return; p.em = { id, t0: time }; emOpen = false;
+  if ((state !== 'play' && state !== 'menu') || !emoWheel().includes(id)) return; p.em = { id, t0: time }; emOpen = false; menuEmOpen = false; idleT = 0;   // выбрал — панель закрывается
   emoSnd(id); const C = EMO_COL[id] || ['#ffd23a', '#ffffff'];
   burst(p.x, p.y - 20, 12, C[0], 160, 0.6, 4, -40, 'star'); burst(p.x, p.y - 20, 6, '#ffffff', 90, 0.4, 3, 0);
   parts.push({ x: p.x, y: p.y - 6, vx: 0, vy: 0, life: 0.4, max: 0.4, color: C[0], size: 40, grav: 0, shape: 'wave' });
   if (mp.active) mpSend({ t: 'em', e: id });
+}
+// смайлики в меню: облачко «…» (будто кто-то пишет); нажал — веер смайликов, выбрал — герой показывает, веер закрывается
+const MENU_EMO = { x: W - 60, y: 392, w: 46, h: 38 };
+let menuEmOpen = false, menuEmT = 0;
+const menuEmItem = i => ({ x: MENU_EMO.x - 2 - Math.floor(i / 5) * 52, y: MENU_EMO.y - 4 - ((i % 5) + 1) * 50, w: 46, h: 46 });
+function menuEmoClick(pt) {
+  const wl = emoWheel(); if (!wl.length || TUT.on || mp.link) return false;
+  if (inRect(pt, MENU_EMO)) { audio(); menuEmOpen = !menuEmOpen; menuEmT = time; sfx.click(); return true; }
+  if (menuEmOpen) { for (let i = 0; i < wl.length; i++) if (inRect(pt, menuEmItem(i))) { emoDo(wl[i]); return true; } menuEmOpen = false; return true; }
+  return false;
+}
+function drawMenuEmo() {
+  const wl = emoWheel(); if (!wl.length || mp.link) return; const b = MENU_EMO, bob = Math.round(Math.sin(time * 2.5) * 1.5), y = b.y + bob;
+  // облачко-сообщение с хвостиком
+  ctx.fillStyle = OL; ctx.fillRect(b.x, y - 2, b.w, b.h - 6); ctx.fillRect(b.x - 2, y, b.w + 4, b.h - 10); ctx.fillRect(b.x + 8, y + b.h - 8, 10, 6); ctx.fillRect(b.x + 6, y + b.h - 4, 6, 6);
+  ctx.fillStyle = menuEmOpen ? '#ffd23a' : '#ffffff'; ctx.fillRect(b.x + 2, y, b.w - 4, b.h - 10); ctx.fillRect(b.x, y + 2, b.w, b.h - 14); ctx.fillRect(b.x + 10, y + b.h - 10, 6, 4); ctx.fillRect(b.x + 8, y + b.h - 6, 2, 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(b.x + 2, y + b.h - 14, b.w - 4, 4);
+  for (let k = 0; k < 3; k++) { const j = Math.max(0, Math.sin(time * 6 - k * 0.9)) * 3; prect(ctx, b.x + 11 + k * 10, y + 12 - j, 6, 6, '#3a2a5a'); }
+  if (!menuEmOpen) return;
+  const sk = mpSkin(skinId);
+  wl.forEach((id, i) => { const r = menuEmItem(i), pop = Math.min(1, Math.max(0, (time - menuEmT - i * 0.04) * 7)); if (pop <= 0) return; const ix = r.x + 23, iy = r.y + 23;
+    ctx.save(); ctx.translate(ix, iy); ctx.scale(pop, pop); ctx.translate(-ix, -iy);
+    pell(ctx, ix, iy, 25, 25, OL); pell(ctx, ix, iy, 22, 22, '#ffffff'); emoPortrait(id, sk, ix - 21, iy - 21, 42, 42, time % 3.2, true, 0.56); ctx.restore(); });
 }
 function emoPlayClick(pt) {
   const wl = emoWheel(); if (!wl.length || TUT.on) return false;
@@ -7480,7 +7521,10 @@ function drawSplat() {
   ctx.globalAlpha = 1; text(tr('ПИРОГ В ЛИЦО!', 'PIE IN THE FACE!'), W / 2, 300, 3, '#8a4a10', 'center', '#ffffff', W - 20);
 }
 const PW_STATIC = { magnet: 1, shield: 1, x2: 1, slow: 1, freeze: 1, feather: 1, gem2: 1, clone: 1 }, PW_PIC = new Map();
+// значки сил — пиксель-арт 18×18, чёткий на любом экране
+const PW_PIX = {"magnet":{"r":["..................","..OOOOO....OOOOO..","..OWWWO....OWWWO..","..OWWWO....OWWWO..","..ORRRO....ORRRO..","..ORRRO....ORRRO..","..ORRRO....ORRRO..","..ORRRO....ORRRO..","..ORRRO....ORRRO..","..ORHRO....ORRRO..","..ORHROOOOOORRRO..","..ORHRRROORRRRRO..","..OORRRRRRRRRROO..","...OORRRRRRRROO...","....OOORRRROOO....","......OOOOOO......","..................",".................."],"c":{"O":"#1a1030","R":"#e8262a","W":"#e8ecf8","H":"#ff8a8a"}},"shield":{"r":["..................",".OOOOOOOOOOOOOOOO.",".OBBBBBBBBBBBBBBO.",".OBBBBBBWWBBBBBBO.",".OBBLLLLWWBBBBBBO.",".OBBLLLLWWBBBBBBO.",".OBBLLLLWWBBBBBBO.",".OBWWWWWWWWWWWWWO.",".OBWWWWWWWWWWWWWO.",".OOBBLLLWWBBBBBOO.","..OOBBLLWWBBBBOO..","...OOBBLWWBBBOO...","....OOBBWWBBOO....",".....OOBWWBOO.....","......OOWWOO......",".......OOOO.......","..................",".................."],"c":{"O":"#1a1030","B":"#3ab0ff","L":"#8ad8ff","W":"#ffffff"}},"x2":{"r":["......OOOOOO......","....OOODDDDOOO....","..OOODDDDDDDDOOO..","..ODHHYYYYYYDDDO..",".OODHHYYYYYYYYDOO.",".ODDYYYYYYYYYYDDO.","OODYKYKYYKKKYYYDOO","ODDYYKYYYYYYKYYDDO","ODDYKYKYYYYKYYYDDO","ODDYYYYYYYKYYYYDDO","ODDYYYYYYKYYYYYDDO","OODYYYYYYKKKKYYDOO",".ODDYYYYYYYYYYDDO.",".OODYYYYYYYYYYDOO.","..ODDDYYYYYYDDDO..","..OOODDDDDDDDOOO..","....OOODDDDOOO....","......OOOOOO......"],"c":{"O":"#1a1030","Y":"#ffd23a","D":"#c8820a","K":"#7a4a00","H":"#fff6a0"}},"feather":{"r":["............OOO...","...........OOWOOO.","..........OOWLLSO.",".........OOWLLLWO.","........OOWLLLWOO.",".......OOWWWLWOO..","......OOWWWSWOO...",".....OOWWWSSOO....","....OOWWWSSWO.....","....OWWWSSWOO.....","....OWWSSWOO......","...OOWWSWOO.......","...OWSSWOO........","..OOSSOOO.........","..OSSOO...........",".OOSOO............",".OSOO.............",".OOO.............."],"c":{"O":"#1a1030","W":"#ffffff","S":"#8a92b8","L":"#bfe8ff"}},"tele":{"r":["......OOOOOO......","....OOOPPPPOOO....","..OOOPPPPPPPPOOO..","..OPPLPMMMMPPPPO..",".OOPLMMMMMMMMPPOO.",".OPPMMMMDDMMMMPPO.","OOPLMMDDDDDDMMPPOO","OPPMMMDDWWDDMMMPPO","OPPMMDDWWWWDDMMPPO","OPPMMDDWWWWDDMMPPO","OPPMMMDDWWDDMMMPPO","OOPPMMDDDDDDMMPPOO",".OPPMMMMDDMMMMPPO.",".OOPPMMMMMMMMPPOO.","..OPPPPMMMMPPPPO..","..OOOPPPPPPPPOOO..","....OOOPPPPOOO....","......OOOOOO......"],"c":{"O":"#1a1030","P":"#c04aff","M":"#8a2ad8","D":"#4a0a8a","W":"#ffffff","L":"#f0c0ff"}},"freeze":{"r":["..................","....OOOO...OOOO...","....OBBOO.OOBBO...","....OBBBO.OBBBO...","....OBWBOOOWBBO...","....OOBBBOBBBOO...",".....OBBBOBBBO....",".OOOOOOWWWWBOOOOOO",".OBBWBBWWWWBBBWBBO",".OOOOOOWWWWOOOOOOO",".OBBBBBWWWWBBBBBBO",".OOOOOOBBBBBOOOOOO",".....OBBBOBBBO....","....OOWBBOBWBOO...","....OBBBOOOBBBO...","....OBBBO.OBBBO...","....OBBOO.OOBBO...","....OOOO...OOOO..."],"c":{"O":"#1a1030","B":"#7ad8ff","W":"#ffffff"}},"rain":{"r":[".........OOOOO....",".......OOOWWWOOO..","...OOOOOWWWWWWWO..","..OOWWWWWWWWWWWOO.","..OWWWWWWWWWWWWWO.","..OWWWWWWWWWWWWWO.","..OWWWWWWWWWWWWWO.","..OWWWWWWWWWWWWOO.","..OWWWWWWWWWWWWO..","..OSSSSSSSSSSSSO..","..OOOOOOOOOOOOOO..","..OOOOO....OYYYO..","..OYYYO....OYDYO..","..OYDYOOOOOOYYYO..","..OYYYOOYYYOOOOO..","..OOOOOOYDYO......",".......OYYYO......",".......OOOOO......"],"c":{"O":"#1a1030","W":"#ffffff","S":"#c8d0e8","Y":"#ffd23a","D":"#c8820a"}},"slow":{"r":["......OOOOOO......","......ORRRRO......","......ORRRRO......",".....OOOSSOOO.....","...OOOSSSSSSOOO...","...OSSWWWWWWSSO...","..OOSWWWKWWWWSOO..","..OSWWWWKWWWWWSO..",".OOSWWWWKWWWWWSOO.",".OSWWWWWKWWWWWWSO.",".OSWWWWWRKKKKWWSO.",".OSWWWWWWWWWWWWSO.",".OOSWWWWWWWWWWSOO.","..OSWWWWWWWWWWSO..","..OOSWWWWWWWWSOO..","...OSSWWWWWWSSO...","...OOOSSSSSSOOO...",".....OOOOOOOO....."],"c":{"O":"#1a1030","W":"#ffffff","S":"#a8b0c8","R":"#e8262a","K":"#1a1030"}},"gem2":{"r":["..................","........OOOOOOO...",".......OOLLLLLOO..",".......OLWWLLLLOO.",".OOOOOOOLLLLMMMMO.","OOBBBBBOOLLLMMMOO.","OBWWBBBBOOLLMMOO..","OBBBBDDDDOLLMMO...","OOBBBDDDOOOLMOO...",".OOBBDDOO.OOOO....","..OBBDDO..........","..OOBDOO..........","...OOOO...........","..................","..................","..................","..................",".................."],"c":{"O":"#1a1030","B":"#5ac8ff","D":"#1a70c8","L":"#ff7ad8","M":"#c01f8a","W":"#ffffff"}},"rocket":{"r":["...........OOOOO..","........OOOORRRO..",".......OOWWWWRRO..","......OOWWWWWWRO..",".....OOWWWWWWWOO..","....OOWWWWBBWWO...","...OOWWWWBBBBOO...",".OOOWWWWWBBBBO....","OORRWWWWWWBBOO....","ORRROWWWWWOOO.....","OROOFOWWWOO.......","OOOFFFOWOO........","OOFFYFRRO.........","OFFYFORRO.........","OFFFOROOO.........","OOFOOOO...........",".OOO..............",".................."],"c":{"O":"#1a1030","W":"#ffffff","R":"#e8262a","B":"#3ab0ff","F":"#ff7a1a","Y":"#ffd23a"}},"mega":{"r":["..................","..OOOOOOOOOOOOOO..","..OLLLLLLLLLLLLO..","..OGGGGGGGGGGGGO..","..OGGGGGGGGGGGGO..","..OOOOOOOOOOOOOO..","...OWWWWWWWWWWO...","...OSSSSSSSSSSO...","...OOOOOOOOOOOO...","...OWWWWWWWWWWO...","...OSSSSSSSSSSO...","...OOOOOOOOOOOO...","...OWWWWWWWWWWO...","...OSSSSSSSSSSO...","..OOOOOOOOOOOOOO..","..ODDDDDDDDDDDDO..","..ODDDDDDDDDDDDO..","..OOOOOOOOOOOOOO.."],"c":{"O":"#1a1030","G":"#3ce06a","L":"#9affb0","S":"#a8b0c8","W":"#ffffff","D":"#5a6a7a"}},"jet":{"r":["..OOOOOOOOOOOOOO..","..ORRRRROORRRRRO..","..OWWSSSOOWWSSSO..","..OWWSSSOOWWSSSO..","..OWWSSSOOWWSSSO..","..OWWSSSKKWWSSSO..","..OWWSSSKKWWSSSO..","..OWWSSSKKWWSSSO..","..OWWSSSOOWWSSSO..","..OWWSSSOOWWSSSO..","..OWWSSSOOWWSSSO..","..OWWSSSOOWWSSSO..","..OFYYYFOOFYYYFO..","..OOFYFOOOOFYFOO..","...OFYFO..OFYFO...","...OOFOO..OOFOO...","....OFO....OFO....","....OOO....OOO...."],"c":{"O":"#1a1030","S":"#a8b0c8","W":"#e8ecf8","R":"#e8262a","F":"#ff7a1a","Y":"#ffd23a","K":"#5a6a7a"}},"bomb":{"r":["............OROYO.","..........OOONYOO.",".....OOOOOONNOORO.",".....OSSSSNOOOOOO.","....OOSSSSOOO.....","...OOKKKKKKKOO....","..OOKKKKKKKKKOO...","..OKKWWWKKKKKKO...",".OOKKWWWKKKKKKOO..",".OKKKWWWKKKKKKKO..",".OKKKKKKKKKKKKKO..",".OKKKKKKKKKKKKKO..",".OOKKKKKKKKKKKOO..","..OKKKKKKKKKKKO...","..OOKKKKKKKKKOO...","...OOKKKKKKKOO....","....OOOKKKOOO.....","......OOOOO......."],"c":{"O":"#1a1030","K":"#3a3a4a","S":"#7a7a8a","W":"#ffffff","N":"#c8820a","Y":"#ffd23a","R":"#ff5a1a"}},"wings":{"r":["..................","OOO...........OOO.","OWOOO.......OOOWO.","OWWWOO.....OOWWWOO","WWWWWOOOOOOOWWWWWO","WWSWWWWOYYWWWWWSWO","WWWSSWWWYYWWWSSWWO","OWWSSSSWYYWSSSSWOO","OWWWSSSSYYSSSSWWO.","OOWWSSSSYYSSSSWOO.",".OWWWWSSYYSSWWOO..",".OOWWWWOYYWWWOO...","..OOWWOOOOOWOO....","...OOOO...OOO.....","..................","..................","..................",".................."],"c":{"O":"#1a1030","W":"#ffffff","S":"#bfe8ff","Y":"#ffd23a"}},"clone":{"r":["..................",".............OOOO.",".OOOO.....OOOOBBO.",".OAAOOOOOOObbbBBO.",".OAAOAAAObBBBBBbOO",".OOAAAAAbBBBBBBBbO",".OAAAAAABBBBBBBBBO","OOAAAAAbBBKBBKBBBb","OAAAKAAKBBBBBBBBBb","OAAAAAAbBBBBBBBBBb","OAAAAAAABBBBBBBBBO","OOAAAAAAbBBBBBBBbO",".OAAAAAAAbBBBBBbOO",".OOAAAAAAAObbbOOO.","..OOOAAAOOOOOOO...","....OOOOO.........","..................",".................."],"c":{"O":"#1a1030","A":"#ff9a3a","B":"#7ad8ff","b":"#7ad8ff","K":"#1a1030"}},"star":{"r":[".......OOO........",".......ORO........","......OOROO.......","......ORRRO.......","......ORRRO.......","OOOOOOOPPPOOOOOOO.","OPPPPPPPPPPPPPPPO.","OOPPPPPPPPPPPPPOO.",".OOYYYYKYYKYYYOO..","..OOYYYYYYYYYOO...","...OOYYYYYYYOO....","....OGGGGGGGO.....","...OOGGGGGGGOO....","...OGGGOOOGGGO....","...OBOOO.OOOBO....","...OOO.....OOO....","..................",".................."],"c":{"O":"#1a1030","R":"#ff3a5a","P":"#ff9a3a","Y":"#ffd23a","G":"#3ce06a","B":"#3ab0ff","K":"#1a1030"}},"ghost":{"r":["......OOOOOO......","....OOOWWWWOOO....","...OOWWWWWWWWOO...","..OOWWWWWWWWWWOO..","..OWWWWWWWWWWWWO..","..OWWWWWWWWWWWWO..","..OWWWKKWWKKWWWO..","..OWWWKKWWKKWSSO..","..OWWWKKWWKKWSSO..","..OWWWWWWWWWWSSO..","..OWWWWWWWWWWSSO..","..OWWWWWWWWWWSSO..","..OWWWWWWWWWWSSO..","..OWWWWWWWWWWSSO..","..OWWOOWWOOWWOOO..","..OOOOOOOOOOOO....","..................",".................."],"c":{"O":"#1a1030","W":"#ffffff","S":"#c8d0e8","K":"#1a1030"}},"revive":{"r":["..................","...OOOOOOOOOOOO...","..OORRRROORRRROO..",".OORRRRRRRRRRRROO.",".ORHHRRRRRRRRRRRO.",".ORHHRRWWWRRRRRRO.",".ORRRRRWWWRRRRRRO.",".ORRRWWWWWWWRRRRO.",".ORRRWWWWWWWRRRRO.",".OORRWWWWWWWRRROO.","..OORRRWWWRRRROO..","...OORRWWWRROOO...","....OORRRRROO.....",".....OORRROO......","......OOROO.......",".......OOO........","..................",".................."],"c":{"O":"#1a1030","R":"#e8264a","W":"#ffffff","H":"#ff9aa8"}}};
 function powerIcon(id, x, y, s = 1) {
+  const pp = PW_PIX[id]; if (pp) { pixIcon(pp.r, pp.c, x, y, s * 0.8); return; }
   if (id === 'flame') {   // огнемёт: бак, ствол и язык пламени
     const P = (dx, dy, w, h, c) => prect(ctx, x + dx * s, y + dy * s, w * s, h * s, c), f = Math.sin(time * 20) * 2;
     P(-11, -4, 8, 12, OL); P(-10, -3, 6, 10, '#e8261a'); P(-10, -3, 2, 10, '#ff8a6a'); P(-4, -2, 12, 6, OL); P(-3, -1, 10, 4, '#8a8a9a'); P(-3, -1, 10, 1, '#d8d8e0');
@@ -7576,10 +7620,12 @@ const SV_BUY = { x: SV_WIN.x + SV_WIN.w - 158, y: SV_WIN.y + SV_WIN.h - 58, w: 1
 const SV_NO = { x: SV_WIN.x + 12, y: SV_WIN.y + SV_WIN.h - 58, w: 110, h: 44 };
 const SV_ROAD = { x: SV_WIN.x + 12, y: SV_WIN.y + SV_WIN.h - 58, w: 150, h: 44 };   // «дорожка кубков» у своего героя
 const SV_GP = { x: SV_WIN.x + SV_WIN.w - 176, y: SV_WIN.y + 66, w: 168, h: 336 };
+const SV_TRN = { x: SV_GP.x + 8, y: SV_GP.y + SV_GP.h - 42, w: SV_GP.w - 16, h: 32 };   // «Тренировка» — справа, внизу ролика
 function svOpen(k, pr) { sv = { k, pr, confirm: false, t0: time, no: -9 }; sfx.click(); }
 function svClick(pt) {
   if (inRect(pt, SV_X) || !inRect(pt, SV_WIN)) { sv = null; sfx.click(); return; }
   const k = sv.k;
+  if (inRect(pt, SV_TRN)) { sfx.click(); trnOpen(k); return; }
   if (k.gift && !owned.includes(k.id)) { if (inRect(pt, SV_BUY)) { sv = null; sfx.click(); if (acctG()) giftCharodey(); else openProfile(); } return; }
   if (owned.includes(k.id)) { if (inRect(pt, SV_ROAD)) { sv = null; sfx.click(); openHero(k.id); return; } if (inRect(pt, SV_BUY) && k.id !== skinId) { selectSkin(k); sfx.click(); sv = null; } return; }
   if (sv.confirm) { if (inRect(pt, SV_NO)) { sv.confirm = false; sfx.click(); } else if (inRect(pt, SV_BUY)) { const pr = sv.pr; sv = null; buySkin(k, pr); } return; }
@@ -7883,6 +7929,7 @@ function svDraw() {
     else text(tr('РАНГ С 500', 'RANK AT 500'), Wn.x + Wn.w - 16, py + 4, 1, '#d8d0ff', 'right', OL);
     button(SV_ROAD, tr('ДОРОЖКА', 'ROAD'), '#a64aff', '#5a1aa0'); if (roadReady(k.id)) badge(SV_ROAD.x + SV_ROAD.w - 4, SV_ROAD.y + 2);
   }
+  { const b = SV_TRN, pu = Math.max(0, Math.sin(time * 3)) * 1.5; button({ x: b.x, y: b.y - pu, w: b.w, h: b.h }, '▶ ' + tr('ТРЕНИРОВКА', 'TRAINING'), '#3ab0ff', '#1a5aa0'); }   // тренировка — у любого героя
   if (own) button(SV_BUY, k.id === skinId ? tr('НАДЕТО', 'EQUIPPED') : tr('ВЫБРАТЬ', 'EQUIP'), k.id === skinId ? '#777777' : '#3ce06a', k.id === skinId ? '#444444' : '#1a7a3a');
   else if (sv.confirm) { button(SV_NO, tr('ОТМЕНА', 'CANCEL'), '#e8261a', '#a01008'); button(SV_BUY, tr('ПОДТВЕРДИТЬ', 'CONFIRM'), '#3ce06a', '#1a7a3a'); }
   else button(SV_BUY, tr('КУПИТЬ', 'BUY'), canPay(pr) ? '#ffb02a' : '#8a7a6a', canPay(pr) ? '#c06a00' : '#5a4a3a');
@@ -9236,6 +9283,7 @@ function uiClick(pt) {
   if (state === 'load') { audio(); if (loadReady) finishLoad(); return true; }
   if (chest) { chestTap(); return true; }
   if (modal) { modalClick(pt); return true; }
+  if (homeOn() && inRect(pt, HOME_BTN)) { goHome(); return true; }
   if (state === 'shop' && !sv && shopMain === 1 && pt.y > STORE_TOP && !wheel.spinning) { storeDown = { x: pt.x, y: pt.y, sy: storeScroll, moved: false }; return true; }   // магазин листается — нажатие на отпускании
   if (state === 'shop') { if (sv) svClick(pt); else shopClick(pt); return true; }
   if (state === 'ach') { if (inRect(pt, BACK_BTN)) { state = 'menu'; sfx.click(); } else acDown = { y: pt.y, sy: acScroll }; return true; }
@@ -9247,6 +9295,7 @@ function uiClick(pt) {
   if (mp.active && state === 'dead' && mpAlive() && inRect(pt, BTN_ZOMB)) { zmBecome(true); return true; }
   if (mp.active && state === 'dead' && inRect(pt, BTN_LEAVE)) { mpLeaveRound(); return true; }
   if (mp.active && state === 'dead' && mpSpecClick(pt)) return true;
+  if (trnClick(pt)) return true;
   if (state === 'play' && pmenu) { powerMenuClick(pt); return true; }
   if (state === 'play' && !paused && emoPlayClick(pt)) return true;
   if (state === 'play' && !paused) {
@@ -9269,6 +9318,7 @@ function uiClick(pt) {
   if (state === 'play' && inRect(pt, BTN.pause)) { if (!mp.active) { paused = !paused; pauseAsk = false; } return true; }
   if (state === 'play' && paused) { pauseClick(pt); return true; }
   if (state === 'menu') {
+    if (menuEmoClick(pt)) return true;
     if (mp.link && inRect(pt, BTN_RDY)) { mpReadyClick(); return true; }
     if (menuMetaClick(pt)) return true;
     if (mp.link && inRect(pt, BTN_TR)) { sfx.click(); trOpen(); return true; }
@@ -9277,7 +9327,7 @@ function uiClick(pt) {
     if (inRect(pt, BTN.store)) return open(1);
     if (inRect(pt, BTN.wheel)) return open(2);
     if (inRect(pt, BTN.ach)) { audio(); startMusic(); state = 'ach'; acScroll = 0; sfx.click(); return true; }
-    if (inRect(pt, { x: DWIN_BOX.x, y: DWIN_BOX.y - 14, w: DWIN_BOX.w, h: DWIN_BOX.h + 14 })) { audio(); startMusic(); sfx.click(); openDayWins(); return true; }
+    if (inRect(pt, { x: DWIN_BOX.x, y: DWIN_BOX.y - 14, w: DWIN_BOX.w, h: DWIN_BOX.h + 14 })) { audio(); startMusic(); sfx.click(); if (dayWinReady()) dropShow(); else openDayWins(); return true; }
     if (inRect(pt, BTN.menuB)) { audio(); startMusic(); sfx.click(); openSideMenu(); return true; }
     if (inRect(pt, BTN.mp)) { audio(); startMusic(); sfx.click(); mpOpen(); return true; }
     if (inRect(pt, BTN.friends)) { audio(); startMusic(); sfx.click(); openFriends(); return true; }
@@ -9616,7 +9666,14 @@ function askPass(done) {
   inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') check(); else if (e.key === 'Escape') close(false); });
   setTimeout(() => inp.focus(), 50);
 }
+const VOL_SL = i => { const k = SET_KEYS[i]; if (k !== 'music' && k !== 'sfx') return null; const r = setRow(i); return { x: r.x + 104, y: r.y, w: r.w - 104 - 92, h: r.h, k }; };
+let volDrag = null;
+function volSet(s, x) { VOL[s.k] = clamp((x - s.x) / s.w, 0, 1); if (VOL[s.k] < 0.03) VOL[s.k] = 0; store.set('vol', VOL); audio(); applyVolumes(); }
+window.addEventListener('pointermove', e => { if (!volDrag || state !== 'set') return; volSet(volDrag, toGame(e).x); });
+window.addEventListener('pointerup', () => { if (volDrag) { if (volDrag.k === 'sfx') sfx.click(); volDrag = null; } });
 function setClick(pt) {
+  if (inRect(pt, BACK_BTN)) { state = setFrom === 'pause' ? 'play' : 'menu'; setFrom = 'menu'; sfx.click(); return; }
+  for (let i = 0; i < SET_KEYS.length; i++) { const s = VOL_SL(i); if (s && pt.x >= s.x - 10 && pt.x <= s.x + s.w + 10 && pt.y >= s.y && pt.y <= s.y + s.h) { volSet(s, pt.x); volDrag = s; return; } }
   for (let i = 0; i < SET_KEYS.length; i++) if (inRect(pt, setRow(i))) {
     const k = SET_KEYS[i];
     if (k === 'inf' && !SET.inf && !askPass.ok) { sfx.click(); askPass(ok => { if (ok) { askPass.ok = true; setClick(pt); askPass.ok = false; } }); return; }   // включить — только по паролю
@@ -9757,6 +9814,7 @@ function land(s) {
 function die(reason) {
   if (quiet) return;
   if (state !== 'play') return;
+  if (TRN.on) { if (reason === 'quit') trnExit(); else trnFall(); return; }
   const quit = reason === 'quit';   // игрок сам закончил забег через паузу: без щитов, клонов и оживлений
   if (quit) { p.shield = 0; clone = null; p.revive = 0; }
   if (ZB.on && !quit) { if (ZB.sh > 0 || reason === 'zombie') return; if (ZB.rage > 0 && reason !== 'fall') return; zmRespawn(); return; }
@@ -12000,7 +12058,7 @@ const GEAR_COL = { O: '#1a1030', L: '#ffffff', M: '#c8d0e8', D: '#8a92b8' }, GEA
 function drawGearBtn() {
   const b = BTN.gear, cx = b.x + b.w / 2, cy = b.y + b.h / 2;
   pixIcon(GEAR_PIX, GEAR_SH, cx, cy + 3, 0.9);
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.sin(time * 0.8) * 0.12); pixIconRaw(ctx, GEAR_PIX, GEAR_COL, 0, 0, 0.9); ctx.restore();
+  pixIcon(GEAR_PIX, GEAR_COL, cx, cy, 0.9);
 }
 // Мистер Пиклс показывает, куда нажимать: палец опускается, от касания расходятся круги
 function drawPkTap(x, y) {
@@ -12235,17 +12293,31 @@ function badge(x, y) {
 }
 // кристалл и рубин — пиксель-арт, как монеты и герои: по точкам, без сглаженных линий (раньше были гладкие
 // многоугольники — на экране телефона они выглядели мутными рядом с пиксельной графикой)
-const GEM_PIX = ['...OOOOOOOOO...', '..OWWLLOLLMMO..', '.OWWLLLOLLMMDO.', 'OWLLLLLOLLMMDDO', 'OHHHHHHHHHHHHHO', '.OBLBBBMMMDDDO.', '..OBLBBMMDDDO..', '...OBLBMMDDO...', '....OBBMMDO....', '.....OBMDO.....', '......OMO......', '.......O.......'];
-const GEM_COL = { O: OL, W: '#ffffff', L: '#bff0ff', H: '#e8fbff', B: '#7ad8ff', M: '#3ab0ff', D: '#1a70c8' };
+const GEM_PIX = ["...OOOOOOOOO...", "..OHWLLLLLMMO..", ".OHWLLLLLLMMDO.", "OHWLLLLLLLMMDDO", "OKKKKKKKKKKKKKO", "OBBLLBBBMMMDDDO", ".OBBLLBBMMMDDO.", "..OBBLBBMMDDO..", "...OBBLBMMDO...", "....OBBMMDO....", ".....OBMDO.....", "......OMO......", ".......O......."];
+const GEM_COL = { O: OL, H: '#ffffff', W: '#ffffff', L: '#bff0ff', M: '#5ac8ff', D: '#1a70c8', B: '#8ae0ff', K: '#e8fbff' };
 const RUBY_PIX = ['...OOOOO...', '..OLLLLLO..', '.OLWWLLLDO.', 'OLLRRRRRDDO', 'OLRRRRRRRDO', 'OLRRRRRRRDO', 'OLRRRRRRRDO', 'OMMRRRRRDDO', '.OMMDDDDDO.', '..ODDDDDO..', '...OOOOO...'];
 const RUBY_COL = { O: OL, W: '#ffffff', L: '#ff7a8e', R: '#e81838', D: '#9a0420', M: '#c80a2a' };
 // значок по точкам рисуется один раз в маленький холст (раньше — десятки fillRect на каждый кристалл каждый кадр)
-const PIX_CACHE = new Map();
+const PIX_CACHE = new Map(), PIX_CACHE0 = new Map();
+// чётко на любом экране: клетка значка — целое число пикселей ЭКРАНА (раньше заготовка в игровых точках растягивалась
+// на нецелый масштаб 2.17, 2.4… и клетки выходили то шире, то уже — значки казались мутными и кривыми)
 function pixIcon(rows, cols, x, y, s) {
+  const t = ctx.getTransform();
+  if (!t.b && !t.c && t.a > 0 && Math.abs(t.a - t.d) < 1e-6) {
+    const w = rows[0].length, h = rows.length, U = Math.max(1, Math.round(s * 2.2 * t.a));
+    let byC = PIX_CACHE.get(rows); if (!byC) { byC = new Map(); PIX_CACHE.set(rows, byC); }
+    let byU = byC.get(cols); if (!byU || !(byU instanceof Map) || byU.__dev !== 1) { byU = new Map(); byU.__dev = 1; byC.set(cols, byU); }   // по цветам отдельно (тень и сам значок — одни строки)
+    let c = byU.get(U);
+    if (!c) { c = document.createElement('canvas'); c.width = w * U; c.height = h * U; const g = c.getContext('2d');
+      for (let r = 0; r < h; r++) { const row = rows[r]; let q = 0; while (q < w) { const ch = row[q]; if (ch === '.' || !cols[ch]) { q++; continue; } let e = q + 1; while (e < w && row[e] === ch) e++; g.fillStyle = cols[ch]; g.fillRect(q * U, r * U, (e - q) * U, U); q = e; } }
+      byU.set(U, c); }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); drawRaw.call(ctx, c, Math.round(t.a * x + t.e - w * U / 2), Math.round(t.d * y + t.f - h * U / 2)); ctx.restore();
+    return;
+  }
   const u = Math.max(1, Math.round(s * 2.2)), w = rows[0].length, h = rows.length;
   if (ctx.imageSmoothingEnabled !== false) { pixIconRaw(ctx, rows, cols, x, y, s); return; }
-  let byU = PIX_CACHE.get(rows);
-  if (!byU) { byU = new Map(); PIX_CACHE.set(rows, byU); }
+  let byU = PIX_CACHE0.get(rows);
+  if (!byU) { byU = new Map(); PIX_CACHE0.set(rows, byU); }
   let c = byU.get(u);
   if (!c) {
     c = document.createElement('canvas'); c.width = w * u; c.height = h * u;
@@ -12300,6 +12372,7 @@ function drawMenu() {
   if (hint > 0.05) drawPkTap(W - 56, 505);
   ctx.globalAlpha = 1;
   drawDayWins();
+  drawMenuEmo();
   drawMenuMsg();
 }
 // «Сеть» — большая жёлтая кнопка внизу справа: дышит, по ней бежит блик, два скрещённых меча
@@ -12315,31 +12388,43 @@ function drawPlayBtn() {
   ctx.restore();
   ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(x + 4, y + 3, w - 8, 3);
   const ix = x + 26, iy = y + h / 2;   // два скрещённых меча
-  for (const d of [-1, 1]) { ctx.save(); ctx.translate(ix, iy); ctx.rotate(d * 0.78); prect(ctx, -3, -15, 6, 22, OL); prect(ctx, -1, -13, 2, 18, '#ffffff'); prect(ctx, -7, 5, 14, 4, OL); prect(ctx, -2, 7, 4, 8, OL); prect(ctx, -5, 6, 10, 2, '#c8820a'); ctx.restore(); }
+  pixIcon(SWORD_PIX, SWORD_COL, ix, iy + 1, 0.8);
   text(tr('СЕТЬ', 'ONLINE'), x + w / 2 + 18, y + 30, 3, '#ffffff', 'center', OL, w - 56);
   text(tr('ИГРАТЬ ПО СЕТИ', 'PLAY ONLINE'), x + w / 2 + 18, y + h - 7, 1, '#7a3a00', 'center', null, w - 56);
 }
 // «Победы дня» в меню над кнопкой «Сеть»: 10 клеток, первая — особая; готовая награда подпрыгивает
-const DWIN_BOX = { x: 12, y: 540, w: 336, h: 34 };
+const DWIN_BOX = { x: 12, y: 540, w: 336, h: 34 }, DWIN_B0 = { x: 12, y: 540, w: 336, h: 34 };
 function drawDayWins() {
-  const g = dayWins(), b = DWIN_BOX, pop = clamp(1 - (time - dwinPop) / 0.6, 0, 1);
-  // ярлык сверху
-  const tl = tr('ПОБЕДЫ ДНЯ', 'DAILY WINS'), tw = 104; ctx.fillStyle = OL; ctx.fillRect(b.x + b.w / 2 - tw / 2 - 2, b.y - 14, tw + 4, 16); ctx.fillStyle = '#1a1030'; ctx.fillRect(b.x + b.w / 2 - tw / 2, b.y - 12, tw, 13);
-  text(tl, b.x + b.w / 2, b.y - 2, 1, '#ffd23a', 'center', OL, tw - 4);
-  ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4); ctx.fillStyle = '#2a50c8'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.fillStyle = '#4a7aff'; ctx.fillRect(b.x, b.y, b.w, 3);
-  let x = b.x + 2;
-  for (let i = 0; i < DWIN_N; i++) {
-    const w = i === 0 ? 44 : 30, got = i < g.cl, can = !got && i < g.n, cx = x + w / 2, cy = b.y + b.h / 2;
-    const bob = can ? Math.round(Math.abs(Math.sin(time * 5 + i)) * -2) : 0;
-    ctx.fillStyle = can ? '#9affb0' : got ? '#1a2a6a' : '#3a62d8'; ctx.fillRect(x, b.y + 2, w - 2, b.h - 4);
-    if (can) { ctx.globalAlpha = 0.4 + Math.sin(time * 6) * 0.2; ctx.fillStyle = '#ffffff'; ctx.fillRect(x, b.y + 2, w - 2, b.h - 4); ctx.globalAlpha = 1; }
-    ctx.globalAlpha = got ? 0.35 : (!can ? 0.75 : 1);
-    if (i === 0) chestIcon(cx, cy + 4 + bob, false, 0, true); else { ctx.save(); ctx.translate(cx, cy + bob); ctx.scale(0.62, 0.62); giftIcon(0, 6, 1); ctx.restore(); }
-    ctx.globalAlpha = 1;
-    if (got) text('✓', cx, cy + 5, 2, '#3ce06a', 'center', OL);
-    if (i === g.n - 1 && pop > 0) { ctx.globalAlpha = pop; pell(ctx, cx, cy, 16 + (1 - pop) * 14, 16 + (1 - pop) * 14, '#fff6a0'); ctx.globalAlpha = 1; }
-    x += w;
+  const g = dayWins(), b = DWIN_B0, pop = clamp(1 - (time - dwinPop) / 0.6, 0, 1);
+  const fin = g.cl >= DWIN_N, ft = fin ? (g.ft && Date.now() - g.ft < 60000 && time - dwinFinT < 3 ? Math.min(1, Math.max(0, time - dwinFinT - 0.3) / 0.9) : 1) : 0;
+  if (fin && ft < 1 && !drawDayWins.snd && time - dwinFinT > 0.3) { drawDayWins.snd = true; try { tone(900, 200, 0.5, 'sawtooth', 0.04); noise(0.3, 0.05, 900); } catch (e) {} }
+  if (!fin) drawDayWins.snd = false;
+  if (fin && ft >= 1) {   // все 10 забраны: маленькое окошко «приходи завтра» с таймером
+    const w = 196, x = W / 2 - w / 2, y = b.y + 2, a = clamp((time - dwinFinT - 1.2) / 0.4, 0, 1) || 1;
+    ctx.globalAlpha = a; ctx.fillStyle = OL; ctx.fillRect(x - 2, y - 2, w + 4, 32); ctx.fillStyle = '#1e1448'; ctx.fillRect(x, y, w, 28); ctx.fillStyle = '#3a2a7a'; ctx.fillRect(x, y, w, 3);
+    dropIcon(-1, x + 16, y + 14, 0.42); pixIcon(CHECK_PIX, CHECK_COL, x + 20, y + 18, 0.3);
+    text(tr('ПРИХОДИ ЗАВТРА!', 'COME BACK TOMORROW!'), x + 32, y + 13, 1, '#ffd23a', 'left', OL, w - 38);
+    text(timeToMidnight(), x + 32, y + 24, 1, '#ffffff', 'left', OL, w - 38); ctx.globalAlpha = 1;
+    return;
   }
+  const ox = -Math.pow(ft, 2) * (W + 30);   // уезжает влево
+  ctx.save(); ctx.translate(ox, 0);
+  const tl = tr('ПОБЕДЫ ДНЯ', 'DAILY WINS') + ' ' + g.n + '/' + DWIN_N, tw = 124; ctx.fillStyle = OL; ctx.fillRect(b.x + 6, b.y - 14, tw + 4, 16); ctx.fillStyle = '#1e1448'; ctx.fillRect(b.x + 8, b.y - 12, tw, 13);
+  text(tl, b.x + 8 + tw / 2, b.y - 2, 1, '#ffd23a', 'center', OL, tw - 4);
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4); const bg = ctx.createLinearGradient(0, b.y, 0, b.y + b.h); bg.addColorStop(0, '#3a2a7a'); bg.addColorStop(1, '#1e1448'); ctx.fillStyle = bg; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(b.x, b.y, b.w, 2);
+  const cw = b.w / DWIN_N;
+  for (let i = 0; i < DWIN_N; i++) {
+    const got = i < g.cl, can = !got && i < g.n, cx = Math.round(b.x + cw * i + cw / 2), cy = b.y + b.h / 2;
+    if (i) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(Math.round(b.x + cw * i), b.y + 4, 2, b.h - 8); }
+    const bob = can ? Math.round(-Math.abs(Math.sin(time * 5 + i)) * 3) : 0;
+    if (can) { ctx.globalAlpha = 0.55 + Math.sin(time * 6) * 0.25; ctx.fillStyle = '#9a7aff'; ctx.fillRect(Math.round(b.x + cw * i) + 2, b.y + 2, Math.round(cw) - 2, b.h - 4); ctx.globalAlpha = 1; }
+    ctx.globalAlpha = got || can ? 1 : 0.5;
+    dropIcon(got ? (g.rr[i] != null ? g.rr[i] : 0) : -1, cx, cy + bob, can ? 0.72 : 0.62);
+    ctx.globalAlpha = 1;
+    if (got) pixIcon(CHECK_PIX, CHECK_COL, cx + 7, cy + 7, 0.45);
+    if (i === g.n - 1 && pop > 0) { ctx.globalAlpha = pop; pell(ctx, cx, cy, 14 + (1 - pop) * 14, 14 + (1 - pop) * 14, '#fff6a0'); ctx.globalAlpha = 1; }
+  }
+  ctx.restore();
 }
 // короткое сообщение в меню (например, «клубы откроются с 1000 кубков»)
 let menuMsgS = '', menuMsgT = 0;
@@ -15141,6 +15226,21 @@ function drawShopBg() {
   }
   ctx.globalAlpha = 1;
 }
+// кнопка «домой» — справа сверху во всех окнах: сразу в главное меню
+const HOME_BTN = { x: W - 46, y: 12, w: 36, h: 36 }, HOME_ST = new Set(['shop', 'ach', 'set', 'tent', 'allies', 'emotes']);
+const HOME_PIX = ['.....OO.....', '....OWWO....', '...OWWWWO...', '..OWWWWWWO..', '.OWWWWWWWWO.', 'OWWWWWWWWWWO', '..OWWWWWWO..', '..OWWWWWWO..', '..OWWDDWWO..', '..OWWDDWWO..', '..OOOOOOOO..'], HOME_COL = { O: '#1a1030', W: '#ffffff', D: '#5a3ab8' };
+const homeOn = () => HOME_ST.has(state) && !(state === 'set' && setFrom === 'pause');   // из паузы раунда — без «домой»
+function drawHomeBtn() {
+  const b = HOME_BTN, cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  pell(ctx, cx, cy + 2, b.w / 2 + 2, b.h / 2 + 2, OL); pell(ctx, cx, cy, b.w / 2, b.h / 2, '#5a3ab8'); pell(ctx, cx, cy - 4, b.w / 2 - 4, b.h / 2 - 8, '#7a5ad8');
+  pixIcon(HOME_PIX, HOME_COL, cx, cy, 0.9);
+}
+function goHome() {
+  sfx.click(); sv = null; tentFrom = false; emOpen = false; menuEmOpen = false;
+  try { moClose(); } catch (e) {} try { if (sideUi) { sideUi.remove(); sideUi = null; } } catch (e) {}
+  state = 'menu'; menuAt = time;
+}
+function homeCnv(size) { const c = document.createElement('canvas'); c.width = 12; c.height = 11; c.style.cssText = 'width:' + size + 'px;height:' + Math.round(size * 11 / 12) + 'px;image-rendering:pixelated'; const g = c.getContext('2d'); HOME_PIX.forEach((r, y) => { for (let x = 0; x < 12; x++) { const col = HOME_COL[r[x]]; if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); } } }); return c; }
 // плашки валют: монеты, кристаллы, рубины — одного вида везде
 function moneyPlates(x, y0, w = 118) {
   [[bank, '#3a2a5a', '#ffffff'], [gems, '#1a3a6a', '#bfeaff'], [rubies, '#5a0a1e', '#ffc0c8']].forEach(([v, bg, col], i) => {
@@ -15153,8 +15253,8 @@ function moneyPlates(x, y0, w = 118) {
 }
 function drawShopHeader() {
   roundBtn(BACK_BTN); text('<', BACK_BTN.x + 21, BACK_BTN.y + 28, 3, OL, 'center', null);
-  text(T('shop'), 146, 48, 3, '#ffd23a', 'center', OL, 170);
-  moneyPlates(234, 4);
+  text(T('shop'), 122, 48, 3, '#ffd23a', 'center', OL, 112);
+  moneyPlates(192, 4);
   for (let i = 0; i < MAIN_TABS.length; i++) {
     const r = mainTabRect(i), on = i === shopMain;
     ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 6);
@@ -15819,12 +15919,18 @@ function drawAch() {
 
 function drawSettings() {
   ctx.fillStyle = 'rgba(42,20,8,0.88)'; ctx.fillRect(0, 0, W, H);
-  text(T('settings'), W / 2, 60, 3, '#ffd23a');
+  text(T('settings'), W / 2, 60, 3, '#ffd23a', 'center', OL, W - 120);
+  roundBtn(BACK_BTN); text('<', BACK_BTN.x + 21, BACK_BTN.y + 28, 3, OL, 'center', null);
   SET_KEYS.forEach((k, i) => {
     const r = setRow(i), on = SET[k];
     ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
     ctx.fillStyle = '#4a3428'; ctx.fillRect(r.x, r.y, r.w, r.h);
-    text(T(k), r.x + 12, r.y + 21, 2, '#ffffff', 'left', null, 210);
+    const vs = VOL_SL(i); text(T(k), r.x + 12, r.y + 21, 2, '#ffffff', 'left', null, vs ? vs.x - r.x - 18 : 210);
+    if (vs) {   // ползунок громкости
+      const v = VOL[k], kx = Math.round(vs.x + vs.w * v); ctx.fillStyle = OL; ctx.fillRect(vs.x - 2, vs.y + 8, vs.w + 4, 10); ctx.fillStyle = '#2a1a10'; ctx.fillRect(vs.x, vs.y + 10, vs.w, 6);
+      ctx.fillStyle = on ? '#ffd23a' : '#8a7a6a'; ctx.fillRect(vs.x, vs.y + 10, kx - vs.x, 6); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(vs.x, vs.y + 10, kx - vs.x, 2);
+      pell(ctx, kx, vs.y + 13, 9, 9, OL); pell(ctx, kx, vs.y + 13, 7, 7, '#ffffff'); text(Math.round(v * 100) + '%', vs.x + vs.w, vs.y + 6, 1, '#ffd23a', 'right', OL, 40);
+    }
     const sx = r.x + r.w - 76, sy = r.y + 3;
     ctx.fillStyle = OL; ctx.fillRect(sx - 2, sy - 2, 68, 26);
     ctx.fillStyle = on ? '#3ce06a' : '#8a7a6a'; ctx.fillRect(sx, sy, 64, 22);
@@ -16080,6 +16186,7 @@ function draw() {
   if (state === 'play' && !paused && !pmenu) drawEmoBtn();
   if (state === 'play' && pmenu) drawPowerMenu();
   if (state === 'over') drawOver();
+  if (homeOn() && !modal && !chest) drawHomeBtn();
   if (modal) drawModal();
   if (chest) drawChest();
   drawToast();
@@ -16729,15 +16836,113 @@ function dayGameAdd() { if (quiet) return; const g = dayGames(); g.n++; store.se
 const dayGReady = () => { const g = dayGames(); return DAYG.some((s, i) => g.n >= s.need && !g.cl.includes(i)); };
 // «Победы дня»: 10 наград за день. Победа — забег выше 50 м или топ-3 в раунде «Сети». Первая — особый ящик (сразу эпический)
 const DWIN_N = 10;
-function dayWins() { let g = store.get('dwin', null); if (!g || g.d !== dayNum()) { g = { d: dayNum(), n: 0, cl: 0 }; store.set('dwin', g); } g.n = Math.min(DWIN_N, nat(g.n)); g.cl = Math.min(g.n, nat(g.cl)); return g; }
+function dayWins() { let g = store.get('dwin', null); if (!g || g.d !== dayNum()) { g = { d: dayNum(), n: 0, cl: 0, rr: [] }; store.set('dwin', g); } g.n = Math.min(DWIN_N, nat(g.n)); g.cl = Math.min(g.n, nat(g.cl)); if (!Array.isArray(g.rr)) g.rr = []; return g; }
+// ---- дропы: у каждого своя редкость (шансы ниже); тапаешь — редкость может подняться, потом он раскрывается и из него вылетают призы ----
+const DROP_PIX = ["......OOOO......", "....OOLLLLOO....", "...OLLHHLLLLO...", "..OLHHLLLLLLMO..", ".OLHLLLYYLLLMMO.", ".OLLLLLYYLLLMMO.", "OLLLLLYYYYLLLMMO", "OLYYYYYYYYYYYMMO", "OLLYYYYYYYYYYMMO", "OLLLYYYYYYYYLMMO", ".OLLLYYYYYYLLMO.", ".OLLYYYLLYYYMMO.", "..OLYYLLLLYYMO..", "...OMMMMMMMMO...", "....OOMMMMOO....", "......OOOO......"], CHECK_PIX = ["..........OO", ".........OGO", "........OGGO", ".OO....OGGO.", "OGGO..OGGO..", "OGGGOOGGO...", ".OGGGGGGO...", "..OGGGGO....", "...OGGO.....", "....OO......"], CHECK_COL = { O: '#1a1030', G: '#3ce06a' };
+const DROP_R = [
+  { ru: 'РЕДКИЙ', en: 'RARE', p: 50, c: ['#5ae06a', '#c8ffc0', '#2a9a3a'] },
+  { ru: 'СВЕРХРЕДКИЙ', en: 'SUPER RARE', p: 28, c: ['#3ab0ff', '#bfe8ff', '#1a60c0'] },
+  { ru: 'ЭПИЧЕСКИЙ', en: 'EPIC', p: 15, c: ['#c04aff', '#f0c0ff', '#6a1ab0'] },
+  { ru: 'МИФИЧЕСКИЙ', en: 'MYTHIC', p: 5, c: ['#ff3a5a', '#ffc0c8', '#a0102a'] },
+  { ru: 'ЛЕГЕНДАРНЫЙ', en: 'LEGENDARY', p: 2, c: ['#ffc23a', '#fff6b0', '#c07a00'] }];
+const DROP_UNK = ['#7a6aa8', '#b8a8e0', '#3a2a6a'];
+const DROP_BONUS = 10, DROP_BIG = 3;   // в 1 дропе из 10 — ещё и ящик с героем; из них большой — 3 из 100 дропов
+// у каждого цвета — своя копия строк: заготовки значков хранятся по строкам
+const DROP_ICONS = DROP_R.map(r => r.c).concat([DROP_UNK]).map((c, i) => ({ rows: DROP_PIX.slice(), cols: { O: '#1a1030', L: c[0], H: c[1], M: c[2], Y: i === 5 ? '#d8d0f0' : '#ffffff' } }));
+const dropIcon = (r, x, y, s) => { const d = DROP_ICONS[r < 0 ? 5 : r]; pixIcon(d.rows, d.cols, x, y, s); };
+function dropCnv(r, size) { const c = document.createElement('canvas'); c.width = c.height = 16; c.style.cssText = 'width:' + size + 'px;height:' + size + 'px;image-rendering:pixelated'; const g = c.getContext('2d'), d = DROP_ICONS[r < 0 ? 5 : r]; d.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const col = d.cols[row[x]]; if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); } } }); return c; }
+function dropRoll(min = 0) { let x = Math.random() * 100, r = 0; for (let i = DROP_R.length - 1; i >= 0; i--) { const lo = DROP_R.slice(i + 1).reduce((a, q) => a + q.p, 0); if (x < lo + DROP_R[i].p && x >= lo) { r = i; break; } } return Math.max(min, r); }
+function dropPrizes(r) {
+  const R = Math.random(), L = [];
+  if (r === 0) L.push(R < 0.6 ? { k: 'coins', n: 50 + Math.floor(Math.random() * 40) } : R < 0.85 ? { k: 'xp', n: 60 } : { k: 'power', n: 1 });
+  else if (r === 1) L.push(R < 0.45 ? { k: 'coins', n: 150 + Math.floor(Math.random() * 60) } : R < 0.75 ? { k: 'gems', n: 3 } : { k: 'power', n: 2 });
+  else if (r === 2) { L.push(R < 0.5 ? { k: 'gems', n: 6 } : { k: 'coins', n: 350 }); L.push({ k: 'power', n: 2 }); }
+  else if (r === 3) { L.push(R < 0.6 ? { k: 'gems', n: 15 } : { k: 'ruby', n: 1 }); L.push({ k: 'coins', n: 250 }); }
+  else { L.push(R < 0.6 ? { k: 'gems', n: 40 } : { k: 'ruby', n: 2 }); L.push({ k: 'coins', n: 500 }); L.push({ k: 'xp', n: 200 }); }
+  const b = Math.random() * 100; if (b < DROP_BIG) L.push({ k: 'chest', gold: true }); else if (b < DROP_BONUS) L.push({ k: 'chest' });
+  return L;
+}
+const dropRwName = rw => rw.k === 'coins' ? tr('МОНЕТ', 'COINS') : rw.k === 'gems' ? tr('КРИСТАЛЛОВ', 'GEMS') : rw.k === 'ruby' ? tr('РУБИН', 'RUBY') : rw.k === 'xp' ? tr('ОПЫТА PASS', 'PASS XP') : rw.k === 'power' ? tr('СИЛЫ', 'POWERS') : rw.gold ? tr('БОЛЬШОЙ ЯЩИК', 'BIG BOX') : tr('ЯЩИК', 'BOX');
+function dropRwIcon(rw, size) {
+  if (rw.k === 'xp') { const c = document.createElement('canvas'); c.width = c.height = 40; c.style.width = c.style.height = size + 'px'; withCtx(c, () => { emoStar(20, 20, 16, OL); emoStar(20, 19, 12, '#ffd23a'); text('XP', 20, 24, 1, '#ffffff', 'center', OL); }); return c; }
+  return iconCnv(rw.k === 'chest' ? 'chest' : rw.k, rw.k === 'chest' && rw.gold ? 1 : 0, size);
+}
+// показать дроп на весь экран. opt.road — награда «Пути славы» (не считается победой дня), opt.min — редкость не ниже
+function dropShow(opt = {}) {
+  if (document.getElementById('dropov')) return;
+  const g = dayWins(); if (!opt.road && g.cl >= g.n) return;
+  const r = dropRoll(opt.min != null ? opt.min : g.cl === 0 ? 1 : 0); let shown = opt.min || 0, opened = false;
+  const ov = document.createElement('div'); ov.id = 'dropov';
+  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown', 'wheel']) ov.addEventListener(ev, e => e.stopPropagation(), { passive: ev === 'wheel' || ev.startsWith('touch') });
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const rays = el('div', 'rays'), ttl = el('div', 'tt', opt.road ? tr('ПУТЬ СЛАВЫ', 'ROAD OF GLORY') : tr('ПОБЕДА ДНЯ', 'DAILY WIN')), stage = el('div', 'stage'), box = el('div', 'box'), nm = el('div', 'nm'), hint = el('div', 'hint', tr('ТАПНИ!', 'TAP!'));
+  const left = el('div', 'lf'); if (!opt.road) left.textContent = trf('ДРОП {a} ИЗ {b}', 'DROP {a} OF {b}', { a: g.cl + 1, b: DWIN_N });
+  let cnv = dropCnv(shown, 170); box.appendChild(cnv); stage.appendChild(box);
+  const paint = () => { const R = DROP_R[shown]; ov.style.setProperty('--dc', R.c[0]); ov.style.setProperty('--dk', R.c[2]); nm.textContent = tr(R.ru, R.en); const c2 = dropCnv(shown, 170); box.replaceChild(c2, cnv); cnv = c2; };
+  paint(); ov.append(rays, ttl, left, stage, nm, hint); document.body.appendChild(ov);
+  try { tone(392, 784, 0.25, 'triangle', 0.05); } catch (e) {}
+  const burst = (n, col) => { for (let i = 0; i < n; i++) { const d = el('i', 'sp'), a = Math.random() * 6.283, v = 90 + Math.random() * 130; d.style.background = col || DROP_R[shown].c[i % 2 ? 1 : 0]; d.style.setProperty('--dx', Math.cos(a) * v + 'px'); d.style.setProperty('--dy', Math.sin(a) * v + 'px'); stage.appendChild(d); setTimeout(() => d.remove(), 800); } };
+  const tap = () => {
+    if (opened) return;
+    box.classList.remove('hit'); void box.offsetWidth; box.classList.add('hit'); vib(15);
+    if (shown < r) {   // редкость поднимается
+      shown++; paint(); burst(16); box.classList.remove('up'); void box.offsetWidth; box.classList.add('up');
+      try { tone(520 + shown * 160, 900 + shown * 240, 0.16, 'square', 0.05); tone(1040 + shown * 200, 1040 + shown * 200, 0.12, 'triangle', 0.04, 0.1); } catch (e) {}
+      hint.textContent = shown >= 3 ? tr('ОГО! ЕЩЁ ТАП!', 'WOW! TAP AGAIN!') : tr('ЕЩЁ ТАП!', 'TAP AGAIN!'); if (shown >= 3) vib([30, 20, 60]);
+      return;
+    }
+    opened = true; hint.textContent = '';
+    if (!opt.road) { const g2 = dayWins(); g2.cl = Math.min(g2.n, g2.cl + 1); g2.rr.push(shown); if (g2.cl >= DWIN_N) g2.ft = Date.now(); store.set('dwin', g2); }
+    const prizes = dropPrizes(shown); let chestRw = null;
+    for (const rw of prizes) { if (rw.k === 'chest') { chestRw = rw; continue; } if (rw.k === 'xp') passXp(rw.n); else passGive(rw); }
+    saveMoney();
+    box.classList.add('open'); burst(30); burst(14, '#ffffff');
+    try { noise(0.18, 0.1, 1400); tone(400, 1200, 0.25, 'triangle', 0.06); sfx.gem(); } catch (e) {}
+    const row = el('div', 'pr');
+    prizes.forEach((rw, i) => { const c = el('div', 'pz'); c.style.animationDelay = (0.25 + i * 0.22) + 's'; c.style.setProperty('--fx', ((i - (prizes.length - 1) / 2) * 30) + 'px');
+      c.append(dropRwIcon(rw, 48), el('div', 'n', rw.k === 'chest' ? '' : '+' + rw.n), el('div', 'k', dropRwName(rw))); row.appendChild(c);
+      setTimeout(() => { try { tone(880 + i * 220, 1320 + i * 220, 0.1, 'triangle', 0.05); } catch (e) {} }, 250 + i * 220); });
+    stage.appendChild(row);
+    const more = !opt.road && dayWinReady(), ok = el('button', 'ok', more ? trf('ЕЩЁ ДРОП ({n})', 'NEXT DROP ({n})', { n: dayWins().n - dayWins().cl }) : tr('ЗАБРАТЬ', 'COLLECT'));
+    ok.style.animationDelay = (0.4 + prizes.length * 0.22) + 's';
+    ok.onclick = e => { e.stopPropagation(); sfx.click(); ov.remove(); if (chestRw) { moClose(); freeChest(!!chestRw.gold); return; } if (more) dropShow(); else if (moUi && moUi.style.display === 'flex') moRefresh(); if (dayWins().cl >= DWIN_N && !opt.road) dwinFinT = time; };
+    ov.appendChild(ok);
+  };
+  ov.addEventListener('click', tap);
+}
+let dwinFinT = -99;
+{ const st = document.createElement('style'); st.textContent = `
+#dropov{position:fixed;inset:0;z-index:97;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:Montserrat,sans-serif;font-weight:900;text-transform:uppercase;color:#fff;background:radial-gradient(circle at 50% 45%,var(--dk) 0%,#140a28 65%);overflow:hidden;animation:dpIn .3s ease-out;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#dropov .rays{position:absolute;left:50%;top:45%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(from 0deg,#ffffff14 0 10deg,transparent 10deg 20deg);animation:nwRot 18s linear infinite;pointer-events:none}
+#dropov .tt{position:relative;font-size:24px;letter-spacing:3px;color:#ffd23a;text-shadow:0 3px 0 #1a0a04}
+#dropov .lf{position:relative;font-size:13px;opacity:.8;letter-spacing:1px}
+#dropov .stage{position:relative;width:260px;height:240px;display:flex;align-items:center;justify-content:center}
+#dropov .box{position:relative;filter:drop-shadow(0 0 22px var(--dc)) drop-shadow(0 8px 0 #0008);animation:dpBob 1.4s ease-in-out infinite}
+#dropov .box.hit canvas{animation:dpHit .18s ease-out}
+#dropov .box.up{animation:dpUp .45s cubic-bezier(.2,2,.4,1)}
+#dropov .box.open{animation:dpOpen .45s ease-in forwards}
+#dropov .nm{position:relative;font-size:26px;letter-spacing:2px;color:var(--dc);text-shadow:0 3px 0 #1a0a04,0 0 14px var(--dk)}
+#dropov .hint{position:relative;font-size:18px;animation:dpPulse .8s ease-in-out infinite;min-height:24px}
+#dropov .sp{position:absolute;left:50%;top:50%;width:10px;height:10px;border:2px solid #1a0a04;animation:dpSp .75s ease-out forwards;pointer-events:none}
+#dropov .pr{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+#dropov .pz{width:92px;padding:8px 4px;border:3px solid #1a0a04;border-radius:12px;background:linear-gradient(#3a2a7a,#1e1448);display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0;transform:translate(calc(var(--fx)*-1),40px) scale(.2);animation:dpPz .5s cubic-bezier(.2,1.8,.4,1) forwards;box-shadow:0 0 14px var(--dc)}
+#dropov .pz canvas{image-rendering:pixelated}
+#dropov .pz .n{font-size:20px;color:#ffd23a;text-shadow:0 2px 0 #1a0a04}
+#dropov .pz .k{font-size:10px;text-align:center}
+#dropov .ok{position:relative;margin-top:6px;padding:12px 34px;font:inherit;font-size:18px;color:#fff;background:linear-gradient(#ffe27a,#f0a000);border:4px solid #1a0a04;border-radius:12px;box-shadow:0 5px 0 #1a0a04;text-shadow:0 2px 0 #1a0a04;opacity:0;animation:dpIn .3s ease-out forwards;cursor:pointer}
+@keyframes dpIn{from{opacity:0}to{opacity:1}}
+@keyframes dpBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes dpHit{0%{transform:scale(.86) rotate(-6deg)}60%{transform:scale(1.08) rotate(4deg)}100%{transform:none}}
+@keyframes dpUp{0%{transform:scale(.6)}100%{transform:scale(1)}}
+@keyframes dpOpen{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(0);opacity:0}}
+@keyframes dpPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@keyframes dpSp{to{transform:translate(var(--dx),var(--dy)) rotate(200deg);opacity:0}}
+@keyframes dpPz{to{opacity:1;transform:none}}
+@keyframes nwRot{to{transform:rotate(360deg)}}`; document.head.appendChild(st); }
 function dayWinAdd() { if (quiet) return; const g = dayWins(); if (g.n >= DWIN_N) return; g.n++; store.set('dwin', g); dwinPop = time; }
 const dayWinReady = () => { const g = dayWins(); return g.cl < g.n; };
 let dwinPop = -9;
-function dayWinClaim(from) {   // забрать следующую награду: ящик, который на тапы может стать лучше
-  const g = dayWins(); if (g.cl >= g.n) return false;
-  const first = g.cl === 0; g.cl++; store.set('dwin', g);
-  passBoxOpen(true, first ? 2 : 0); return true;
-}
+function dayWinClaim() { if (!dayWinReady()) return false; dropShow(); return true; }
 const passReady = memo(() => { const v = passData(), lv = passLevel(); return v.cf < lv || (v.prem && v.cp < lv) || v.bx > 0 || dayWinReady(); });
 
 // ---- конец забега: кубки герою, опыт пропуска, задания ----
@@ -16771,6 +16976,7 @@ function moCss() {
 #mo .ttl{flex:1;text-align:center;font-size:21px;letter-spacing:3px;color:#ffd23a;text-shadow:0 3px 0 #2a1408,2px 0 #2a1408,-2px 0 #2a1408,0 -2px #2a1408,0 0 18px #ffd23a66}
 #mo .bk{width:44px;height:44px;border-radius:50%;border:3px solid #2a1408;background:#fff;color:#2a1408;font:900 22px sans-serif;box-shadow:0 3px 0 #2a1408;cursor:pointer;flex:none}
 #mo .sp{width:44px;flex:none}
+#mo .bk.hm{background:linear-gradient(#7a5ad8,#5a3ab8);display:flex;align-items:center;justify-content:center;padding:0}
 #mo .bd{width:100%;max-width:440px;flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 12px 24px;-webkit-overflow-scrolling:touch}
 #mo .card{background:linear-gradient(180deg,#3a2a6a,#24184a);border:3px solid #2a1408;border-radius:14px;box-shadow:0 4px 0 #120a24,inset 0 2px 0 #ffffff22;padding:12px;margin-bottom:12px}
 #mo .btn{font:inherit;border:3px solid #2a1408;border-radius:11px;padding:9px 14px;color:#fff;cursor:pointer;text-shadow:0 2px 0 #2a1408;box-shadow:0 4px 0 #2a1408,inset 0 3px 0 #ffffff44;background:linear-gradient(#5ae07a,#1a9a3a)}
@@ -16862,7 +17068,7 @@ function moCss() {
 #mo .bmid.done b{background:radial-gradient(circle at 40% 35%,#fff6a0,#e8a010)}
 #mo .bmid.next b{box-shadow:0 0 0 3px #fff6a0,0 0 16px #ffd23a;animation:moPulse 1.2s ease-in-out infinite}
 #mo .dwrow{display:flex;gap:4px;margin-top:8px;position:relative;z-index:1;align-items:stretch}
-#mo .dw{flex:1;min-width:0;height:44px;border:3px solid #1a0a04;border-radius:9px;background:linear-gradient(#5a8aff,#2a4ab8);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:inset 0 2px 0 #ffffff55}
+#mo .dw{flex:1;min-width:0;height:40px;border:3px solid #1a0a04;border-radius:9px;background:linear-gradient(#3a2a7a,#1e1448);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:inset 0 2px 0 #ffffff55}
 #mo .dw.big{flex:1.6;background:linear-gradient(#ffe27a,#c87a00)}
 #mo .dw canvas{image-rendering:pixelated} #mo .dw.lock{filter:saturate(.4) brightness(.7)} #mo .dw.got>canvas{opacity:.35}
 #mo .dw.cur{cursor:pointer;animation:bsBob .9s ease-in-out infinite;box-shadow:0 0 0 2px #3ce06a,0 0 12px #3ce06a}
@@ -16897,6 +17103,15 @@ function moCss() {
 #mo .qcard.ready .qb{background:linear-gradient(#9affb0,#3ce06a 50%,#1a9a3a);cursor:pointer;font-size:13px}
 #mo .qcard.ready .qb:active{transform:translateY(3px);box-shadow:0 1px 0 #1a0a04}
 #mo .qcard.done .qb{background:linear-gradient(#3ce06a,#1a9a3a);font-size:22px}
+/* современный вид заданий: тёмный фон с мягким светом, стеклянные карточки, тонкие рамки */
+#mo[data-th=quests]{background:radial-gradient(60% 40% at 15% 10%,#5a3ad866,transparent 70%),radial-gradient(50% 35% at 90% 30%,#1ab0ff44,transparent 70%),radial-gradient(70% 40% at 50% 100%,#c04aff33,transparent 70%),linear-gradient(180deg,#141a3e,#0b0f26)}
+#mo[data-th=quests]::before{content:'';position:fixed;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:28px 28px;pointer-events:none;mask-image:linear-gradient(#000,transparent 70%);-webkit-mask-image:linear-gradient(#000,transparent 70%)}
+#mo[data-th=quests] .qcard{background:linear-gradient(135deg,#2c3678,#1b2156);border:2px solid #ffffff22;border-radius:18px;box-shadow:0 8px 20px #00000066,inset 0 1px 0 #ffffff33}
+#mo[data-th=quests] .qcard .qi{border:2px solid #ffffff33;border-radius:14px;background:linear-gradient(145deg,#4a5ad8,#26307a)}
+#mo[data-th=quests] .qcard.ready{background:linear-gradient(135deg,#ffc83a,#e0820a);border-color:#fff6a0;box-shadow:0 0 22px #ffb02a88,0 8px 20px #0006}
+#mo[data-th=quests] .qcard.qall{background:linear-gradient(135deg,#7a3ad8,#3a1a8a)}
+#mo[data-th=quests] .qb{border:2px solid #ffffff33;border-radius:14px;background:linear-gradient(#3a4690,#252d68);box-shadow:0 4px 0 #0a0e2a}
+#mo[data-th=quests] .qtimer{background:#ffffff14;border:1px solid #ffffff2a;border-radius:999px;backdrop-filter:blur(4px)}
 #mo .qstars{display:flex;gap:6px;font-size:22px;color:#0a1440;text-shadow:0 2px 0 #1a0a04}
 #mo .qstars .off{opacity:.55}
 #mo .qstars .on{color:#ffd23a;text-shadow:0 0 8px #ffd23a,0 2px 0 #1a0a04}
@@ -17015,7 +17230,8 @@ function moShow() {
   moAnim = []; if (MO_IO) MO_IO.disconnect(); moUi.innerHTML = ''; moUi.dataset.th = '';   // старые картинки не держим в наблюдателе — без утечки   // своё оформление окна (например, «Новости») ставит само окно
   const hd = moEl('div', 'hd'), bk = moTxt('button', 'bk', '‹'), tt = moTxt('div', 'ttl', top.title);
   bk.onclick = () => { sfx.click(); moBack(); };
-  hd.append(bk, tt, moEl('div', 'sp')); moUi.appendChild(hd);
+  const hm = moEl('button', 'bk hm'); hm.appendChild(homeCnv(24)); hm.onclick = () => goHome();
+  hd.append(bk, tt, hm); moUi.appendChild(hd);
   const bd = moEl('div', 'bd'); moUi.appendChild(bd);
   moUi.style.display = 'flex'; top.render(bd, top);
   if (!moShow.loop) { moShow.loop = true; (function loop(ts) { if (moUi.style.display !== 'flex') { moShow.loop = false; return; } for (const a of moAnim) if (a.c.isConnected && moVis(a.c)) a.paint(ts / 1000); requestAnimationFrame(loop); })(performance.now()); }
@@ -17421,6 +17637,7 @@ function openQuests() {
     bd.appendChild(passMini());
     const q = questsToday();
     const tm = moTxt('div', 'qtimer ol', '⏳ ' + tr('НОВЫЕ ЗАДАНИЯ ЧЕРЕЗ ', 'NEW QUESTS IN ') + timeToMidnight()); bd.appendChild(tm);
+    moAnim.push({ c: tm, paint: () => { const s = '⏳ ' + tr('НОВЫЕ ЗАДАНИЯ ЧЕРЕЗ ', 'NEW QUESTS IN ') + timeToMidnight(); if (tm.textContent !== s) tm.textContent = s; } });   // отсчёт идёт, пока окно открыто
     for (const x of q.list) {
       const d = questDef(x), goal = questGoal(x), ready = !x.done && x.prog >= goal;
       const claim = b => { if (b.disabled) return; b.disabled = true; x.done = true; store.set('quests', q); bank += d.c[x.lv]; saveMoney(); domCoinFly(b, d.c[x.lv], 'c'); xpFly(b, d.xp[x.lv], () => { moRefresh(); moReward(tr('ЗАДАНИЕ ВЫПОЛНЕНО!', 'QUEST DONE!'), iconCnv('coins', 0, 80), '+' + d.c[x.lv] + '  •  +' + d.xp[x.lv] + ' XP'); }); };
@@ -17553,18 +17770,25 @@ function passTile(rw, opt) {
   return c;
 }
 // «Награды за игры»: сыграл раунд или забег — ближе к награде
-function openDayWins() { moOpen(tr('ПОБЕДЫ ДНЯ', 'DAILY WINS'), bd => { bd.appendChild(dayGamesCard()); }); if (dayWinReady()) setTimeout(() => dayWinClaim(), 250); }
+function openDayWins() { moOpen(tr('ПОБЕДЫ ДНЯ', 'DAILY WINS'), bd => { bd.appendChild(dayGamesCard()); bd.appendChild(dropChancesCard()); }); }
+function dropChancesCard() {
+  const c = moEl('div', 'card'); c.appendChild(moTxt('div', 'ol', tr('ШАНСЫ ДРОПОВ', 'DROP CHANCES')));
+  DROP_R.forEach((R, i) => { const r = moEl('div', 'row'); r.style.cssText = 'gap:8px;margin-top:6px'; const n = moTxt('div', 'ol', tr(R.ru, R.en)); n.style.cssText = 'flex:1;color:' + R.c[0]; r.append(dropCnv(i, 28), n, moTxt('div', 'ol', R.p + '%')); c.appendChild(r); });
+  c.appendChild(moTxt('div', 'sm', trf('ПЕРВЫЙ ДРОП ДНЯ — НЕ НИЖЕ СВЕРХРЕДКОГО. ТАПАЙ ПО ДРОПУ — РЕДКОСТЬ МОЖЕТ ПОДНЯТЬСЯ. БОНУС: ЯЩИК С ГЕРОЕМ — {a}%, БОЛЬШОЙ ЯЩИК — {b}%', 'THE FIRST DROP OF THE DAY IS AT LEAST SUPER RARE. TAP THE DROP — ITS RARITY MAY RISE. BONUS: A HERO BOX — {a}%, A BIG BOX — {b}%', { a: DROP_BONUS - DROP_BIG, b: DROP_BIG })));
+  c.lastChild.style.marginTop = '8px'; return c;
+}
 function dayGamesCard() {
   const g = dayWins(), card = moEl('div', 'card dayg' + (dayWinReady() ? ' glow' : ''));
   const hd = moEl('div', 'row'); hd.style.cssText = 'justify-content:space-between;gap:8px';
-  hd.append(moTxt('div', 'ol', '⚔ ' + tr('ПОБЕДЫ ДНЯ', 'DAILY WINS') + ' ' + g.n + '/' + DWIN_N), moTxt('span', 'chip', '⏳ ' + timeToMidnight()));
+  const tm = moTxt('span', 'chip', '⏳ ' + timeToMidnight()); moAnim.push({ c: tm, paint: () => { const s = '⏳ ' + timeToMidnight(); if (tm.textContent !== s) tm.textContent = s; } });   // время идёт
+  hd.append(moTxt('div', 'ol', tr('ПОБЕДЫ ДНЯ', 'DAILY WINS') + ' ' + g.n + '/' + DWIN_N), tm);
   card.appendChild(hd);
-  card.appendChild(moTxt('div', 'sm', tr('ПОБЕДА — ЗАБЕГ ВЫШЕ 50 М ИЛИ ТОП-3 В «СЕТИ». ЗА КАЖДУЮ — ЯЩИК, ПЕРВЫЙ — ОСОБЫЙ', 'A WIN IS A RUN ABOVE 50 M OR A TOP 3 ONLINE. EACH GIVES A BOX, THE FIRST ONE IS SPECIAL')));
+  card.appendChild(moTxt('div', 'sm', tr('ПОБЕДА — ЗАБЕГ ВЫШЕ 50 М ИЛИ ТОП-3 В «СЕТИ». ЗА КАЖДУЮ — ДРОП С ПРИЗАМИ. НОВЫЕ — КАЖДЫЙ ДЕНЬ В 00:00', 'A WIN IS A RUN ABOVE 50 M OR A TOP 3 ONLINE. EACH GIVES A DROP WITH PRIZES. NEW ONES EVERY DAY AT 00:00')));
   const row = moEl('div', 'dwrow');
   for (let i = 0; i < DWIN_N; i++) {
-    const got = i < g.cl, can = !got && i < g.n, c = moEl('div', 'dw' + (i === 0 ? ' big' : '') + (got ? ' got' : '') + (can ? ' cur' : '') + (!got && !can ? ' lock' : ''));
-    c.appendChild(iconCnv(i === 0 ? 'chest' : 'gift', i === 0 ? 1 : 0, i === 0 ? 34 : 24)); if (got) c.appendChild(moTxt('div', 'ck', '✓'));
-    if (can) c.onclick = () => dayWinClaim();   // окно ящика само обновит экран после «OK»
+    const got = i < g.cl, can = !got && i < g.n, c = moEl('div', 'dw' + (got ? ' got' : '') + (can ? ' cur' : '') + (!got && !can ? ' lock' : ''));
+    c.appendChild(dropCnv(got ? (g.rr[i] != null ? g.rr[i] : 0) : -1, 26)); if (got) c.appendChild(moTxt('div', 'ck', '✓'));
+    if (can) c.onclick = () => dayWinClaim();
     row.appendChild(c);
   }
   card.appendChild(row);
@@ -17823,15 +18047,20 @@ Object.assign(BTN, { prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: 12, y: 10
 const MORE_KEYS = ['tent', 'allies', 'emo'];
 // круглые иконки меню: награды (у новостей), меню (под звуком), друзья (справа от рейтинга)
 function drawTopIcons() {
-  { const b = BTN.ach; roundBtn(b); trophyIcon(b.x + b.w / 2, b.y + b.h / 2 + 2, 0.85); }
+  { const b = BTN.ach; roundBtn(b); trophyIcon(b.x + b.w / 2, b.y + b.h / 2, 0.8); }
   { const b = BTN.menuB; roundBtn(b); for (let k = 0; k < 3; k++) { prect(ctx, b.x + 9, b.y + 10 + k * 6, 16, 4, OL); } }
   { const b = BTN.friends, x = b.x + b.w / 2, y = b.y + b.h / 2;   // друзья — квадратная кнопка со скруглёнными углами
     sqBtn(b, '#ff7a2a', '#ffa05a', '#c04a00');
-    pixIcon(FRI_PIX, FRI_COL, x, y + 1, 0.7);
+    pixIcon(FRI_PIX, FRI_COL, x, y + 1, 0.62);
     if (FR.inbox.length) badge(b.x + b.w - 2, b.y + 4); }
 }
-const FRI_PIX = ['....................', '......OO............', '....OOssOO..........', '....OssssO..OO......', '...OsOssOsOOttOO....', '...OssssssOttttO....', '....OssssOtOttOtO...', '....OOssOOpttttpO...', '......OO.OttmmttO...', '....OObbOOOttttO....', '...ObbbbbbOOttO.....', '..ObbbbbbbbOggO.....', '..ObbbbbbOOggggOO...', '.ObbbbbbOggggggggO..', '.ObbbbbbOggggggggO..', '.OOOOOOOOOOOOOOOOOO.'];
-const FRI_COL = { O: '#2a1a3a', s: '#ffe0c0', t: '#fff0dc', m: '#d84a4a', p: '#ff9aa0', b: '#3ab0ff', g: '#3ce06a' };
+const FRI_PIX0 = ['....................', '......OO............', '....OOssOO..........', '....OssssO..OO......', '...OsOssOsOOttOO....', '...OssssssOttttO....', '....OssssOtOttOtO...', '....OOssOOpttttpO...', '......OO.OttmmttO...', '....OObbOOOttttO....', '...ObbbbbbOOttO.....', '..ObbbbbbbbOggO.....', '..ObbbbbbOOggggOO...', '.ObbbbbbOggggggggO..', '.ObbbbbbOggggggggO..', '.OOOOOOOOOOOOOOOOOO.'];
+const FRI_COL0 = { O: '#2a1a3a', s: '#ffe0c0', t: '#fff0dc', m: '#d84a4a', p: '#ff9aa0', b: '#3ab0ff', g: '#3ce06a' };
+// значки меню по точкам: друзья, газета, задания, мечи «Сети»
+const FRI_PIX = ["...........OOOO....", "..........OBBBBO...", "....OOOO.OBBBBBDO..", "...OWWWWOOBBBBBDO..", "..OWWWWWLOBBBBBDO..", "..OWWWWWLOOBBBDO...", "..OWWWWWLO.OOOO....", "...OWWWLO..OOOOOO..", "....OOOO..OBBBBBDO.", "..OOOOOOOOBBBBBBBDO", ".OWWWWWWWLOBBBBBBDO", "OWWWWWWWWWLOBBBBBDO", "OWWWWWWWWWLOBBBBBDO", "OWWWWWWWWWLOOOOOOOO", "OOOOOOOOOOOO......."], FRI_COL = { O: '#1a1030', W: '#ffffff', L: '#c8d0e8', B: '#8ad8ff', D: '#3a90d8' };
+const NEWS_PIX = ["OOOOOOOOOOOOOOOO..", "OWWWWWWWWWWWWWWO..", "OWRRRRRRRRRRRRWOO.", "OWRRRRRRRRRRRRWOSO", "OWWWWWWWWWWWWWWOSO", "OWPPPPPWGGGGGGWOSO", "OWPPYPPWWWWWWWWOSO", "OWPPPPPWGGGGGGWOSO", "OWPKKPPWWWWWWWWOSO", "OWKKKKPWGGGGGGWOSO", "OWWWWWWWWWWWWWWOSO", "OWGGGGGGWGGGGGWOSO", "OWWWWWWWWWWWWWWOSO", "OWGGGGGGWGGGGWWOSO", "OWWWWWWWWWWWWWWOSO", "OOOOOOOOOOOOOOOOSO", ".OSSSSSSSSSSSSSSSO", "..OOOOOOOOOOOOOOOO"], NEWS_COL = { O: '#1a1030', W: '#ffffff', R: '#e8264a', G: '#9a9ab0', P: '#7ad8ff', Y: '#ffd23a', K: '#3ac06a', S: '#c8c8d8' };
+const QUEST_PIX = ["....OOOOOO....", ".OOOOYHHYOOOO.", "ONNNOYYYYONNNO", "ONWWOOOOOOWWNO", "ONWWWWWWWWWWNO", "ONWGGWLLLLLWNO", "ONWGGWWWWWWWNO", "ONWWWWWWWWWWNO", "ONWGGWLLLLWWNO", "ONWGGWWWWWWWNO", "ONWWWWWWWWWWNO", "ONWKKWLLLLLWNO", "ONWKKWWWWWWWNO", "ONWWWWWWWWWWNO", "ONNNNNNNNNNNNO", "OOOOOOOOOOOOOO"], QUEST_COL = { O: '#1a1030', N: '#c87a3a', Y: '#ffd23a', H: '#fff6a0', W: '#fff6e0', G: '#3ce06a', K: '#c8b8a0', L: '#8a7a6a' };
+const SWORD_PIX = ["OOOO.............OOOO", "OHSOO...........OOSHO", "OHWSOO.........OOSWHO", "OOHWSOO.......OOSWHOO", ".OOHWSOO.....OOSWHOO.", "..OOHWSOO...OOSWHOO..", "...OOHWSOO.OOSWHOO...", "....OOHWSOOOSWHOO....", ".....OOHWSOSWHOO.....", "...OOOOOHWSWHOOOOO...", "...ODYOOOSWHOOOYDO...", "...OODYOSWHWSOYDOO...", "....OODYOHOHOYDOO....", "....OOODYOOOYDOOO....", "...OOMNODYOYDONMOO...", "..OOMNOOODYDOOONMOO..", ".OOMNOO.OYDYO.OONMOO.", ".OYYOO..OOOOO..OOYYO.", ".ODYO...........OYDO.", ".OOOO...........OOOO."], SWORD_COL = { O: '#1a1030', W: '#ffffff', H: '#e8ecf8', S: '#a8b0c8', Y: '#ffd23a', D: '#c8820a', N: '#8a4a1a', M: '#5a2a0a' };
 let menuMore = false, menuMoreT = 0;   // стрелки «ЕЩЁ» больше нет: палатка — отдельной кнопкой, союзники и эмоции — внутри палатки
 // квадратная кнопка со скруглёнными углами (друзья, клан)
 function sqBtn(b, col, light, dark, y = b.y) {
@@ -17881,9 +18110,7 @@ function drawPassBtn() {
 function drawQuestIcon() {
   const b = BTN.quest, cx = b.x + b.w / 2, bob = Math.sin(time * 3 + 2.6) * 1.5, cy = b.y + b.h / 2 + bob;
   sqBtn(b, '#3ab0ff', '#8ad8ff', '#1a70c0', b.y + bob);
-  prect(ctx, cx - 12, cy - 15, 24, 30, OL); prect(ctx, cx - 10, cy - 13, 20, 26, '#fff6dc'); prect(ctx, cx - 10, cy - 13, 20, 4, '#e8c88a');
-  for (let k = 0; k < 3; k++) { const y = cy - 6 + k * 7, done = k < 2; prect(ctx, cx - 8, y, 4, 4, done ? '#3ce06a' : '#c8b8a0'); prect(ctx, cx - 2, y + 1, 10, 2, '#8a7a6a'); }
-  prect(ctx, cx - 3, cy - 17, 6, 4, '#c8820a');
+  pixIcon(QUEST_PIX, QUEST_COL, cx, cy - 1, 0.95);
   text(tr('ЗАДАНИЯ', 'QUESTS'), cx, b.y + b.h + 10, 1, '#ffffff', 'center', OL, 70);
 }
 function drawMenuMeta() {
@@ -17894,16 +18121,84 @@ function drawMenuMeta() {
   text(mp.nick || tr('ПРОФИЛЬ', 'PROFILE'), b.x + 38, b.y + 15, 1, nickCol(myNc()), 'left', OL, b.w - 42);
   const tn = String(troTotal()); trophyIcon(b.x + 44, b.y + 25, 0.5); text(tn, b.x + 52, b.y + 30, 1, '#ffe680', 'left', OL, 50);
   const tt = titleText(META.prof.title); if (tt) text(tt, b.x + 58 + tn.length * 7, b.y + 30, 1, META.prof.title === 'divine' ? divineCol() : '#ffd23a', 'left', OL, b.w - 64 - tn.length * 7);   // титул рядом с именем
-  button(BTN.rank, tr('РЕЙТИНГ', 'RANKING'), '#ffb02a', '#c06a00');
+  drawGloryBar();
   drawQuestIcon(); drawClanBtn();
   if (questReady()) badge(BTN.quest.x + BTN.quest.w - 4, BTN.quest.y + 2);
   drawPassBtn();
   const gn = META.troGain; if (gn && Date.now() - gn.t < 6000) { const a = (Date.now() - gn.t) / 6000; ctx.globalAlpha = 1 - a * a; text('+' + gn.n, b.x + b.w - 10, b.y + 32 + a * 14, 2, '#ffe680', 'center', OL); ctx.globalAlpha = 1; }   // новые кубки
 }
+// ---- Путь славы: награды за кубки (как дорога трофеев), полоса сверху в меню ----
+const GLORY = (() => {
+  const T = [10, 25, 50, 80, 120, 160, 200, 250, 300, 375, 450, 525, 600, 700, 800, 900, 1000, 1150, 1300, 1500, 1750, 2000, 2300, 2600, 3000, 3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000, 10000];
+  return T.map((t, i) => ({ t, rw: i % 6 === 5 ? { k: 'chest', gold: i > 20 } : i % 4 === 3 ? { k: 'drop', r: Math.min(3, 1 + Math.floor(i / 10)) } : i % 3 === 1 ? { k: 'gems', n: 3 + Math.floor(i / 4) * 2 } : i % 3 === 2 ? { k: 'power', n: 1 + Math.floor(i / 12) } : { k: 'coins', n: 100 + i * 40 } }));
+})();
+const gloryGot = () => Math.min(GLORY.length, nat(store.get('glory', 0)));
+const gloryNext = () => GLORY[gloryGot()] || null;
+const gloryReady = memo(() => { const n = gloryNext(); return !!n && troTotal() >= n.t; });
+function gloryClaim() {
+  const n = gloryNext(); if (!n || troTotal() < n.t) return; store.set('glory', gloryGot() + 1);
+  try { tone(784, 1568, 0.2, 'triangle', 0.06); } catch (e) {}
+  const rw = n.rw;
+  if (rw.k === 'drop') { dropShow({ road: true, min: rw.r }); moRefresh(); return; }
+  if (rw.k === 'chest') { moClose(); freeChest(!!rw.gold); return; }
+  passGive(rw); moReward(tr('НАГРАДА!', 'REWARD!'), passRewNode(rw, 64)); moRefresh();
+}
+function gloryRwNode(rw, size) {
+  if (rw.k === 'drop') { const w = moEl('div'); w.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px'; w.append(dropCnv(rw.r, size * 0.8), moTxt('div', 'sm', tr('ДРОП', 'DROP'))); return w; }
+  return passRewNode(rw, size);
+}
+function openGlory() {
+  moOpen(tr('ПУТЬ СЛАВЫ', 'GLORY OF GLORY'), bd => {
+    const tro = troTotal(), got = gloryGot();
+    const hd = moEl('div', 'card'), top = moEl('div', 'row'); top.style.gap = '10px';
+    top.append(iconCnv('trophy', 0, 40), (() => { const c = moEl('div'); c.append(moTxt('div', 'ol big', String(tro)), moTxt('div', 'sm', tr('ВСЕГО КУБКОВ. ПОДНИМАЙ — ЗАБИРАЙ НАГРАДЫ', 'TOTAL TROPHIES. CLIMB AND COLLECT'))); return c; })());
+    hd.appendChild(top); bd.appendChild(hd);
+    const sc = moEl('div', 'road'), tr0 = moEl('div', 'rtrk'); sc.appendChild(tr0);
+    let cur = null;
+    GLORY.forEach((m, i) => {
+      const done = i < got, can = i === got && tro >= m.t, prev = i ? GLORY[i - 1].t : 0, fill = clamp((tro - prev) / (m.t - prev), 0, 1);
+      const c = moEl('div', 'rs' + (done ? ' done' : '') + (can ? ' can' : '') + (!done && !can && tro < m.t ? ' lock' : ''));
+      const ln = moEl('div', 'rl'); const f = moEl('i'); f.style.width = (fill * 100) + '%'; ln.appendChild(f); c.appendChild(ln);
+      const tile = moEl('div', 'rt'); tile.appendChild(gloryRwNode(m.rw, 44)); if (done) tile.appendChild(moTxt('div', 'ck', '✓')); c.appendChild(tile);
+      const lb = moEl('div', 'rn row'); lb.append(iconCnv('trophy', 0, 14), moTxt('span', 'ol', String(m.t))); c.appendChild(lb);
+      if (can) { const b = moTxt('button', 'btn gold', tr('ЗАБРАТЬ', 'CLAIM')); b.onclick = () => { sfx.click(); gloryClaim(); }; c.appendChild(b); }
+      if (i === got) cur = c;
+      tr0.appendChild(c);
+    });
+    bd.appendChild(sc);
+    if (cur) requestAnimationFrame(() => { sc.scrollLeft = Math.max(0, cur.offsetLeft - sc.clientWidth / 2 + cur.offsetWidth / 2); });
+    bd.appendChild(moTxt('div', 'sm', tr('ЛИСТАЙ ВБОК. КУБКИ ДАЮТ ЗА ЗАБЕГИ И ПОБЕДЫ В «СЕТИ».', 'SWIPE SIDEWAYS. TROPHIES COME FROM RUNS AND ONLINE WINS.')));
+  });
+}
+{ const st = document.createElement('style'); st.textContent = `
+#mo .road{overflow-x:auto;overflow-y:hidden;margin:4px -12px 10px;padding:6px 12px 10px;-webkit-overflow-scrolling:touch}
+#mo .rtrk{display:flex;gap:0;width:max-content}
+#mo .rs{width:96px;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;padding-top:4px}
+#mo .rs .rl{width:100%;height:10px;background:#1a1030;border-top:3px solid #0a0418;border-bottom:3px solid #0a0418;order:2}
+#mo .rs .rl i{display:block;height:100%;background:linear-gradient(#ffe27a,#f0a000)}
+#mo .rs .rt{order:1;width:80px;height:84px;border:3px solid #1a0a04;border-radius:12px;background:linear-gradient(#4a3a9a,#241a5a);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:inset 0 3px 0 #ffffff33}
+#mo .rs.done .rt{background:linear-gradient(#2a6a3a,#173a22)} #mo .rs.done .rt>div{opacity:.4}
+#mo .rs.can .rt{background:linear-gradient(#ffe27a,#d88a00);animation:bsBob .9s ease-in-out infinite;box-shadow:0 0 14px #ffd23a}
+#mo .rs.lock .rt{filter:saturate(.5) brightness(.75)}
+#mo .rs .rt .ck{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#3ce06a;font-size:34px;text-shadow:0 3px 0 #1a0a04}
+#mo .rs .rn{order:3;gap:3px} #mo .rs .btn{order:4;padding:6px 10px;font-size:12px}`; document.head.appendChild(st); }
+// полоса «Путь славы» в меню: кубки, полоска до следующей награды и сама награда
+function drawGloryBar() {
+  const b = BTN.rank, tro = troTotal(), n = gloryNext(), got = gloryGot(), prev = got ? GLORY[got - 1].t : 0, ready = gloryReady();
+  ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 6); const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h); g.addColorStop(0, '#5a3ab8'); g.addColorStop(1, '#2a1a6a'); ctx.fillStyle = g; ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(b.x, b.y, b.w, 3); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(b.x, b.y + b.h - 3, b.w, 3);
+  trophyIcon(b.x + 16, b.y + b.h / 2, 0.75);
+  text(tr('ПУТЬ СЛАВЫ', 'GLORY OF GLORY'), b.x + 32, b.y + 13, 1, '#ffd23a', 'left', OL, 110);
+  const bx = b.x + 32, by = b.y + 18, bw = b.w - 76; ctx.fillStyle = OL; ctx.fillRect(bx - 2, by - 2, bw + 4, 12); ctx.fillStyle = '#140a30'; ctx.fillRect(bx, by, bw, 8);
+  const f = n ? clamp((tro - prev) / (n.t - prev), 0, 1) : 1; ctx.fillStyle = ready ? '#3ce06a' : '#ffd23a'; ctx.fillRect(bx, by, Math.round(bw * f), 8); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(bx, by, Math.round(bw * f), 2);
+  text(ready ? tr('ЗАБЕРИ НАГРАДУ!', 'CLAIM REWARD!') : n ? tro + '/' + n.t : String(tro), bx + bw, b.y + 13, 1, ready ? '#9affb0' : '#ffffff', 'right', OL, 120);
+  const rx = b.x + b.w - 22, ry = b.y + b.h / 2 + (ready ? Math.round(-Math.abs(Math.sin(time * 5)) * 3) : 0);   // следующая награда
+  if (n) { const rw = n.rw; if (rw.k === 'drop') dropIcon(rw.r, rx, ry, 0.55); else if (rw.k === 'coins') coinIcon(rx, ry, 8); else if (rw.k === 'gems') gemIcon(rx, ry, 0.55); else if (rw.k === 'chest') { ctx.save(); ctx.translate(rx, ry + 4); ctx.scale(0.6, 0.6); chestIcon(0, 0, false, 0, !!rw.gold); ctx.restore(); } else powerIcon('magnet', rx, ry, 0.6); }
+}
 function menuMetaClick(pt) {
   const act = fn => { audio(); startMusic(); sfx.click(); fn(); return true; };
   if (inRect(pt, BTN.prof)) return act(openProfile);
-  if (inRect(pt, BTN.rank)) return act(() => openBoard());
+  if (inRect(pt, BTN.rank)) return act(openGlory);
   if (inRect(pt, BTN.quest)) return act(openQuests);
   if (inRect(pt, BTN.pass)) return act(openPass);
   return false;
@@ -17979,6 +18274,149 @@ function pkSay(str) { if (PKS.str === str) return; PKS.str = str; PKS.shown = 0;
 function pkTalkStep(dt) { PKS.t += dt; const L = pkPlain(PKS.str).length; if (PKS.shown < L) { const a = Math.floor(PKS.shown); PKS.shown = Math.min(L, PKS.shown + dt * 38); const b = Math.floor(PKS.shown); if (b > a && b % 2 && pkPlain(PKS.str)[b - 1] !== ' ') pkBlip(b); } }
 const pkTalking = () => PKS.shown < pkPlain(PKS.str).length;
 function pkBlip(i) { tone(560 + (i * 37 % 5) * 70, 480 + (i * 13 % 3) * 40, 0.035, 'square', 0.028); }   // «блип» на появление буквы
+
+// =====================================================================================
+// ---------- ТРЕНИРОВКА: из окна любого героя. Готовая карта, гонка до 150 м с Eldar-хомяком, Пиклс подсказывает ----------
+// =====================================================================================
+const TRN_SEED = 4242, TRN_GOAL = 150;
+const TRN = { on: false, k: null, prev: '', rv: null, q: [], dlg: null, said: {}, end: 0, endT: 0, t: 0, lastLead: 0, leadT: 0 };
+const TRN_BACK = { x: 8, y: 116, w: 40, h: 40 }, TRN_AGAIN = { x: W / 2 - 150, y: 420, w: 140, h: 46 }, TRN_OUT = { x: W / 2 + 10, y: 420, w: 140, h: 46 };
+const trnRival = () => SKINS.find(s => s.id === 'eldarham') || SKINS[0];
+const TRN_TIPS = [
+  [0, 'el', ['ПРИВЕТ! Я ELDAR. НАПЕРЕГОНКИ ДО 150 М? ПОГНАЛИ!', "HI! I'M ELDAR. RACE YOU TO 150 M? LET'S GO!"]],
+  [0, 'pk', ['ЖМИ ПО ЭКРАНУ — ГЕРОЙ ПРЫГАЕТ К ДРУГОЙ СТЕНЕ. ДЕРЖИ РИТМ!', 'TAP THE SCREEN — YOUR HERO JUMPS TO THE OTHER WALL. KEEP THE RHYTHM!']],
+  [15, 'pk', ['ЖМИ ЕЩЁ РАЗ В ВОЗДУХЕ — САЛЬТО И РАЗВОРОТ. ТАК МЕНЯЮТ СТОРОНУ!', 'TAP AGAIN IN THE AIR — A FLIP AND A TURN. THAT IS HOW YOU SWITCH SIDES!']],
+  [35, 'pk', ['МОНЕТЫ ИДУТ В КОПИЛКУ, А КРИСТАЛЛЫ ЕЩЁ ЦЕННЕЕ. ЛОВИ ИХ НА ЛЕТУ!', 'COINS GO TO YOUR PIGGY BANK, GEMS ARE WORTH EVEN MORE. GRAB THEM MID-AIR!']],
+  [55, 'el', ['НЕПЛОХО! НО Я ВСЁ РАВНО БЫСТРЕЕ!', 'NOT BAD! BUT I AM STILL FASTER!']],
+  [70, 'pk', ['ВРАГИ, ШИПЫ И ТОК — ОПАСНЫ. ПРЫГАЙ МИМО, А ЩИТ СПАСЁТ ОТ УДАРА.', 'ENEMIES, THORNS AND SPARKS HURT. JUMP PAST THEM — A SHIELD SAVES YOU.']],
+  [90, 'pk', ['СИЛЫ — КНОПКА СПРАВА ВНИЗУ: МАГНИТ, ЩИТ, РАКЕТА И ДРУГИЕ.', 'POWERS ARE ON THE BUTTON BOTTOM RIGHT: MAGNET, SHIELD, ROCKET AND MORE.']],
+  [110, 'el', ['ФИНИШ БЛИЗКО! ЖМИ-ЖМИ-ЖМИ!', 'THE FINISH IS CLOSE! TAP TAP TAP!']],
+  [130, 'pk', ['СОВЕТ: В «СЕТИ» ЗА ТОП-3 ДАЮТ ПОБЕДУ ДНЯ И ДРОП С ПРИЗАМИ!', 'TIP: A TOP 3 ONLINE GIVES A DAILY WIN AND A DROP WITH PRIZES!']]];
+function trnSay(who, txt, now) { const d = { who, txt, shown: 0, t: 0 }; if (now) { TRN.q = []; TRN.dlg = d; } else if (!TRN.dlg) TRN.dlg = d; else TRN.q.push(d); try { tone(who === 'pk' ? 660 : 520, who === 'pk' ? 880 : 700, 0.05, 'triangle', 0.03); } catch (e) {} }
+function trnOpen(k) {
+  if (document.getElementById('trnld')) return;
+  const ov = document.createElement('div'); ov.id = 'trnld';
+  ov.innerHTML = '<div class=t></div><div class=h></div><div class=b><i></i></div><div class=s></div>';
+  ov.querySelector('.t').textContent = tr('ТРЕНИРОВКА', 'TRAINING');
+  ov.querySelector('.s').textContent = tr('ЗАГРУЗКА КАРТЫ… ELDAR И ПИКЛС УЖЕ ЖДУТ', 'LOADING THE MAP… ELDAR AND PICKLES ARE WAITING');
+  try { ov.querySelector('.h').append(heroCnv(k, 96), heroCnv(trnRival(), 96)); } catch (e) {}
+  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click']) ov.addEventListener(ev, e => e.stopPropagation());
+  if (!document.getElementById('trnCss')) { const st = document.createElement('style'); st.id = 'trnCss'; st.textContent = `
+#trnld{position:fixed;inset:0;z-index:98;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:Montserrat,sans-serif;font-weight:900;color:#fff;background:radial-gradient(circle at 50% 40%,#2a5ad8,#0a1440 70%);animation:dpIn .2s}
+#trnld .t{font-size:30px;letter-spacing:4px;color:#ffd23a;text-shadow:0 3px 0 #1a0a04}
+#trnld .h{display:flex;gap:30px;align-items:center} #trnld .h canvas{image-rendering:pixelated;animation:dpBob 1s ease-in-out infinite} #trnld .h canvas+canvas{animation-delay:.5s}
+#trnld .b{width:240px;height:18px;border:3px solid #1a0a04;border-radius:10px;background:#0a0a2a;overflow:hidden} #trnld .b i{display:block;height:100%;width:0;background:linear-gradient(#9affb0,#3ce06a);transition:width .12s linear}
+#trnld .s{font-size:12px;opacity:.85;text-align:center;max-width:280px}`; document.head.appendChild(st); }
+  document.body.appendChild(ov); audio(); startMusic();
+  const bar = ov.querySelector('.b i'); let pr = 0;
+  const step = () => { pr += 0.09 + Math.random() * 0.08; bar.style.width = Math.min(100, pr * 100) + '%'; if (pr < 1) setTimeout(step, 90); else setTimeout(() => { try { trnStart(k); } finally { ov.remove(); } }, 200); };
+  setTimeout(step, 120);
+}
+function trnStart(k) {
+  TRN.k = k; TRN.prev = skinId; skinId = k.id; sv = null; try { moClose(); } catch (e) {}
+  const o = Math.random; Math.random = mulberry(TRN_SEED);   // карта тренировки всегда одна и та же: ровный зигзаг до финиша
+  tutGen = true; tutKeep = true; try { reset(); while (path.y0 > -PX_PER_M * (TRN_GOAL + 60)) addPathPole(); } finally { Math.random = o; tutGen = false; }
+  state = 'play'; paused = false; pmenu = false; menuAt = time;
+  Object.assign(TRN, { on: true, q: [], dlg: null, said: {}, end: 0, endT: 0, t: 0, lastLead: 0, leadT: 0 });
+  const q0 = poles[0]; TRN.rv = { q: q0, ph: 'cling', t: -1.2, x: q0.cx + (q0.cx < W / 2 ? 1 : -1) * 40, y: p.y, face: q0.cx < W / 2 ? 1 : -1, st: 'ground' };
+  PK.x = W / 2; PK.y = H + 60; PK.pose = 'wave'; PK.rot = 0;
+}
+function trnExit() {
+  TRN.on = false; tutKeep = false; const k = TRN.k; skinId = TRN.prev || skinId; TRN.dlg = null; TRN.q = [];
+  reset(); state = 'shop'; shopMain = 0; paused = false; pmenu = false;
+  if (k) svOpen(k, priceOf(k));
+}
+function trnFall() {   // упал — Пиклс сажает на столб, гонка продолжается
+  let c = null, cd = 1e9; for (const q of poles) { if (q.kind !== 'log' || q.thorn || !(q.y0 < p.y + 40)) continue; const d = Math.abs(q.y1 - Math.min(p.y, camY + H * 0.6)) + Math.abs(q.cx - p.x) * 0.3; if (d < cd) { cd = d; c = q; } }
+  if (!c) c = poles[0]; camY = Math.min(camY, c.y1 - H * 0.55); putOnPole(c); p.inv = 1.5;
+  burst(p.x, p.y - 10, 16, '#ffffff', 160, 0.4, 4, 0, 'star'); try { tone(500, 900, 0.12, 'triangle', 0.05); } catch (e) {}
+  trnSay('pk', [tr('ОЙ! НИЧЕГО — Я ТЕБЯ ПОЙМАЛ. ПРОДОЛЖАЙ!', "OOPS! NO WORRIES, I CAUGHT YOU. KEEP GOING!"), tr('ОП! ЕЩЁ ПОПЫТКА. СМОТРИ НА СОСЕДНИЙ СТОЛБ!', 'HOP! ANOTHER TRY. WATCH THE NEXT POLE!')][Math.floor(Math.random() * 2)], true);
+}
+const trnPoleX = (q, d) => d > 0 ? q.x1 + PW / 2 : q.x0 - PW / 2;
+function trnDir(q) { const n = q.next; const d = n ? Math.sign(n.cx - q.cx) : 0; return d || (q.cx < W / 2 ? 1 : -1); }
+function trnTick(dt) {
+  if (!TRN.on || state !== 'play' || paused) return;
+  TRN.t += dt; const my = heightM(), goalY = -PX_PER_M * TRN_GOAL;
+  // подсказки по высоте
+  TRN_TIPS.forEach((s, i) => { if (!TRN.said[i] && my >= s[0] && TRN.t > 0.3 + i * 0.05) { TRN.said[i] = 1; trnSay(s[1], tr(s[2][0], s[2][1])); } });
+  // соперник: прыгает по столбам пути; отстал — догоняет, сильно впереди — ждёт (честная, но живая гонка)
+  const rv = TRN.rv;
+  if (!TRN.end) {
+    const gap = p.y - rv.y, spd = gap < -260 ? 1.45 : gap > 300 ? 0.55 : gap > 120 ? 0.85 : 1;
+    rv.t += dt * spd;
+    if (rv.ph === 'cling') {
+      if (rv.st === 'ground') { if (rv.t > 0) { rv.ph = 'jump'; rv.t = 0; rv.from = { x: rv.x, y: rv.y }; rv.to = rv.q; } }
+      else { const top = rv.q.y0 + PH / 2 + 6; rv.y = Math.max(top, rv.y - dt * spd * 60); if (rv.t > 0.42) { const n = rv.q.next; if (n) { rv.ph = 'jump'; rv.t = 0; rv.from = { x: rv.x, y: rv.y }; rv.to = n; } } }
+    } else {
+      const n = rv.to, d = trnDir(n), tx = trnPoleX(n, -Math.sign(n.cx - rv.from.x) || d), ty = clamp(rv.from.y - 50, n.y0 + PH / 2 + 4, n.y1 - PH / 2), dur = 0.42, k = Math.min(1, rv.t / dur);
+      rv.x = rv.from.x + (tx - rv.from.x) * k; rv.y = rv.from.y + (ty - rv.from.y) * k - Math.sin(k * Math.PI) * 36; rv.face = Math.sign(tx - rv.from.x) || rv.face; rv.rot = (rv.rot || 0) + dt * 9 * (k < 1 ? 1 : 0);
+      if (k >= 1) { rv.q = n; rv.ph = 'cling'; rv.st = 'wall'; rv.t = 0; rv.rot = 0; rv.x = trnPoleX(n, trnDir(n)); rv.face = -trnDir(n); }
+    }
+    // кто впереди
+    const lead = p.y < rv.y - 30 ? 1 : rv.y < p.y - 30 ? -1 : 0;
+    if (lead && lead !== TRN.lastLead && TRN.t - TRN.leadT > 7 && TRN.t > 4) { TRN.leadT = TRN.t; trnSay('el', lead > 0 ? tr('ЭЙ! НЕ ТАК БЫСТРО!', 'HEY! NOT SO FAST!') : tr('ДОГОНЯЙ!', 'CATCH ME!')); }
+    if (lead) TRN.lastLead = lead;
+    if (p.y <= goalY || rv.y <= goalY) { TRN.end = p.y <= goalY ? 1 : 2; TRN.endT = time; burst(p.x, p.y - 20, 40, '#ffd23a', 300, 1.2, 5, 0, 'star');
+      try { if (TRN.end === 1) sfx.achieve(); else tone(400, 200, 0.4, 'triangle', 0.05); } catch (e) {}
+      trnSay('el', TRN.end === 1 ? tr('ТЫ МЕНЯ ОБОГНАЛ! КРАСАВА!', 'YOU BEAT ME! AWESOME!') : tr('Я ПЕРВЫЙ! ПОПРОБУЕШЬ ЕЩЁ РАЗ?', 'I WON! WANT TO TRY AGAIN?'), true); }
+  }
+  // диалог: печатается по буквам, потом следующий
+  const D = TRN.dlg; if (D) { D.t += dt; const L = D.txt.length; if (D.shown < L) D.shown = Math.min(L, D.shown + dt * 40); else if (D.t > Math.max(2.6, L * 0.055) && !TRN.end) { TRN.dlg = TRN.q.shift() || null; } }
+  // Пиклс летает рядом с героем
+  const tx = clamp(p.x + (p.x < W / 2 ? 70 : -70), 40, W - 40), ty = clamp(p.y - camR - 90, 190, H - 140) + Math.sin(time * 3) * 6;
+  PK.x += (tx - PK.x) * Math.min(1, dt * 4); PK.y += (ty - PK.y) * Math.min(1, dt * 4); PK.pose = TRN.end === 1 ? 'thumb' : D && D.who === 'pk' && D.shown < D.txt.length ? 'point' : 'wave';
+}
+function trnDraw() {
+  if (!TRN.on || state !== 'play') return;
+  const rv = TRN.rv, goalY = -PX_PER_M * TRN_GOAL;
+  // финишная линия
+  const fy = Math.round(goalY - camR); if (fy > -20 && fy < H + 20) { for (let x = 0; x < W; x += 12) { prect(ctx, x, fy - 6, 6, 6, (x / 12) % 2 ? '#ffffff' : OL); prect(ctx, x + 6, fy, 6, 6, (x / 12) % 2 ? '#ffffff' : OL); } text(tr('ФИНИШ', 'FINISH'), W / 2, fy - 12, 2, '#ffd23a', 'center', OL); }
+  // соперник
+  if (rv && rv.y - camR > -60 && rv.y - camR < H + 60) {
+    const k = trnRival(); heroSprite(k, rv.ph === 'jump' ? 'jump' : rv.st === 'ground' ? 'idle' : 'cling', time, false);
+    ctx.save(); ctx.translate(even(rv.x), even(rv.y - camR)); ctx.scale(rv.face || 1, 1); if (rv.ph === 'jump') ctx.rotate((rv.rot || 0) * 0.15); ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
+    text('ELDAR', rv.x, rv.y - camR - 46, 1, '#ff8a5a', 'center', OL);
+  } else if (rv) {   // соперник за экраном — стрелка
+    const up = rv.y - camR < 0, y = up ? 150 : H - 150; ctx.globalAlpha = 0.85; text((up ? '▲ ' : '▼ ') + 'ELDAR ' + Math.abs(Math.round((p.y - rv.y) / PX_PER_M)) + tr(' М', ' M'), clamp(rv.x, 50, W - 50), y, 1, '#ff8a5a', 'center', OL); ctx.globalAlpha = 1;
+  }
+  drawPickles(PK.x, PK.y, 0.9, PK.pose, time, { talk: TRN.dlg && TRN.dlg.who === 'pk' ? 1 : 0, rot: Math.sin(time * 2) * 0.05 });
+  // полоска гонки: кто сколько прошёл
+  { const bx = 60, by = H - 16, bw = W - 120, me = clamp(heightM() / TRN_GOAL, 0, 1), el = clamp(-rv.y / PX_PER_M / TRN_GOAL, 0, 1);
+    ctx.fillStyle = OL; ctx.fillRect(bx - 2, by - 2, bw + 4, 12); ctx.fillStyle = '#1a1030'; ctx.fillRect(bx, by, bw, 8);
+    ctx.fillStyle = '#3ce06a'; ctx.fillRect(bx, by, Math.round(bw * me), 4); ctx.fillStyle = '#ff8a5a'; ctx.fillRect(bx, by + 4, Math.round(bw * el), 4);
+    text(tr('ТЫ', 'YOU'), bx + bw * me, by - 4, 1, '#9affb0', 'center', OL); text('ELDAR', bx + bw * el, by - 14, 1, '#ff8a5a', 'center', OL); }
+  // кнопка «назад»
+  roundBtn(TRN_BACK); text('<', TRN_BACK.x + 21, TRN_BACK.y + 28, 3, OL, 'center', null);
+  // диалог как в играх: портрет, имя, текст по буквам
+  const D = TRN.dlg; if (D) {
+    const x = 56, y = 116, w = W - 64, lines = pkWrap(D.txt, w - 74), h = Math.max(62, 30 + lines.length * 14), pop = clamp(D.t / 0.15, 0, 1);
+    ctx.save(); ctx.globalAlpha = pop; ctx.fillStyle = OL; ctx.fillRect(x - 3, y - 3, w + 6, h + 6); ctx.fillStyle = D.who === 'pk' ? '#1e3a8a' : '#6a2a1a'; ctx.fillRect(x, y, w, h); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x, y, w, 4);
+    ctx.fillStyle = OL; ctx.fillRect(x + 6, y + 6, 54, 50); ctx.fillStyle = D.who === 'pk' ? '#9affb0' : '#ffd8a0'; ctx.fillRect(x + 8, y + 8, 50, 46);
+    if (D.who === 'pk') drawPickles(x + 33, y + 31, 0.5, 'wave', time, {}); else { heroSprite(trnRival(), 'idle', time, false); ctx.save(); ctx.translate(x + 33, y + 50); ctx.drawImage(hcv, -24, -39, 48, 60); ctx.restore(); }
+    text(D.who === 'pk' ? tr('МИСТЕР ПИКЛС', 'MR. PICKLES') : 'ELDAR', x + 68, y + 16, 1, D.who === 'pk' ? '#9affb0' : '#ffb07a', 'left', OL, w - 76);
+    let left = Math.floor(D.shown); lines.forEach((ln, i) => { const s = ln.map(pkPlain).join(' '), part = s.slice(0, Math.max(0, left)); left -= s.length + 1; if (part) text(part, x + 68, y + 32 + i * 14, 1, '#ffffff', 'left', null, w - 76); });
+    if (D.shown >= D.txt.length && Math.sin(time * 8) > 0) prect(ctx, x + w - 12, y + h - 10, 6, 4, '#ffffff');
+    ctx.restore();
+  }
+  // конец гонки
+  if (TRN.end) {
+    const a = clamp((time - TRN.endT - 0.8) / 0.3, 0, 1); if (a <= 0) return;
+    ctx.globalAlpha = a * 0.7; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = a;
+    text(TRN.end === 1 ? tr('ПОБЕДА!', 'VICTORY!') : tr('ELDAR ПЕРВЫЙ', 'ELDAR WINS'), W / 2, 330, 4, TRN.end === 1 ? '#ffd23a' : '#ff8a5a', 'center', OL, W - 30);
+    text(tr('ТРЕНИРОВКА ПРОЙДЕНА', 'TRAINING COMPLETE'), W / 2, 370, 2, '#ffffff', 'center', OL, W - 30);
+    button(TRN_AGAIN, tr('ЕЩЁ РАЗ', 'AGAIN'), '#3ce06a', '#1a7a3a'); button(TRN_OUT, tr('НАЗАД', 'BACK'), '#ffb02a', '#c06a00');
+    ctx.globalAlpha = 1;
+  }
+}
+function trnClick(pt) {
+  if (!TRN.on || state !== 'play') return false;
+  if (inRect(pt, TRN_BACK)) { sfx.click(); trnExit(); return true; }
+  if (TRN.end) { if (time - TRN.endT < 1.1) return true; if (inRect(pt, TRN_AGAIN)) { sfx.click(); trnStart(TRN.k); } else if (inRect(pt, TRN_OUT)) { sfx.click(); trnExit(); } return true; }
+  if (TRN.dlg && pt.y > 112 && pt.y < 196 && pt.x > 50) { const D = TRN.dlg; if (D.shown < D.txt.length) D.shown = D.txt.length; else TRN.dlg = TRN.q.shift() || null; return true; }   // тап по диалогу — дочитать / дальше
+  return false;
+}
+{ const u3 = update; update = function (dt) { if (TRN.on && TRN.end && state === 'play') { time += dt; return; } u3(dt); if (TRN.on) trnTick(dt); }; }
+{ const d3 = draw; draw = function () { d3(); if (TRN.on && state === 'play' && ctx.canvas === cv) { ctx.save(); try { trnDraw(); } finally { ctx.restore(); } } }; }
 
 // ---------- обучающий раунд ----------
 const TUT = { on: false, step: 0, st: 0, jumps: 0, hist: [], histT: 0, rw: null, guard: false, endT: 0, pops: [], shots: [], show: null, shown: {}, ev: {}, carry: null, kills: 0, rocket: 0, praise: '' };
@@ -18362,7 +18800,7 @@ const TOUR_STEPS = [
   { r: () => BTN.ach, say: () => tr('[НАГРАДЫ]: ДОСТИЖЕНИЯ ЗА ТРЮКИ И РЕКОРДЫ — ЗА КАЖДОЕ ДАЮТ [МОНЕТЫ].', '[AWARDS]: ACHIEVEMENTS FOR TRICKS AND RECORDS — EACH ONE GIVES [COINS].') },
   { r: () => BTN.menuB, say: () => tr('КНОПКА [МЕНЮ]: [ПОВТОРЫ] ТВОИХ РАУНДОВ В «СЕТИ», [КОНСТРУКТОР КАРТ] И [КАРТЫ НЕДЕЛИ].', 'THE [MENU] BUTTON: [REPLAYS] OF YOUR ONLINE ROUNDS, THE [MAP MAKER] AND [MAPS OF THE WEEK].') },
   { r: () => BTN.mp, say: () => tr('[СЕТЬ]: СОЗДАЙ КОМНАТУ, ДАЙ ДРУЗЬЯМ КОД — И СОРЕВНУЙТЕСЬ, [КТО ЗАЛЕЗЕТ ВЫШЕ]!', '[ONLINE]: CREATE A ROOM, SHARE THE CODE — AND RACE [WHO CLIMBS HIGHER]!') },
-  { r: () => BTN.rank, say: () => tr('[РЕЙТИНГ]: ЛУЧШИЕ ИГРОКИ МИРА. МЕСТО ЗАВИСИТ ОТ [КУБКОВ] — НАЖМИ НА ИГРОКА, УВИДИШЬ ЕГО ПРОФИЛЬ.', '[RANKING]: THE BEST PLAYERS. YOUR PLACE DEPENDS ON [TROPHIES] — TAP A PLAYER TO SEE THEIR PROFILE.') },
+  { r: () => BTN.rank, say: () => tr('[ПУТЬ СЛАВЫ]: ЗА КУБКИ — НАГРАДЫ: МОНЕТЫ, КРИСТАЛЛЫ, ДРОПЫ И ЯЩИКИ. А [РЕЙТИНГ] — В МЕНЮ ☰. ', '[ROAD OF GLORY]: TROPHIES GIVE REWARDS: COINS, GEMS, DROPS AND BOXES. The [RANKING] is in the ☰ menu. ') || tr('[РЕЙТИНГ]: ЛУЧШИЕ ИГРОКИ МИРА. МЕСТО ЗАВИСИТ ОТ [КУБКОВ] — НАЖМИ НА ИГРОКА, УВИДИШЬ ЕГО ПРОФИЛЬ.', '[RANKING]: THE BEST PLAYERS. YOUR PLACE DEPENDS ON [TROPHIES] — TAP A PLAYER TO SEE THEIR PROFILE.') },
   { r: () => BTN.friends, say: () => tr('[ДРУЗЬЯ]: СПИСОК ДРУЗЕЙ — КТО [В СЕТИ], КОГДА ИГРАЛ, ЕГО РЕКОРД. ЗАЯВКИ В ДРУЗЬЯ ПРИХОДЯТ СЮДА [ПИСЬМАМИ].', '[FRIENDS]: WHO IS [ONLINE], WHEN THEY PLAYED, THEIR BEST. FRIEND REQUESTS ARRIVE HERE AS [LETTERS].') },
   { r: () => BTN.shop, say: () => tr('[ГЕРОИ]: ЗАХОДИ СЮДА ЗА НОВЫМИ ГЕРОЯМИ! ПОКУПАЙ ЗА [МОНЕТЫ] И [КРИСТАЛЛЫ]. НАЖМИ НА ГЕРОЯ — УВИДИШЬ, [КАК ОН ИГРАЕТ].', '[HEROES]: COME HERE FOR NEW HEROES! BUY THEM WITH [COINS] AND [GEMS]. TAP A HERO TO SEE [HOW IT PLAYS].') },
   { r: () => BTN.shop, say: () => tr('КАК [ПРОКАЧАТЬ] ГЕРОЯ: ЛЕТИ ИМ ВЫШЕ! РЕКОРД ГЕРОЯ = ЕГО [КУБКИ]. КАЖДЫЕ 500 — НОВЫЙ [РАНГ]: ДЕРЕВО, БРОНЗА, СЕРЕБРО... А НА 1000, 2000 И 3000 — [НАГРАДЫ] НА ЕГО ДОРОЖКЕ.', 'HOW TO [LEVEL UP] A HERO: CLIMB HIGHER WITH IT! ITS BEST HEIGHT = ITS [TROPHIES]. EVERY 500 — A NEW [RANK]: WOOD, BRONZE, SILVER... AND AT 1000, 2000, 3000 — [REWARDS] ON ITS ROAD.') },
@@ -18616,9 +19054,9 @@ async function frPresAll() {
   frSave();
 }
 const frOpenNow = () => moStack.length && moStack[moStack.length - 1].fr;
-const frOnline = f => { const d = FR.pres[f.u]; return !!d && frNow() - (+d.t || 0) < 75000; };
+const frOnline = f => { const d = FR.pres[f.u]; return !!d && frNow() - (+d.t || 0) < 50000; };
 function frSeen(f) {   // «в сети» или «был … назад»
-  const d = FR.pres[f.u]; if (!d || !d.t) return tr('ЕЩЁ НЕ ЗАХОДИЛ', 'NOT SEEN YET');
+  const d = FR.pres[f.u]; if (!d || !d.t) return tr('НЕ В СЕТИ', 'OFFLINE');
   if (frOnline(f)) return d.st === 'play' ? tr('● ИГРАЕТ СЕЙЧАС', '● PLAYING NOW') : tr('● В СЕТИ', '● ONLINE');
   const m = Math.max(1, Math.round((frNow() - d.t) / 60000));
   if (m < 60) return trf('БЫЛ {n} МИН НАЗАД', 'SEEN {n} MIN AGO', { n: m });
@@ -18636,11 +19074,30 @@ async function frOpenProfile(f) {   // профиль друга: карточк
     bd.appendChild(x);
   }, true);
 }
-// раз в секунду: «я в игре» (раз в 30 с) и письма (раз в 10 с в меню, раз в 4 с на экране друзей)
+// друзья видят сразу: вышел из игры (закрыл или свернул) — своя отметка «в сети» стирается; вернулся — ставится снова;
+// начал раунд или вернулся в меню — отметка обновляется тут же. На экране друзей их отметки приходят живым потоком
+function frGone() { try { if (!frLive() || !FB.uid || !FB.tok) return; fetch(fbUrl('pres/' + FB.uid), { method: 'DELETE', keepalive: true }).catch(() => {}); FR.presT = 0; } catch (e) {} }
+window.addEventListener('pagehide', frGone);
+document.addEventListener('visibilitychange', () => { if (document.hidden) frGone(); else if (frLive() && navigator.onLine) { FR.presT = Date.now(); frPresence(); } });
+window.addEventListener('offline', () => { if (frOpenNow()) moRefresh(); });
+const FRW = {};   // живые потоки отметок друзей (только пока открыт экран друзей)
+function frWatch(on) {
+  const want = on ? FR.list.filter(f => f.st === 'ok').slice(0, 25).map(f => f.u) : [];
+  for (const u of Object.keys(FRW)) if (!want.includes(u)) { try { FRW[u].close(); } catch (e) {} delete FRW[u]; }
+  for (const u of want) { if (FRW[u] || !FB.tok) continue;
+    try { const es = new EventSource(fbUrl('pres/' + u)); FRW[u] = es;
+      const ev = e => { try { const m = JSON.parse(e.data); if (!m) return; const path = (m.path || '/').split('/').filter(Boolean);
+        if (!path.length) FR.pres[u] = m.data && typeof m.data === 'object' ? m.data : null; else FR.pres[u] = Object.assign({}, FR.pres[u] || {}, { [path[0]]: m.data });
+        clearTimeout(frWatch.t); frWatch.t = setTimeout(() => { if (frOpenNow()) moRefresh(); }, 250); } catch (x) {} };
+      es.addEventListener('put', ev); es.addEventListener('patch', ev); es.addEventListener('cancel', () => { es.close(); delete FRW[u]; }); es.onerror = () => { es.close(); delete FRW[u]; };
+    } catch (e) {} }
+}
+// раз в секунду: «я в игре» (раз в 20 с и сразу при смене меню/раунд) и письма (раз в 10 с в меню, раз в 4 с на экране друзей)
 setInterval(() => {
-  if (!frLive() || document.hidden) return;
-  const now = Date.now(), open = frOpenNow();
-  if (now - FR.presT > 30000) { FR.presT = now; frPresence(); }
+  if (!frLive() || document.hidden || !navigator.onLine) { if (!navigator.onLine) frWatch(false); return; }
+  const now = Date.now(), open = frOpenNow(), st = state === 'play' ? 'play' : 'menu';
+  frWatch(open);
+  if (now - FR.presT > 20000 || (st !== FR.lastSt && now - FR.presT > 1500)) { FR.presT = now; FR.lastSt = st; frPresence(); }
   if (now - FR.pollT > (open ? 4000 : 20000) && (state === 'menu' || open)) {
     FR.pollT = now; frPoll();
     // «в сети» друзья обновляют раз в 30 с: опрашивать каждого чаще чем раз в 15 с бесполезно (было — каждые 4 с, по запросу на друга)
@@ -18743,8 +19200,7 @@ const NEWS = [
 const newsUnread = () => store.get('newsSeen', 0) < NEWS[0].v;
 function drawNewsBtn() {   // газета: сложенный лист со строчками и заголовком
   const b = BTN.news, x = b.x, y = b.y; roundBtn(b);
-  ctx.fillStyle = '#3a2a5a'; ctx.fillRect(x + 9, y + 8, 16, 18); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 11, y + 10, 12, 14);
-  ctx.fillStyle = '#3a2a5a'; ctx.fillRect(x + 13, y + 12, 8, 2); ctx.fillRect(x + 13, y + 16, 8, 2); ctx.fillRect(x + 13, y + 20, 5, 2);
+  pixIcon(NEWS_PIX, NEWS_COL, x + b.w / 2 + 1, y + b.h / 2, 0.6);
   if (newsUnread()) badge(x + b.w - 2, y + 4);
 }
 // оформление «Новостей»: газетный выпуск — лучи и полутоновые точки на фоне, бегущая строка, карточки-вырезки на скотче
@@ -18775,9 +19231,43 @@ function openNews() {
     });
   });
 }
+// «Входящие»: вкладки «Клуб» и «Личные»; пусто — так и написано
+let inboxTab = 'club';
+function openInbox(tab) {
+  if (tab) inboxTab = tab;
+  moOpen(tr('ВХОДЯЩИЕ', 'INBOX'), bd => {
+    const tb = moEl('div', 'tabs'), t1 = moTxt('button', 'tab' + (inboxTab === 'club' ? ' on' : ''), tr('КЛУБ', 'CLUB')), t2 = moTxt('button', 'tab' + (inboxTab === 'me' ? ' on' : ''), tr('ЛИЧНЫЕ', 'PERSONAL'));
+    if (FR.inbox.length) t2.appendChild(moTxt('span', 'chip', String(FR.inbox.length)));
+    t1.onclick = () => { sfx.click(); inboxTab = 'club'; moRefresh(); }; t2.onclick = () => { sfx.click(); inboxTab = 'me'; moRefresh(); };
+    tb.append(t1, t2); bd.appendChild(tb);
+    const empty = (a, b) => { const c = moEl('div', 'card rpe'); c.append(menuIcon('inbox'), moTxt('div', 'ol', a), moTxt('div', 'sm', b)); bd.appendChild(c); };
+    if (inboxTab === 'club') {
+      const cl = CLAN.in ? clanGet(CLAN.in) : null;
+      if (!cl) { empty(tr('ТЫ ПОКА НЕ В КЛУБЕ', 'YOU ARE NOT IN A CLUB YET'), troTotal() >= CLAN_NEED ? tr('ВСТУПИ В КЛУБ — ТУТ БУДУТ ЕГО НОВОСТИ', 'JOIN A CLUB — ITS NEWS WILL APPEAR HERE') : trf('КЛУБЫ ОТКРОЮТСЯ С {n} КУБКОВ', 'CLUBS UNLOCK AT {n} TROPHIES', { n: CLAN_NEED })); return; }
+      const hd = moEl('div', 'card row'); hd.style.gap = '10px'; hd.append(clanBadgeCnv(cl.bd, 40), moTxt('div', 'ol', cl.nm)); hd.style.cursor = 'pointer'; hd.onclick = () => { sfx.click(); clubChatTab = true; clanPage(CLAN.in); }; bd.appendChild(hd);
+      const R = clRoles(), L = (CLAN.log || []).slice(0, 30);
+      const ch = (store.get('cchat', null) || {}); const msgs = ch.id === CLAN.in && Array.isArray(ch.l) ? ch.l.filter(m => m.me).map(m => ({ t: m.t, txt: (m.m || '☺') , who: m.n })) : [];
+      const items = L.map(e => ({ t: e.t, txt: e.ty === 'join' ? trf('{n} ВСТУПИЛ В КЛАН', '{n} JOINED THE CLUB', e) : e.ty === 'leave' ? trf('{n} ВЫШЕЛ ИЗ КЛАНА', '{n} LEFT THE CLUB', e) : e.ty === 'kick' ? trf('{by} ИСКЛЮЧИЛ {n}', '{by} KICKED {n}', e) : e.ty === 'up' ? trf('{by} ПОВЫСИЛ {n}: {role}', '{by} PROMOTED {n}: {role}', { ...e, role: R[e.r] }) : e.ty === 'down' ? trf('{by} ПОНИЗИЛ {n}: {role}', '{by} DEMOTED {n}: {role}', { ...e, role: R[e.r] }) : tr('КЛАН СОЗДАН', 'CLUB CREATED') })).concat(msgs.map(m => ({ t: m.t, txt: m.who + ': ' + m.txt, chat: 1 }))).sort((a, b) => b.t - a.t);
+      if (!items.length) { empty(tr('СООБЩЕНИЙ ОТ КЛУБА НЕТ', 'NO CLUB MESSAGES'), tr('ЗДЕСЬ ПОЯВЯТСЯ НОВОСТИ КЛУБА И ЧАТ', 'CLUB NEWS AND CHAT WILL APPEAR HERE')); return; }
+      items.forEach(it => { const c = moEl('div', 'card'); c.style.cssText += ';padding:8px 10px;margin-bottom:6px;border-left:6px solid ' + (it.chat ? '#3ab0ff' : '#ffd23a'); const tx = moTxt('div', '', it.txt); tx.style.textTransform = it.chat ? 'none' : ''; c.append(tx, moTxt('div', 'sm', clAgo(it.t))); bd.appendChild(c); });
+      return;
+    }
+    // личные: приглашения в друзья
+    if (!fbOn() || !navigator.onLine) { empty(tr('НЕТ ИНТЕРНЕТА', 'NO INTERNET'), tr('ЛИЧНЫЕ СООБЩЕНИЯ ПРИХОДЯТ ТОЛЬКО ПО СЕТИ', 'PERSONAL MESSAGES NEED THE INTERNET')); return; }
+    if (!FR.inbox.length) { empty(tr('ЛИЧНЫХ СООБЩЕНИЙ НЕТ', 'NO PERSONAL MESSAGES'), tr('ТУТ БУДУТ ПРИГЛАШЕНИЯ В ДРУЗЬЯ', 'FRIEND INVITES WILL APPEAR HERE')); return; }
+    for (const q of FR.inbox) {
+      const c = moEl('div', 'card row'); c.style.cssText += ';gap:8px;margin-bottom:6px';
+      const t = moEl('div'); t.style.cssText = 'flex:1;min-width:0'; t.append(moTxt('div', 'ol', q.n), moTxt('div', 'sm', tr('ХОЧЕТ ДРУЖИТЬ', 'WANTS TO BE FRIENDS'))); t.firstChild.style.textTransform = 'none';
+      const y = moTxt('button', 'btn', '✓'), n = moTxt('button', 'btn red', '✕');
+      y.onclick = async () => { sfx.click(); y.disabled = true; await frAccept(q); moRefresh(); }; n.onclick = () => { sfx.click(); frDecline(q); moRefresh(); };
+      c.append(avatarCnv(q.av || 'hamster', 40), t, y, n); bd.appendChild(c);
+    }
+  });
+}
 function openFriends() {
   moOpen(tr('ДРУЗЬЯ', 'FRIENDS'), body => {
     moStack[moStack.length - 1].fr = true;
+    if (!navigator.onLine) { const c = moEl('div', 'card rpe'); c.append(menuIcon('friend'), moTxt('div', 'ol', tr('НЕТ ИНТЕРНЕТА', 'NO INTERNET')), moTxt('div', 'sm', tr('ДРУЗЬЯ РАБОТАЮТ ТОЛЬКО ПО СЕТИ. ПОДКЛЮЧИСЬ И ОТКРОЙ СНОВА', 'FRIENDS WORK ONLY ONLINE. CONNECT AND OPEN AGAIN'))); body.appendChild(c); return; }
     if (!fbOn()) { body.appendChild(moTxt('div', 'card', tr('ДРУЗЬЯ РАБОТАЮТ ЧЕРЕЗ FIREBASE — ОН ЕЩЁ НЕ НАСТРОЕН.', 'FRIENDS NEED FIREBASE, WHICH IS NOT SET UP YET.'))); return; }
     // письма
     if (FR.inbox.length) {
@@ -20447,14 +20937,14 @@ function openSideMenu() {
   if (!document.getElementById('sideCss')) { const st = document.createElement('style'); st.id = 'sideCss'; st.textContent = `
 #side{position:fixed;inset:0;z-index:95;font-family:Montserrat,sans-serif;font-weight:900;text-transform:uppercase}
 #side .bg{position:absolute;inset:0;background:rgba(8,4,24,.55);animation:sdBg .25s ease-out}
-#side .pn{position:absolute;top:0;bottom:0;right:0;width:min(80vw,340px);background:linear-gradient(180deg,#3a2a7a,#1a1040);border-left:4px solid #1a0a04;box-shadow:-10px 0 30px #0009;display:flex;flex-direction:column;padding:max(14px,env(safe-area-inset-top)) 12px 14px;gap:10px;animation:sdIn .32s cubic-bezier(.2,1.2,.4,1);overflow-y:auto}
+#side .pn{position:absolute;top:0;bottom:0;right:0;width:min(66vw,260px);background:linear-gradient(180deg,#3a2a7a,#1a1040);border-left:4px solid #1a0a04;box-shadow:-10px 0 30px #0009;display:flex;flex-direction:column;padding:max(14px,env(safe-area-inset-top)) 12px 14px;gap:10px;animation:sdIn .32s cubic-bezier(.2,1.2,.4,1);overflow-y:auto}
 #side.out .pn{transform:translateX(105%);transition:transform .22s ease-in} #side.out .bg{opacity:0;transition:opacity .22s}
 #side .hd{display:flex;align-items:center;justify-content:space-between;color:#ffd23a;font-size:20px;letter-spacing:2px;text-shadow:0 3px 0 #1a0a04,2px 0 #1a0a04,-2px 0 #1a0a04}
 #side .x{width:40px;height:40px;border-radius:50%;border:3px solid #1a0a04;background:#ff5a4a;color:#fff;font:900 18px sans-serif;box-shadow:0 3px 0 #1a0a04;cursor:pointer}
-#side .it{display:flex;align-items:center;gap:12px;padding:10px;border:3px solid #1a0a04;border-radius:14px;color:#fff;cursor:pointer;box-shadow:0 4px 0 #1a0a04,inset 0 2px 0 #ffffff44;opacity:0;animation:sdItem .38s cubic-bezier(.2,1.3,.4,1) forwards;font-size:15px;text-shadow:0 2px 0 #1a0a04}
+#side .it{display:flex;align-items:center;gap:12px;padding:10px;border:3px solid #1a0a04;border-radius:14px;color:#fff;cursor:pointer;box-shadow:0 3px 0 #1a0a04,inset 0 2px 0 #ffffff44;opacity:0;animation:sdItem .38s cubic-bezier(.2,1.3,.4,1) forwards;font-size:12px;text-shadow:0 2px 0 #1a0a04;padding:6px 8px;gap:8px;border-radius:11px}
 #side .it:active{transform:translateY(3px);box-shadow:0 1px 0 #1a0a04}
-#side .it small{display:block;font-size:10px;color:#ffffffcc;text-shadow:none;font-weight:800;margin-top:2px}
-#side .it canvas{width:44px;height:44px;flex:none;image-rendering:pixelated;border:3px solid #1a0a04;border-radius:10px;background:#1a1030}
+#side .it small{display:block;font-size:8px;color:#ffffffcc;text-shadow:none;font-weight:800;margin-top:2px}
+#side .it canvas{width:30px;height:30px;flex:none;image-rendering:pixelated;border:3px solid #1a0a04;border-radius:10px;background:#1a1030}
 @keyframes sdIn{from{transform:translateX(100%)}} @keyframes sdBg{from{opacity:0}} @keyframes sdItem{from{opacity:0;transform:translateX(120px)}to{opacity:1;transform:none}}`; document.head.appendChild(st); }
   sideUi = document.createElement('div'); sideUi.id = 'side';
   const bg = document.createElement('div'); bg.className = 'bg'; const pn = document.createElement('div'); pn.className = 'pn';
@@ -20464,7 +20954,7 @@ function openSideMenu() {
   const items = [
     [tr('ДАННЫЕ БОЯ', 'BATTLE LOG'), trf('ПОВТОРЫ РАУНДОВ ЗА 5 ДНЕЙ: {n}', 'ROUND REPLAYS FROM 5 DAYS: {n}', { n: rpList().length }), ['#3a5ad8', '#1a2a8a'], 'replay', openReplays],
     [tr('СПИСОК ЛИДЕРОВ', 'LEADERBOARDS'), tr('ОБЩИЙ РЕЙТИНГ И ТОП ПО ГЕРОЯМ', 'OVERALL AND BY HERO'), ['#ffb02a', '#a05a00'], 'board', () => openBoard()],
-    [tr('ВХОДЯЩИЕ', 'INBOX'), tr('НОВОСТИ И СООБЩЕНИЯ', 'NEWS AND MESSAGES'), ['#c04aff', '#5a1aa0'], 'inbox', openNews],
+    [tr('ВХОДЯЩИЕ', 'INBOX'), tr('КЛУБ И ЛИЧНЫЕ СООБЩЕНИЯ', 'CLUB AND PERSONAL MESSAGES'), ['#c04aff', '#5a1aa0'], 'inbox', () => openInbox()],
     [tr('ДРУЖЕСКИЙ БОЙ', 'FRIENDLY BATTLE'), tr('КОМНАТА ПО КОДУ ДЛЯ ДРУЗЕЙ', 'A ROOM WITH A CODE FOR FRIENDS'), ['#3ce06a', '#1a7a3a'], 'friend', mpOpen],
     [tr('СОЗДАНИЕ КАРТ', 'MAP MAKER'), trf('СВОИ КАРТЫ: {n} ИЗ {m}', 'YOUR MAPS: {n} OF {m}', { n: edMaps().length, m: ED_MAX }), ['#2ab8a0', '#0a5a4a'], 'map', openMaps],
     ['WALL PLAY ID', tr('АККАУНТ, ВХОД И СОХРАНЕНИЕ', 'ACCOUNT, SIGN-IN AND SAVES'), ['#ff5a8a', '#a01a4a'], 'id', openAccounts],
@@ -20493,7 +20983,7 @@ function menuIcon(kind) {
 }
 
 // ---------- ПОВТОРЫ: каждый раунд в «Сети» записывается (6 снимков в секунду) и хранится 5 дней ----------
-const RP_DAYS = 5, RP_MAX = 10;
+const RP_DAYS = 10, RP_MAX = 12;
 function rpList() { try { const l = JSON.parse(localStorage.getItem('wpReps') || '[]'); return Array.isArray(l) ? l.filter(r => r && r.d > Date.now() - RP_DAYS * 864e5 && Array.isArray(r.f) && Array.isArray(r.n)) : []; } catch (e) { return []; } }
 function rpSave(rec) {
   let l = rpList(); l.unshift(rec); l = l.slice(0, RP_MAX);
@@ -20519,30 +21009,46 @@ function rpRecTick() {
 function rpRecEnd(order) {
   const R = AR.rec; AR.rec = null; if (!R || R.f.length < 12) return;
   const me = order.indexOf(arMe()) + 1;
-  rpSave({ d: R.d, mode: R.mode, seed: R.seed, n: R.n, f: R.f, place: me, len: R.f[R.f.length - 1][0] });
+  rpSave({ d: R.d, mode: R.mode, seed: R.seed, n: R.n, f: R.f, place: me, len: Math.max(0.1, R.f[R.f.length - 1][0] - R.f[0][0]), t0: R.f[0][0] });
 }
 function openReplays() {
-  moOpen(tr('ПОВТОРЫ РАУНДОВ', 'ROUND REPLAYS'), bd => {
+  moOpen(tr('ДАННЫЕ БОЯ', 'BATTLE LOG'), bd => {
     const l = rpList();
-    bd.appendChild(moTxt('div', 'sm', tr('ТВОИ РАУНДЫ ЗА ПОСЛЕДНИЕ 5 ДНЕЙ. В ПОВТОРЕ МОЖНО ПЕРЕМАТЫВАТЬ, СТАВИТЬ ПАУЗУ И ДВИГАТЬ ЭКРАН', 'YOUR ROUNDS FROM THE LAST 5 DAYS. IN A REPLAY YOU CAN SCRUB, PAUSE AND MOVE THE SCREEN')));
-    if (!l.length) { const c = moEl('div', 'card sm'); c.style.marginTop = '10px'; c.textContent = tr('ПОКА ПУСТО — СЫГРАЙ ЗАБЕГ ИЛИ «ЦАРЯ ГОРЫ» В «СЕТИ»', 'EMPTY SO FAR — PLAY A RACE OR KING OF THE HILL ONLINE'); bd.appendChild(c); return; }
+    if (!l.length) { const c = moEl('div', 'card rpe'); c.append(menuIcon('replay'), moTxt('div', 'ol', tr('НЕТ ЗАПИСЕЙ ЗА ПОСЛЕДНИЕ 10 ДНЕЙ', 'NO RECORDS FROM THE LAST 10 DAYS')), moTxt('div', 'sm', tr('СЫГРАЙТЕ В «СЕТИ», ЧТОБЫ ПОЛУЧИТЬ ЗАПИСЬ', 'PLAY ONLINE TO GET A RECORD'))); bd.appendChild(c); return; }
+    bd.appendChild(moTxt('div', 'sm', trf('РАУНДЫ ЗА 10 ДНЕЙ: {n}. НАЖМИ — ПОСМОТРИ ПОВТОР: ПЕРЕМОТКА, ПАУЗА, СКОРОСТЬ', 'ROUNDS FROM 10 DAYS: {n}. TAP TO WATCH THE REPLAY: SCRUB, PAUSE, SPEED', { n: l.length })));
     l.forEach((r, i) => {
-      const c = moEl('div', 'card'); c.style.cssText += ';margin-top:10px;display:flex;align-items:center;gap:10px;cursor:pointer';
-      c.appendChild(arQIcon(r.mode === 'king' ? 'king' : 'race', 40));
-      const col = moEl('div'); col.style.cssText = 'flex:1;min-width:0';
-      const dt = new Date(r.d), when = dt.toLocaleDateString(lang === 'ru' ? 'ru-RU' : undefined, { day: 'numeric', month: 'short' }) + ' ' + dt.toLocaleTimeString(lang === 'ru' ? 'ru-RU' : undefined, { hour: '2-digit', minute: '2-digit' });
-      col.append(moTxt('div', 'ol', (r.mode === 'king' ? tr('ЦАРЬ ГОРЫ', 'KING OF THE HILL') : tr('ЗАБЕГ', 'RACE')) + ' — ' + tr('МЕСТО ', 'PLACE ') + r.place), moTxt('div', 'sm', when + ' · ' + arClock(r.len)));
-      const b = moTxt('button', 'btn blue', '▶'); c.append(col, b);
+      const win = r.place === 1, top = r.place > 0 && r.place <= 3, col = win ? '#ffd23a' : top ? '#3ce06a' : '#ff6a5a';
+      const c = moEl('div', 'card rpc'); c.style.borderLeftColor = col; c.style.animationDelay = (i * 0.05) + 's';
+      const hd = moEl('div', 'row'); hd.style.gap = '10px';
+      hd.appendChild(arQIcon(r.mode === 'king' ? 'king' : 'race', 40));
+      const col1 = moEl('div'); col1.style.cssText = 'flex:1;min-width:0';
+      const res = moTxt('div', 'ol', win ? tr('ПОБЕДА!', 'VICTORY!') : top ? trf('ТОП-{n}', 'TOP {n}', { n: r.place }) : trf('МЕСТО {n}', 'PLACE {n}', { n: r.place || '?' })); res.style.color = col; res.style.fontSize = '18px';
+      const ago = Math.max(1, Math.round((Date.now() - r.d) / 6e4)), agoS = ago < 60 ? trf('{n} МИН НАЗАД', '{n} MIN AGO', { n: ago }) : ago < 1440 ? trf('{n} Ч НАЗАД', '{n} H AGO', { n: Math.round(ago / 60) }) : trf('{n} ДН НАЗАД', '{n} D AGO', { n: Math.round(ago / 1440) });
+      col1.append(res, moTxt('div', 'sm', (r.mode === 'king' ? tr('ЦАРЬ ГОРЫ', 'KING OF THE HILL') : tr('ЗАБЕГ', 'RACE')) + ' · ' + arClock(r.f.length ? r.f[r.f.length - 1][0] - r.f[0][0] : 0) + ' · ' + agoS));
+      const b = moTxt('button', 'btn blue', '▶'); hd.append(col1, b); c.appendChild(hd);
+      const ppl = moEl('div', 'rpp'); r.n.slice(0, 10).forEach(e => { const k = mpSkin(e.s); const w = moEl('div', 'rpa' + (e.me ? ' me' : '')); try { w.appendChild(heroCnv(k, 30)); } catch (x) {} w.appendChild(moTxt('div', 'sm', String(e.n || '').slice(0, 8))); ppl.appendChild(w); });
+      if (r.n.length > 10) ppl.appendChild(moTxt('div', 'sm', '+' + (r.n.length - 10)));
+      c.appendChild(ppl);
       c.onclick = () => { sfx.click(); moClose(); rpOpen(r); };
       bd.appendChild(c);
     });
   });
 }
-const RP = { on: false, rec: null, t: 0, play: true, spd: 1, follow: true, drag: null, len: 0 };
+{ const st = document.createElement('style'); st.textContent = `
+#mo .rpe{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:26px 14px;margin-top:10px}
+#mo .rpc{margin-top:10px;cursor:pointer;border-left:8px solid;animation:rpIn .35s cubic-bezier(.2,1.3,.4,1) both}
+#mo .rpc:active{transform:scale(.98)}
+#mo .rpp{display:flex;gap:4px;margin-top:8px;overflow-x:auto;padding-bottom:2px}
+#mo .rpa{flex:none;width:44px;display:flex;flex-direction:column;align-items:center;background:#1a1030;border-radius:8px;padding:3px 0;border:2px solid #0a0418}
+#mo .rpa.me{border-color:#3ce06a}
+#mo .rpa .sm{font-size:8px;max-width:42px;overflow:hidden;white-space:nowrap}
+@keyframes rpIn{from{opacity:0;transform:translateX(40px)}}`; document.head.appendChild(st); }
+const RP = { on: false, rec: null, t: 0, t0: 0, play: true, spd: 1, follow: true, drag: null, len: 0 };
 const RP_BAR = { x: 70, y: H - 46, w: W - 140, h: 18 }, RP_PLAY = { x: 14, y: H - 58, w: 46, h: 40 }, RP_SPD = { x: W - 60, y: H - 58, w: 46, h: 40 }, RP_FOL = { x: W - 120, y: 14, w: 106, h: 30 };
 function rpOpen(rec) {
   if (mp.active || mp.mode) { try { mpAfter(); } catch (e) {} mpLeave(); mp.mode = ''; AR.mode = ''; AR.phase = ''; AR.bots = {}; }
-  RP.rec = rec; RP.t = 0; RP.play = true; RP.spd = 1; RP.follow = true; RP.drag = null; RP.len = rec.len || 1;
+  const fr = rec.f; RP.t0 = fr.length ? fr[0][0] : 0;   // запись начинается не с нуля (часы раунда уже шли) — считаем от первого снимка
+  RP.rec = rec; RP.t = 0; RP.play = true; RP.spd = 1; RP.follow = true; RP.drag = null; RP.len = Math.max(0.1, (fr.length ? fr[fr.length - 1][0] : 0) - RP.t0);
   RP.on = false; mp.seed = rec.seed; mp.mode = rec.mode; const was = mp.active; mp.active = true;   // та же карта, что была в раунде: тот же генератор и то же зерно
   try { reset(); } finally { mp.active = was; mp.mode = ''; }
   RP.on = true; p.x = -999; p.y = 999; state = 'replay'; camY = -H + 150; camR = pxSnap(camY);
@@ -20553,25 +21059,32 @@ function rpFrame(t) {   // два ближайших снимка и доля м
   while (hi - lo > 1) { const m = (lo + hi) >> 1; if (f[m][0] <= t) lo = m; else hi = m; }
   const a = f[lo], b = f[hi], k = b[0] > a[0] ? clamp((t - a[0]) / (b[0] - a[0]), 0, 1) : 0; return [a, b, k];
 }
+// плавно: кривая через 4 соседних снимка (Катмулл-Ром) — прыжки идут дугой, а не ломаной; плюс скорость для позы
 function rpPeople(t) {
-  const [a, b, k] = rpFrame(t), out = [];
-  RP.rec.n.forEach((e, i) => { const j = 1 + i * 3; const ca = a[j + 2], dx = b[j] - a[j]; const jump = Math.abs(dx) > 200 || Math.abs(b[j + 1] - a[j + 1]) > 300;
-    out.push({ ...e, x: jump ? a[j] : a[j] + dx * k, y: jump ? a[j + 1] : a[j + 1] + (b[j + 1] - a[j + 1]) * k, f: ca & 1 ? 1 : -1, st: ca & 2 ? 'wall' : ca & 4 ? 'ground' : 'air', dead: !!(ca & 8), king: !!(ca & 16), fin: !!(ca & 32) }); });
+  const f = RP.rec.f; let lo = 0, hi = f.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (f[m][0] <= t) lo = m; else hi = m; }
+  const a = f[lo], b = f[hi], a0 = f[Math.max(0, lo - 1)], b1 = f[Math.min(f.length - 1, hi + 1)], k = b[0] > a[0] ? clamp((t - a[0]) / (b[0] - a[0]), 0, 1) : 0, out = [];
+  const cr = (p0, p1, p2, p3, u) => 0.5 * (2 * p1 + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (-p0 + 3 * p1 - 3 * p2 + p3) * u * u * u);
+  RP.rec.n.forEach((e, i) => { const j = 1 + i * 3, ca = k < 0.5 ? a[j + 2] : b[j + 2], jump = Math.abs(b[j] - a[j]) > 200 || Math.abs(b[j + 1] - a[j + 1]) > 300;
+    const far = q => Math.abs(q[j] - a[j]) > 260 || Math.abs(q[j + 1] - a[j + 1]) > 360, P0 = far(a0) ? a : a0, P3 = far(b1) ? b : b1;
+    const x = jump ? a[j] : cr(P0[j], a[j], b[j], P3[j], k), y = jump ? a[j + 1] : cr(P0[j + 1], a[j + 1], b[j + 1], P3[j + 1], k), vy = (b[j + 1] - a[j + 1]) / Math.max(0.05, b[0] - a[0]);
+    out.push({ ...e, x, y, vy, f: ca & 1 ? 1 : -1, st: ca & 2 ? 'wall' : ca & 4 ? 'ground' : 'air', dead: !!(ca & 8), king: !!(ca & 16), fin: !!(ca & 32) }); });
   return out;
 }
 function rpTick(dt) {
   if (!RP.on) return;
   if (RP.play && !RP.drag) { RP.t += dt * RP.spd; if (RP.t >= RP.len) { RP.t = RP.len; RP.play = false; } }
-  if (RP.follow && !(RP.drag && RP.drag.k === 'pan')) { const me = rpPeople(RP.t).find(e => e.me); if (me) camY += (me.y - H * 0.58 - camY) * Math.min(1, dt * 5); }
+  if (RP.follow && !(RP.drag && RP.drag.k === 'pan')) { const me = rpPeople(RP.t0 + RP.t).find(e => e.me); if (me) camY += (me.y - H * 0.58 - camY) * Math.min(1, dt * 5); }
   camY = clamp(camY, -PX_PER_M * 950, -H + 150); camR = pxSnap(camY);
 }
 function rpDrawWorld() {   // герои повтора — поверх мира
   if (!RP.on) return;
   if (RP.rec.mode === 'race') arFinishLine();
-  for (const e of rpPeople(RP.t)) {
+  for (const e of rpPeople(RP.t0 + RP.t)) {
     if (e.dead || e.y < camY - 80 || e.y > camY + H + 80) continue;
-    const k = mpSkin(e.s); heroSprite(k, e.st === 'wall' ? 'cling' : e.st === 'ground' ? 'idle' : 'jump', time, false);
-    ctx.save(); ctx.translate(even(e.x), even(e.y)); ctx.scale(e.f, 1);
+    const k = mpSkin(e.s), pose = e.fin ? 'cheer' : e.st === 'wall' ? 'cling' : e.st === 'ground' ? 'idle' : e.vy < -40 ? 'jump' : 'fall';
+    heroSprite(k, pose, time + e.x * 0.01, false);
+    ctx.save(); ctx.translate(even(e.x), even(e.y)); ctx.scale(e.f, 1); if (e.st === 'air' && !e.fin) ctx.rotate(clamp(e.vy / 2400, -0.25, 0.25));
     if (e.me) { const tc = tintSprite('#3ce06a', 1); for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) ctx.drawImage(tc, -32 + dx, -52 + dy, 64, 80); }   // свой герой — с зелёным контуром, как в раунде
     ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
     text(e.n, e.x, e.y - 46, 1, e.me ? '#ffffff' : '#ff5a4a');
@@ -21180,19 +21693,9 @@ const CCHAT_REP = [['Привет!', 'Hey!'], ['Го!', 'Go!'], ['Красава
 const CCHAT_STK = ['hhappy', 'hcry', 'hmad', 'hlove', 'hcool', 'hlol', 'hwink', 'hshock', 'hsleep'];
 function emoCnv(id, size = 40) { const c = document.createElement('canvas'); c.width = c.height = 48; c.style.width = c.style.height = size + 'px'; withCtx(c, () => emoIcon(id, 24, 25, isBaseEmo(id) ? 1.7 : 1.4)); return c; }
 const emoHave = id => EMO_BASE.some(e => e.id === id) || emOwn.includes(id);
-function clubChatLoad(cl) {
+function clubChatLoad(cl) {   // боты в чате не пишут — только твои сообщения
   let g = store.get('cchat', null); if (!g || g.id !== cl.id) g = { id: cl.id, l: [] };
-  const ci = /^c\d+$/.test(cl.id) ? +cl.id.slice(1) : 777, now = Date.now(), step = 3e5, mem = cl.mem.filter(m => !m.me);
-  if (!mem.length) return g;
-  const s0 = Math.floor((now - 8 * 36e5) / step), s1 = Math.floor(now / step), have = new Set(g.l.filter(m => m.k).map(m => m.k));
-  for (let s = s0; s <= s1; s++) {   // одинаковые сообщения у всех, кто в этом клубе: по слоту времени
-    const h = clH(ci, 200, s % 100000); if (h > 0.22) continue;
-    const k = 'b' + s; if (have.has(k)) continue;
-    const m = mem[Math.floor(clH(ci, 201, s % 100000) * mem.length)], h2 = clH(ci, 202, s % 100000), t = s * step + Math.floor(h2 * step);
-    if (t > now) continue;
-    g.l.push(h2 < 0.3 ? { k, t, n: m.n, e: CCHAT_STK[Math.floor(clH(ci, 203, s % 100000) * CCHAT_STK.length)] } : { k, t, n: m.n, m: tr(...CCHAT_TXT[Math.floor(clH(ci, 204, s % 100000) * CCHAT_TXT.length)]) });
-  }
-  g.l.sort((a, b) => a.t - b.t); g.l = g.l.slice(-40); store.set('cchat', g); return g;
+  g.l = g.l.filter(m => m.me); return g;
 }
 function clubChat(box, cl) {
   box.innerHTML = '';
@@ -21200,12 +21703,10 @@ function clubChat(box, cl) {
   const bubble = m => { const r = moEl('div', 'msg' + (m.me ? ' me' : '')); if (!m.me) r.appendChild(moTxt('div', 'who ol', m.n));
     if (m.e) r.appendChild(emoCnv(m.e, 46)); else r.appendChild(moTxt('div', 'tx', m.m));
     r.appendChild(moTxt('div', 'sm', clAgo(m.t))); return r; };
-  const paint = () => { list.innerHTML = ''; if (!g.l.length) list.appendChild(moTxt('div', 'sm', tr('Тут пока тихо. Напиши первым!', 'Quiet here. Say hi first!'))); g.l.forEach(m => list.appendChild(bubble(m))); list.scrollTop = 1e6; };
+  const paint = () => { list.innerHTML = ''; if (!g.l.length) list.appendChild(moTxt('div', 'sm', tr('Сообщений пока нет. Напиши первым!', 'No messages yet. Say hi first!'))); g.l.forEach(m => list.appendChild(bubble(m))); list.scrollTop = 1e6; };
   const push = m => { g.l.push(m); g.l = g.l.slice(-40); store.set('cchat', g); if (box.isConnected && wrap.isConnected) paint(); };
   let lastSend = 0;
-  const answer = () => { const mem = cl.mem.filter(x => !x.me); if (!mem.length || Math.random() < 0.25) return; const who = mem[Math.floor(Math.random() * mem.length)];
-    setTimeout(() => { const st = Math.random() < 0.4; push(st ? { t: Date.now(), n: who.n, e: CCHAT_STK[Math.floor(Math.random() * CCHAT_STK.length)] } : { t: Date.now(), n: who.n, m: tr(...CCHAT_REP[Math.floor(Math.random() * CCHAT_REP.length)]) }); if (wrap.isConnected) try { tone(988, 1319, 0.08, 'triangle', 0.03); } catch (e) {} }, 1800 + Math.random() * 3500); };
-  const send = msg => { const now = Date.now(); if (now - lastSend < 700) return; lastSend = now; push({ t: now, n: nickOut(), me: 1, ...msg }); try { tone(1319, 1760, 0.07, 'triangle', 0.04); } catch (e) {} answer(); };
+  const send = msg => { const now = Date.now(); if (now - lastSend < 700) return; lastSend = now; push({ t: now, n: nickOut(), me: 1, ...msg }); try { tone(1319, 1760, 0.07, 'triangle', 0.04); } catch (e) {} };
   const inRow = moEl('div', 'in'), inp = moEl('input'); inp.maxLength = 80; inp.placeholder = tr('Сообщение…', 'Message…'); inp.style.textTransform = 'none';
   const sb = moTxt('button', 'btn', '➤'), eb = moTxt('button', 'btn gold', '☺');
   const go = () => { const v = inp.value.replace(/[\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!v) return; inp.value = ''; sfx.click(); send({ m: v }); };
