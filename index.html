@@ -2809,7 +2809,7 @@ const GQ = [1, 2, 3];
 // частота кадров по качеству: низкое и нормальное — не чаще 60 в секунду (телефон не греется, батарея живёт дольше), высокое — с частотой экрана (90/120/144 Гц)
 const gqCap = () => gq < 2;
 let gq = (() => { try { const v = JSON.parse(localStorage.getItem('wk3_gq')); return v === 0 || v === 1 || v === 2 ? v : 1; } catch (e) { return 1; } })();
-let dprLvl = 0;
+let dprLvl = (() => { try { const v = JSON.parse(localStorage.getItem('wp_dprLvl')); return v && v.q === gq && v.l >= 0 && v.l <= 3 ? v.l : 0; } catch (e) { return 0; } })();   // подобранная резкость — с прошлого раза
 function resize() {
   const ww = document.body.clientWidth || window.innerWidth, wh = document.body.clientHeight || window.innerHeight;
   scale = Math.min(ww / W, wh / H);
@@ -3535,31 +3535,36 @@ for (const prop of ['fillStyle', 'strokeStyle']) {   // и заливка, и о
 // между кадрами берётся готовая картинка; у каждого объекта героя — свой номер (копии с другими цветами не путаются)
 // кэш кадров героя. LRU: часто нужные кадры (19 соперников по кругу, герои в витрине) не вытесняются
 // неповторяющимися кадрами своего героя. Ключ — число, без склейки строк на каждый вызов
-const SPR_FPS = 20, SPR_MAX = 640, SPR_CACHE = new Map(), SPR_POSE = new Map();
+const SPR_FPS = 20, SPR_MAX = 900, SPR_CACHE = new Map(), SPR_POSE = new Map();
 let SPR_IDS = new WeakMap();
 let sprN = 0;
 // готовый кадр героя (холст SPR_W×SPR_H, как hcv). Если кадр уже был — без перерисовки
-function heroSpriteGet(sk, pose, t, blink) {
+function heroSpriteGet(sk, pose, t, blink, fpsFix) {
   let id = SPR_IDS.get(sk);
   if (!id) { if (sprN >= 8000) { sprN = 0; SPR_IDS = new WeakMap(); SPR_CACHE.clear(); } SPR_IDS.set(sk, id = ++sprN); }   // номера героев влезают в ключ; кончились — начинаем заново
   let pi = SPR_POSE.get(pose); if (pi === undefined) SPR_POSE.set(pose, pi = SPR_POSE.size);
-  const fps = state === 'play' ? 30 : SPR_FPS, tq = Math.floor(t * fps),   // в игре героев на экране мало — анимация плавнее (30 кадров/с)
-        key = (((tq * 2 + (fps === 30 ? 1 : 0)) * 2 + (blink ? 1 : 0)) * 64 + (pi & 63)) * 8192 + id;
+  // fpsFix — своя частота у зацикленных анимаций (соперники, аватарки): ключ кадра не меняется, жив ты или нет
+  const fps = fpsFix || (state === 'play' ? 30 : SPR_FPS), tq = Math.floor(t * fps + 1e-6),   // в игре героев на экране мало — анимация плавнее (30 кадров/с)
+        key = (((tq * 4 + (fps === 30 ? 1 : fps === SPR_FPS ? 0 : fps === 5 ? 2 : 3)) * 2 + (blink ? 1 : 0)) * 64 + (pi & 63)) * 8192 + id;
   let c = SPR_CACHE.get(key);
   if (c) { SPR_CACHE.delete(key); SPR_CACHE.set(key, c); return c; }   // LRU: свежий — в конец
   hctx.setTransform(1, 0, 0, 1, 0, 0);
   hueNow = sk.hue || 0;
   try { heroSprite0(sk, pose, tq / fps, blink); } finally { hueNow = 0; }
   if (SPR_CACHE.size >= SPR_MAX) { const old = SPR_CACHE.keys().next().value; c = SPR_CACHE.get(old); SPR_CACHE.delete(old); }
-  else { c = document.createElement('canvas'); c.width = SPR_W; c.height = SPR_H; c.__spr = true; }   // __spr: drawImage сам переводит координаты «32×40» в большой холст, как у hcv
-  const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(g, hcv, 0, 0);
+  else { c = document.createElement('canvas'); c.width = SPR_W; c.height = SPR_H; c.__spr = true; c.__g = c.getContext('2d'); }   // __spr: drawImage сам переводит координаты «32×40» в большой холст, как у hcv
+  const g = c.__g || (c.__g = c.getContext('2d')); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(g, hcv, 0, 0);
   SPR_CACHE.set(key, c);
   hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y);
+  sprFresh = c;   // этот кадр уже лежит в hcv
   return c;
 }
 // старый путь: кадр кладётся в hcv (его дорисовывают и красят другие места)
+let sprFresh = null;
 function heroSprite(sk, pose, t, blink) {
+  sprFresh = null;
   const c = heroSpriteGet(sk, pose, t, blink);
+  if (sprFresh === c) return;   // только что нарисован прямо в hcv — копировать незачем
   hctx.setTransform(1, 0, 0, 1, 0, 0); hctx.clearRect(0, 0, SPR_W, SPR_H); drawRaw.call(hctx, c, 0, 0); hctx.setTransform(1, 0, 0, 1, SPR_X, 8 + SPR_Y);
 }
 function heroSprite0(sk, pose, t, blink) {
@@ -7439,6 +7444,7 @@ function drawSplat() {
   for (let k = 0; k < 9; k++) { const x = hash(k * 11) * W, y = 120 + hash(k * 5) * 380 + (2.4 - splatT) * 18, r = 26 + hash(k * 3) * 30; pell(ctx, x, y, r, r * 0.8, '#fff2c8'); pell(ctx, x + 4, y - 3, r * 0.6, r * 0.45, '#ffffff'); if (k % 3 === 0) pell(ctx, x - 6, y + 6, 6, 6, '#e8261a'); }
   ctx.globalAlpha = 1; text(tr('ПИРОГ В ЛИЦО!', 'PIE IN THE FACE!'), W / 2, 300, 3, '#8a4a10', 'center', '#ffffff', W - 20);
 }
+const PW_STATIC = { magnet: 1, shield: 1, x2: 1, slow: 1, freeze: 1, feather: 1, gem2: 1, clone: 1 }, PW_PIC = new Map();
 function powerIcon(id, x, y, s = 1) {
   if (id === 'flame') {   // огнемёт: бак, ствол и язык пламени
     const P = (dx, dy, w, h, c) => prect(ctx, x + dx * s, y + dy * s, w * s, h * s, c), f = Math.sin(time * 20) * 2;
@@ -7447,6 +7453,11 @@ function powerIcon(id, x, y, s = 1) {
   }
   else if (id === 'pie') pieSprite(x, y, s * 1.3);
   else if (id === 'remote') { const P = (dx, dy, w, h, c) => prect(ctx, x + dx * s, y + dy * s, w * s, h * s, c), E = (dx, dy, c) => pell(ctx, x + dx * s, y + dy * s, 2.5 * s, 2.5 * s, c); P(-7, -12, 14, 24, OL); P(-5, -10, 10, 20, '#4a4a5a'); P(-3, -8, 6, 4, '#3ae0ff'); E(-2, 1, '#ff3a3a'); E(3, 1, '#3ce06a'); E(-2, 7, '#ffd23a'); E(3, 7, '#a64aff'); P(-1, -16, 2, 5, OL); }
+  else if (PW_STATIC[id] && ctx.canvas === cv && !perfNoCache) {   // неподвижный значок — готовой картинкой (в HUD и вокруг героя он рисуется каждый кадр)
+    const key = id + '|' + s; let c = PW_PIC.get(key);
+    if (!c || c.__gen !== GFX_GEN) { c = gfxPic(null, -16 * s, -16 * s, 32 * s, 32 * s, () => powerIcon0(id, 0, 0, s)); if (PW_PIC.size > 80) PW_PIC.clear(); PW_PIC.set(key, c); }
+    drawRaw.call(ctx, c, even(x) - 16 * s, even(y) - 16 * s, 32 * s, 32 * s);
+  }
   else powerIcon0(id, x, y, s);
 }
 function mpPregen() {   // вся карта строится сразу в покое: у всех игроков она одинаковая
@@ -10429,7 +10440,10 @@ function drawGround() {
     const g = groundCv.getContext('2d'), sv = ctx; g.scale(k, k); g.translate(0, 8); ctx = g;
     try { drawGround0(); } finally { ctx = sv; }
   }
-  ctx.drawImage(groundCv, 0, -8, W, H + 16);
+  const y0 = Math.max(-8, camR - 2), y1 = Math.min(H + 8, camR + H + 2);   // видимая часть земли (в координатах мира)
+  if (y1 <= y0) return;
+  const k2 = groundCv.height / (H + 16);
+  drawRaw.call(ctx, groundCv, 0, (y0 + 8) * k2, groundCv.width, (y1 - y0) * k2, 0, y0, W, y1 - y0);
 }
 function drawGround0() {
   const z = ZONES[0];
@@ -12316,6 +12330,7 @@ const heroBlink = t => ((t * 1.13) % 3.1 + 3.1) % 3.1 < 0.14;   // герои н
 // карточка героя рисуется в свою картинку 15 раз в секунду (у разных карточек — в разные кадры), а между ними
 // ставится готовая: сценки легенд и мификов — это тысячи мелких прямоугольников, 60 раз в секунду телефон не тянул
 const CARD_CACHE = new Map(), CARD_FPS = 15, CARD_M = { l: 16, t: 50, r: 16, b: 16 };
+let frameT0 = 0, cardSlot = -1;   // начало текущего кадра; в каком кадре уже была перерисовка карточки
 function drawSkinCard(r, k) {
   const K = cv.width / W;
   if (!(K > 0) || ctx.canvas !== cv) return drawSkinCard0(r, k);
@@ -12323,8 +12338,14 @@ function drawSkinCard(r, k) {
   const ph = ((r.x * 7 + r.y * 3) % 10) / 10, tq = Math.floor(time * CARD_FPS + ph);
   const stamp = tq + '|' + (k.id === skinId) + '|' + owned.includes(k.id) + '|' + canPay(priceOf(k)) + '|' + r.x + ',' + r.y + '|' + cw + '|' + lang + '|' + heroStk(k.id);
   let e = CARD_CACHE.get(k.id);
-  if (!e) { if (CARD_CACHE.size > 40) CARD_CACHE.delete(CARD_CACHE.keys().next().value); e = { c: document.createElement('canvas'), stamp: '' }; CARD_CACHE.set(k.id, e); }
-  if (e.stamp !== stamp) {
+  if (!e) { if (CARD_CACHE.size > 40) CARD_CACHE.delete(CARD_CACHE.keys().next().value); e = { c: document.createElement('canvas'), stamp: '', at: 0, base: '' }; CARD_CACHE.set(k.id, e); }
+  // только кадр анимации сменился (а не выбор, цена, язык) — перерисовываем, если в кадре ещё есть время (≈5 мс),
+  // иначе — ту карточку, что ждёт дольше всех. На слабом телефоне сценки идут реже, но экран не тормозит
+  const base = stamp.slice(stamp.indexOf('|')), now = performance.now(), wait = now - e.at;
+  const must = e.stamp === '' || e.base !== base || !e.c.width;
+  const can = must || ((now - frameT0 < 5 || cardSlot !== frameT0) && (wait > 40)) || wait > 400;
+  if (e.stamp !== stamp && can) {
+    cardSlot = frameT0; e.at = now; e.base = base;
     if (e.c.width !== cw || e.c.height !== ch) { e.c.width = cw; e.c.height = ch; }
     const g = e.c.getContext('2d'), old = ctx;
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch); g.setTransform(K, 0, 0, K, (CARD_M.l - r.x) * K, (CARD_M.t - r.y) * K); g.imageSmoothingEnabled = false;
@@ -16057,6 +16078,7 @@ function drawPerfHud() {
   text(l1, 8, H - 22, 1, PFH.fps >= 55 ? '#7cf08a' : PFH.fps >= 40 ? '#ffd23a' : '#ff6a6a', 'left', null, 214); text(l2, 8, H - 10, 1, '#ffffff', 'left', null, 214); ctx.restore();
 }
 function frame0(now) {
+  frameT0 = performance.now();
   // экраны 90–144 Гц (в Chrome на телефоне они включены, во встроенных окнах обычно нет): рисуем не чаще ~60 раз в секунду —
   // работы меньше, телефон не греется и не сбрасывает частоту
   // рисуем с частотой экрана (90, 120, 144 Гц), выше ~165 кадров/с смысла нет
@@ -16086,12 +16108,12 @@ function frame0(now) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
     const heavy = avg > Math.min(13, refMs * 0.8) || slow > 0.2, easy = avg < Math.min(6, refMs * 0.4) && slow < 0.03;
-    if (heavy && dprLvl < (gq ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже
+    if (heavy && dprLvl < (gq === 1 ? 3 : gq === 2 ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже (на «нормальном» — до 1,25×: телефон упирается в число точек)
       { dprLvl++; perfLow = 0; perfDownAt = now; ch = true; }
     else if (heavy && perfFx > 0.5) { perfFx = Math.max(0.5, perfFx - 0.25); perfDownAt = now; }   // резкость уже снижена — меньше необязательных искр и погодных частиц
     else if (easy && perfFx < 1 && now - perfDownAt > 8000) { perfFx = Math.min(1, perfFx + 0.25); perfDownAt = now; }   // стало легко — эффекты возвращаются
     else if (easy && dprLvl > 0 && now - perfDownAt > 20000 && ++perfLow >= 4) { dprLvl--; perfLow = 0; ch = true; }
-    if (ch) { resize(); draw(); }   // сразу перерисовать: после смены размера холст пустой — без чёрной вспышки
+    if (ch) { resize(); draw(); try { localStorage.setItem('wp_dprLvl', JSON.stringify({ q: gq, l: dprLvl })); } catch (e) {} }   // сразу перерисовать: после смены размера холст пустой — без чёрной вспышки
   }
   requestAnimationFrame(frame);
 }
@@ -16299,7 +16321,8 @@ function avatarDraw(av, cx, cy, size, t = time) {
   if (a) { const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; drawRaw.call(ctx, avatarPix(a, Math.floor(t * 4) % 4), 0, 0, 32, 32, x, y, size, size); ctx.imageSmoothingEnabled = sm; return; }
   const gold = String(av).startsWith('g:'), k = skinById(gold ? av.slice(2) : av) || SKINS[0];
   ctx.fillStyle = gold ? '#ffd23a' : '#1a1030'; ctx.fillRect(x, y, size, size);
-  heroSprite(k, 'idle', t, false); ctx.save(); ctx.beginPath(); ctx.rect(x, y, size, size); ctx.clip(); drawRaw.call(ctx, hcv, SPR_X + 4, SPR_Y + 6, 24, 24, x, y, size, size); ctx.restore();
+  const spr = heroSpriteGet(k, 'idle', (Math.floor(t * 10) % 20) / 10, false, 10);   // голова в аватарке: цикл 2 с по 10 кадров/с — всё из кэша
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, size, size); ctx.clip(); drawRaw.call(ctx, spr, SPR_X + 4, SPR_Y + 6, 24, 24, x, y, size, size); ctx.restore();
 }
 
 // ---- рамки с анимированным узором (продаются за кристаллы) ----
@@ -19083,7 +19106,7 @@ function arCrown(x, y, k = 1) {
 function arGhostLite(q, g, r) {
   const k = mpSkin(q.skin), pose = r.d ? 'fall' : r.sp ? 'tuck' : r.st === 'wall' ? 'cling' : r.st === 'ground' ? 'idle' : 'jump';
   const ph = (q.ph = q.ph || Math.random() * 3);
-  const spr = heroSpriteGet(k, pose, (Math.floor((time + ph) * 5) / 5) % 1.2, false);   // 6 кадров по кругу — после первой секунды всё берётся из кэша
+  const spr = heroSpriteGet(k, pose, Math.floor((time + ph) * 5) % 6 / 5, false, 5);   // 6 кадров по кругу — после первой секунды всё берётся из кэша
   ctx.save(); ctx.translate(even(g.x), even(g.y)); if (r.rot) ctx.rotate(r.rot); ctx.scale(r.f || 1, 1);
   if (r.d) ctx.globalAlpha = 0.55;
   ctx.drawImage(spr, -32, -52, 64, 80); ctx.restore(); ctx.globalAlpha = 1;
@@ -19775,7 +19798,7 @@ function arQuestsCard() {
 { const h0 = drawHero; drawHero = function () {
   if (mp.mode && mp.active && AR.meFin && (AR.finFx || 0) > 2.6) return;
   if (mp.mode && mp.active && state === 'play') {   // в режимах свой герой — с зелёным контуром, чтобы не потеряться среди десятерых
-    heroSprite(curSkin(), p.state === 'wall' ? 'cling' : p.state === 'ground' || p.stand ? 'idle' : 'jump', time, false);
+    heroSprite(curSkin(), heroPose(), time, blinkT < 0);   // та же поза и моргание, что у самого героя — второй раз кадр берётся из кэша
     const tc = tintSprite(AR.md && AR.md.k === 'kill' && AR.md.who === arMe() ? '#ff2a2a' : '#3ce06a', 1);   // убийца — с красным контуром
     ctx.save(); ctx.translate(even(p.x), even(p.y)); if (p.rot) ctx.rotate(p.rot); ctx.scale(p.face || 1, 1);
     for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) ctx.drawImage(tc, -32 + dx, -52 + dy, 64, 80);
