@@ -1688,6 +1688,9 @@ SKINS.push(
 // хомяк в костюме и жёлтой маске-улыбке
 SKINS.push({ id: 'smiley', r: 3, gems: 120, nm: ['ХОМЯК-УЛЫБКА', 'SMILEY HAMSTER'], ...HAM, noScarf: true, noEyes: true, noMuzzle: true, parts: ['blackSuit', 'ogTie', 'ogSmileMask'],
   trail: { kind: 'star', cols: ['#ffd23a', '#ffffff'] }, sfx: 'tux', fx: 'gold' });
+// фанат Мистера Пиклса: зелёная кепка, футболка с огурчиком и белая перчатка, как у самого Пиклса
+SKINS.push({ id: 'picklesfan', r: 2, gems: 60, nm: ['ФАНАТ ПИКЛЗА', 'PICKLES FAN'], ...HAM, noScarf: true, parts: ['pkTee', 'pkCap', 'pkGlove'],
+  trail: { kind: 'spark', cols: ['#7ae06a', '#ffffff'] }, sfx: 'tux', fx: 'gold' });
 // цена зависит только от редкости: редкие 200–450, эпики 700–1300 (дорогие — только легенды)
 for (const k of SKINS) {
   const h = [...k.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0) >>> 0, 7);
@@ -2206,7 +2209,7 @@ function FirePeer(id) {
 // ---- рейтинг в Firebase: короткая строка в board/<uid> (её читают таблицей) и подробности в profiles/<uid> (по нажатию) ----
 async function fbBoardPush(e) {
   await fbAuth();   // сначала вход: без него FB.uid ещё пуст и строка ушла бы в board/null
-  const { own, ic, ach, show, tro, ...row } = e;
+  const { own, ic, ach, show, tro, ...row } = e; row.n = netNick(row.n);   // в базе — без смайликов (её правила их не пропускают)
   // строка рейтинга не изменилась с прошлой отправки — запрос не нужен (раньше уходил после каждого забега)
   const rowKey = FB.uid + JSON.stringify(row);
   if (rowKey !== fbBoardPush.lastRow)
@@ -2810,7 +2813,7 @@ const DPR_STEPS = [2, 1.75, 1.5, 1.25, 1];
 const GQ = [1, 2, 3];
 // частота кадров по качеству: низкое и нормальное — не чаще 60 в секунду (телефон не греется, батарея живёт дольше), высокое — с частотой экрана (90/120/144 Гц)
 const gqCap = () => gq < 2;
-let gq = (() => { try { const v = JSON.parse(localStorage.getItem('wk3_gq')); return v === 0 || v === 1 || v === 2 ? v : 1; } catch (e) { return 1; } })();
+let gq = (() => { try { const v = JSON.parse(localStorage.getItem('wk3_gq')); return v === 2 ? 2 : 1; } catch (e) { return 1; } })();   // «низкого» качества больше нет: только нормальное и высокое
 let dprLvl = (() => { try { const v = JSON.parse(localStorage.getItem('wp_dprLvl')); return v && v.q === gq && v.l >= 0 && v.l <= 4 ? v.l : 0; } catch (e) { return 0; } })();   // подобранная резкость — с прошлого раза
 function resize() {
   const ww = document.body.clientWidth || window.innerWidth, wh = document.body.clientHeight || window.innerHeight;
@@ -3546,16 +3549,20 @@ for (const prop of ['fillStyle', 'strokeStyle']) {   // и заливка, и о
 // между кадрами берётся готовая картинка; у каждого объекта героя — свой номер (копии с другими цветами не путаются)
 // кэш кадров героя. LRU: часто нужные кадры (19 соперников по кругу, герои в витрине) не вытесняются
 // неповторяющимися кадрами своего героя. Ключ — число, без склейки строк на каждый вызов
-const SPR_FPS = 20, SPR_MAX = 900, SPR_CACHE = new Map(), SPR_POSE = new Map();
+const SPR_FPS = 15, SPR_MAX = 1400, SPR_CACHE = new Map(), SPR_POSE = new Map();
 let SPR_IDS = new WeakMap();
 let sprN = 0;
 // готовый кадр героя (холст SPR_W×SPR_H, как hcv). Если кадр уже был — без перерисовки
+const SPR_LOOP = Math.PI * 2 / 2.4 * 3;
 function heroSpriteGet(sk, pose, t, blink, fpsFix) {
   let id = SPR_IDS.get(sk);
   if (!id) { if (sprN >= 8000) { sprN = 0; SPR_IDS = new WeakMap(); SPR_CACHE.clear(); } SPR_IDS.set(sk, id = ++sprN); }   // номера героев влезают в ключ; кончились — начинаем заново
   let pi = SPR_POSE.get(pose); if (pi === undefined) SPR_POSE.set(pose, pi = SPR_POSE.size);
   // fpsFix — своя частота у зацикленных анимаций (соперники, аватарки): ключ кадра не меняется, жив ты или нет
-  const fps = fpsFix || (state === 'play' ? 30 : SPR_FPS), tq = Math.floor(t * fps + 1e-6),   // в игре героев на экране мало — анимация плавнее (30 кадров/с)
+  // время анимации зациклено (3 вдоха ≈ 7.85 с): раньше оно росло бесконечно, кадры не повторялись и кэш НИКОГДА не срабатывал —
+  // в магазине и в повторе каждый герой каждый кадр рисовался заново по точкам (13 и 11 к/с на телефоне)
+  const fps = fpsFix || (state === 'play' ? 30 : SPR_FPS), loop = sk.gummy ? GUMMY.length * 5 : sk.special === 'rainbow' || sk.look === 'neon' ? 0 : SPR_LOOP, N = loop ? Math.round(loop * fps) : 0,
+        tq0 = Math.floor(t * fps + 1e-6), tq = N ? ((tq0 % N) + N) % N : tq0,   // в игре героев на экране мало — анимация плавнее (30 кадров/с)
         key = (((tq * 4 + (fps === 30 ? 1 : fps === SPR_FPS ? 0 : fps === 5 ? 2 : 3)) * 2 + (blink ? 1 : 0)) * 64 + (pi & 63)) * 8192 + id;
   let c = SPR_CACHE.get(key);
   if (c) { SPR_CACHE.delete(key); SPR_CACHE.set(key, c); return c; }   // LRU: свежий — в конец
@@ -4869,6 +4876,18 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
         for (const [dx, h2] of [[-4, 3], [-1, 4], [2, 3], [5, 2]]) { R(hx + dx, hy - 7 - h2, 2, h2 + 1, ol); R(hx + dx, hy - 6 - h2, 1, h2, hc); }   // вихры
         R(hx - 3, hy - 6, 4, 1, hl); R(hx + 2, hy - 7, 2, 1, hl); break;
       }
+      case 'pkTee': {   // зелёная футболка с огурчиком в белой перчатке
+        c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, B.ry * 2 - 2); c.clip(); E(B.x, B.y, B.rx + 0.5, B.ry + 0.5, '#2fa34a'); c.restore();
+        R(bx - 2, by - 3, 3, 6, '#1a6a2a'); R(bx - 1, by - 3, 1, 6, '#7ae06a'); R(bx - 2, by - 1, 1, 1, '#c8ffb0'); R(bx, by + 1, 1, 1, '#c8ffb0');   // огурчик
+        R(bx + 1, by - 2, 2, 2, '#ffffff'); R(bx + 2, by - 3, 1, 1, '#ffffff');   // перчатка держит его
+        R(bx - 5, by - 4, 2, 2, '#2fa34a'); R(bx + 4, by - 4, 2, 2, '#2fa34a'); R(bx - 5, by + 4, 11, 1, '#1a6a2a'); break;
+      }
+      case 'pkCap': {   // зелёная кепка козырьком вперёд, на ней огурчик
+        const f = 1; R(hx - 7, hy - 8, 14, 1, ol); R(hx - 7, hy - 7, 14, 3, '#2fa34a'); R(hx - 6, hy - 9, 12, 1, ol); R(hx - 6, hy - 8, 12, 1, '#4ac85a');
+        R(hx + 4 * f, hy - 4, 6, 1, ol); R(hx + 4 * f, hy - 5, 6, 1, '#1a6a2a');   // козырёк
+        R(hx - 2, hy - 7, 3, 2, '#7ae06a'); R(hx - 1, hy - 7, 1, 1, '#c8ffb0'); break;
+      }
+      case 'pkGlove': { E(A1.x, A1.y, 2.2, 2.2, ol); E(A1.x, A1.y, 1.6, 1.6, '#ffffff'); R(r(A1.x) - 1, r(A1.y) + 1, 3, 1, '#2fa34a'); break; }   // белая перчатка с огуречной манжетой
       case 'eldarTee': {   // чёрная футболка с серебряным логотипом ELDAR: клинок-«E»
         c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, B.ry * 2 - 2); c.clip(); E(B.x, B.y, B.rx + 0.5, B.ry + 0.5, '#1a1a22'); c.restore();
         R(bx - 2, by - 3, 4, 1, '#e9eaec'); R(bx - 2, by - 2, 1, 4, '#cfd0d2'); R(bx - 2, by, 3, 1, '#e9eaec'); R(bx - 2, by + 2, 4, 1, '#9ea1a6'); R(bx, by - 1, 3, 1, '#ffffff');   // знак «E» с клинком
@@ -6799,7 +6818,7 @@ const zmSkin = () => SKINS.find(k => k.id === 'zombie') || SKINS[0];
 function zmReset() {
   if (ZB.save) skinId = ZB.save;
   ZB = { on: false, sh: 0, rage: 0, rcd: 0, ms: [], save: null };
-  try { EMO_BTN.x = W - 62; PW_BTN.x = W - 66; PW_ADD.x = W - 30; } catch (e) {}
+  try { EMO_BTN.x = 12; PW_BTN.x = W - 66; PW_ADD.x = W - 30; } catch (e) {}
 }
 function zmPlace() {   // безопасный столб рядом с ближайшим живым игроком
   let ty = camY + H * 0.58, best = null, bd = 1e9;
@@ -6820,7 +6839,7 @@ function zmBecome(safe) {
   p.stunT = 0; p.jet = 0; p.rocket = 0; p.magnet = 0; p.freeze = 0; p.ghost = 0; p.star = 0;
   if (safe) { zmPlace(); ZB.sh = 5; p.shield = 1; p.inv = 0; sfx.portal(); flashT = 0.2; }
   else { ZB.sh = 0; p.shield = 0; p.inv = 0.5; burst(p.x, p.y, 26, '#6aff5a', 240, 0.7, 5, 0, 'star'); sfx.no(); flashT = 0.25; if (SET.shake) shake = 0.3; }
-  try { EMO_BTN.x = 10; PW_BTN.x = 10; PW_ADD.x = 46; } catch (e) {}
+  try { EMO_BTN.x = W - 58; PW_BTN.x = 10; PW_ADD.x = 46; } catch (e) {}   // зомби: кнопки зомби и силы слева — облачко «…» справа
   mpSendState(true);
 }
 function zmRespawn() { p.vx = 0; p.vy = 0; p.stunT = 0; zmPlace(); ZB.sh = 2.5; p.shield = 1; sfx.portal(); }
@@ -7140,7 +7159,11 @@ const EMO_BASE = [{ id: 'hhappy', ru: 'РАДОСТЬ', en: 'HAPPY', p: 0, r: 0,
 EMO.push({ id: 'hsleep', ru: 'СОНЯ', en: 'SLEEPY', p: 400, r: 0, hf: 1 }, { id: 'hlove', ru: 'ЛЮБОВЬ', en: 'LOVE', p: 500, r: 1, hf: 1 }, { id: 'hshock', ru: 'ШОК', en: 'SHOCK', p: 600, r: 1, hf: 1 },
   { id: 'hcool', ru: 'ЧЁТКИЙ', en: 'COOL', p: 700, r: 1, hf: 1 }, { id: 'hlol', ru: 'УГАР', en: 'LMAO', p: 900, r: 2, hf: 1 }, { id: 'hwink', ru: 'ПОДМИГ', en: 'WINK', p: 1200, r: 2, hf: 1 });
 EMO.sort((a, b) => a.r - b.r || a.p - b.p);
-const EMO_ALL = EMO.concat(EMO_BASE), isBaseEmo = id => EMO_BASE.some(e => e.id === id) || ['hsleep', 'hlove', 'hshock', 'hcool', 'hlol', 'hwink'].includes(id);   // «мордочка» хомяка (рисуется hamFace)
+{ const old = EMO.filter(e => !e.hf), own = store.get('emOwn', []);   // старые эмоции убраны: что было куплено — возвращаем монетами (один раз)
+  if (Array.isArray(own) && !store.get('emRefund', 0)) { let n = 0; for (const e of old) if (own.includes(e.id)) n += e.p; if (n) { bank += n; store.set('coins', bank); } store.set('emRefund', 1); }
+  for (let i = EMO.length - 1; i >= 0; i--) if (!EMO[i].hf) EMO.splice(i, 1); }
+EMO_BASE.push({ id: 'hlike', ru: 'ЛАЙК', en: 'LIKE', p: 0, r: 0, base: 1 }, { id: 'hdis', ru: 'ДИЗЛАЙК', en: 'DISLIKE', p: 0, r: 0, base: 1 });
+const EMO_ALL = EMO.concat(EMO_BASE), isBaseEmo = id => EMO_BASE.some(e => e.id === id) || ['hlike', 'hdis', 'hsleep', 'hlove', 'hshock', 'hcool', 'hlol', 'hwink'].includes(id);   // «мордочка» хомяка (рисуется hamFace)
 const emoWheel = () => EMO_BASE.map(e => e.id).concat(emSel);   // в раунде: 3 базовые + до 5 своих
 // пиксельная мордочка хомяка 18×14 клеток; c — размер клетки в единицах игры
 const HF_BASE = ['..OO..........OO..', '.OPPO........OPPO.', '.OPPOOOOOOOOOOPPO.', '..OHHHHHHHHHHHHO..', '.OHHHHHHHHHHHHHHO.', 'OHHBBBBBBBBBBBBHHO', 'OBBBBBBBBBBBBBBBBO', 'OBBBBBBBBBBBBBBBBO', 'OBBCCCCBBBBCCCCBBO', 'OBCCCCCCCCCCCCCCBO', 'OBCCCCCCCCCCCCCCBO', '.OCCCCCCCCCCCCCCO.', '..OCCCCCCCCCCCCO..', '...OOOOOOOOOOOO...'];
@@ -7156,6 +7179,7 @@ function hamBase(mad, c, F, col) {
   }
   drawRaw.call(ctx, pic, -9 * c, -7 * c, 18 * c, 14 * c);
 }
+const THUMB_PIX = ['...OO...', '..OLYO..', '..OYYO..', '..OYYO..', 'OOOYYOOO', 'OLLYYYYO', 'OYYYYYDO', 'OYYYYYDO', 'OYYYYDDO', '.OOOOOO.'];
 function hamFace(id, cx, cy, c, t) {
   const O = '#2a1408', mad = id === 'hmad', col = mad ? HF_MAD : HF_COL;
   let ox = 0, oy = 0, sx = 1, sy = 1, rot = 0;
@@ -7172,6 +7196,12 @@ function hamFace(id, cx, cy, c, t) {
     for (const [x0, d] of [[4, 1], [11, 1]]) { F(x0, 7, 1, 1, O); F(x0 + 1, 6, 1, 1, O); F(x0 + 2, 7, 1, 1, O); }   // глаза-дуги ^ ^
     F(6, 9, 6, 1, O); F(6, 10, 1, 1, O); F(11, 10, 1, 1, O); F(7, 10, 4, 1, '#7a1a2a'); F(8, 10, 2, 1, '#ff6a8a'); F(7, 11, 4, 1, O);   // улыбка до ушей
     const bl = 0.6 + Math.sin(t * 8) * 0.4; ctx.globalAlpha = bl; F(2, 8, 2, 1, '#ff7a90'); F(14, 8, 2, 1, '#ff7a90'); ctx.globalAlpha = 1;
+  } else if (id === 'hlike') {
+    for (const x0 of [4, 11]) { F(x0, 7, 1, 1, O); F(x0 + 1, 6, 1, 1, O); F(x0 + 2, 7, 1, 1, O); }
+    F(7, 10, 1, 1, O); F(10, 10, 1, 1, O); F(8, 11, 2, 1, O);
+  } else if (id === 'hdis') {
+    F(4, 6, 3, 1, O); F(11, 6, 3, 1, O); F(5, 7, 2, 1, O); F(11, 7, 2, 1, O);
+    F(7, 11, 1, 1, O); F(10, 11, 1, 1, O); F(8, 10, 2, 1, O);
   } else if (id === 'hlove') {
     for (const x0 of [4, 11]) { const k = 1 + Math.max(0, Math.sin(t * 9)) * 0.15; F(x0, 6, 1, 1, '#e8264a'); F(x0 + 2, 6, 1, 1, '#e8264a'); F(x0, 7, 3, 1, '#e8264a'); F(x0 + 1, 8, 1, 1, '#e8264a'); F(x0, 6, 1, 1, '#ff8aa0'); }   // глаза-сердечки
     F(7, 10, 1, 1, O); F(10, 10, 1, 1, O); F(8, 11, 2, 1, O); ctx.globalAlpha = 0.8; F(2, 8, 2, 1, '#ff7a90'); F(14, 8, 2, 1, '#ff7a90'); ctx.globalAlpha = 1;
@@ -7209,6 +7239,14 @@ function hamFace(id, cx, cy, c, t) {
   }
   ctx.restore();
   // вокруг: искры радости или пар из ушей
+  if (id === 'hlike' || id === 'hdis') {   // большой палец: прыгает и «стучит», искры
+    const up = id === 'hlike', ph = (t * 2.2) % 1, b = up ? -Math.abs(Math.sin(t * 6)) * 3 : Math.abs(Math.sin(t * 6)) * 2, k = 1 + (ph < 0.12 ? Math.sin(ph / 0.12 * Math.PI) * 0.25 : 0);
+    const rows = up ? THUMB_PIX : THUMB_PIX.slice().reverse(), col = { O: '#2a1408', Y: up ? '#ffd23a' : '#ff8a5a', L: up ? '#fff6a0' : '#ffc0a0', D: up ? '#c8820a' : '#c0401a' };
+    ctx.save(); ctx.translate(cx + 9 * c, cy + (2 + b) * c); ctx.scale(k, k);
+    rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const cc = col[r[x]]; if (cc) { ctx.fillStyle = cc; ctx.fillRect((x - 4) * c, (y - 4) * c, c, c); } } });
+    ctx.restore();
+    if (ph < 0.25) { ctx.globalAlpha = 1 - ph * 4; for (let i = 0; i < 5; i++) { const a = i * 1.26 + t, r = (6 + ph * 30) * c; ctx.fillStyle = up ? '#9affb0' : '#ff6a5a'; ctx.fillRect(cx + 9 * c + Math.cos(a) * r, cy + 2 * c + Math.sin(a) * r, 2 * c, 2 * c); } ctx.globalAlpha = 1; }
+  }
   if (id === 'hlove') for (let i = 0; i < 3; i++) { const u = (t * 0.8 + i / 3) % 1; ctx.globalAlpha = 1 - u; emoHeart(cx + (i - 1) * 9 * c, cy - (9 + u * 8) * c, 0.9 * c, '#ff3d7f'); ctx.globalAlpha = 1; }
   if (id === 'hsleep') for (let i = 0; i < 2; i++) { const u = (t * 0.6 + i / 2) % 1; ctx.globalAlpha = 1 - u; text('Z', cx + (8 + u * 6) * c, cy - (7 + u * 9) * c, 1, '#ffffff', 'center', OL); ctx.globalAlpha = 1; }
   if (id === 'hshock') { const b = Math.abs(Math.sin(t * 8)); text('!', cx + 9 * c, cy - (9 + b * 2) * c, 2, '#ffd23a', 'center', OL); }
@@ -7224,7 +7262,7 @@ const emGive = id => { if (!emOwn.includes(id)) { emOwn.push(id); store.set('emO
 let emOpen = false, emOpenT = 0, emScroll = 0, emDown = null, emFull = -9;
 const EM_MAX = Math.max(0, 96 + Math.ceil(EMO.length / 2) * 172 - H + 16);
 const emoName = id => { const e = EMO.find(x => x.id === id); return e ? tr(e.ru, e.en) : ''; };
-const EMO_BTN = { x: W - 62, y: H - 262, w: 48, h: 48 }, emoItem = i => ({ x: EMO_BTN.x + (EMO_BTN.x < W / 2 ? 1 : -1) * Math.floor(i / 5) * 54, y: H - 262 - ((i % 5) + 1) * 54, w: 48, h: 48 });
+const EMO_BTN = { x: 12, y: H - 118, w: 46, h: 38 }, emoItem = i => ({ x: EMO_BTN.x + (EMO_BTN.x < W / 2 ? 1 : -1) * Math.floor(i / 5) * 52, y: H - 124 - ((i % 5) + 1) * 50, w: 46, h: 46 });   // облачко «…» слева внизу: справа — силы
 function emoIcon(id, cx, cy, s) {
   if (isBaseEmo(id)) { ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s); hamFace(id, 0, 0, 1.3, time); ctx.restore(); return; }
   ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
@@ -7254,6 +7292,8 @@ function emoHeart(x, y, s, c) { ctx.beginPath(); ctx.moveTo(x, y + 4 * s); ctx.b
 function emoMotion(id, t) {   // у каждой эмоции своё движение хомяка
   const sn = Math.sin;
   if (id === 'hhappy') return { pose: 'cheer', y: -Math.abs(sn(t * 6)) * 6 };
+  if (id === 'hlike') return { pose: 'cheer', y: -Math.abs(Math.sin(t * 6)) * 5 };
+  if (id === 'hdis') return { pose: 'idle', y: 0, x: Math.sin(t * 30) * 1 };
   if (['hsleep', 'hlove', 'hshock', 'hcool', 'hlol', 'hwink'].includes(id)) return { pose: id === 'hsleep' ? 'sit' : 'idle', y: id === 'hsleep' ? 6 : -Math.abs(sn(t * 5)) * 3, x: id === 'hshock' || id === 'hlol' ? sn(t * 40) * 1 : 0 };
   if (id === 'hcry') return { pose: 'sit', y: 4, x: sn(t * 30) * 0.8 };
   if (id === 'hmad') return { pose: 'idle', x: sn(t * 50) * 1.5, y: -Math.abs(sn(t * 8)) * 3 };
@@ -7332,7 +7372,7 @@ function emoPortrait(id, sk, x, y, w, h, t, round, s) {
   emoHamster(id, sk, x + w / 2, y + h / 2, s, t); ctx.restore();
 }
 const EMO_DUR = 3;
-const EMO_COL_BASE = { hhappy: ['#fff27a', '#ff9a1a'], hcry: ['#9ad8ff', '#2a5ab0'], hmad: ['#ff8a6a', '#a01008'], hsleep: ['#c8b0ff', '#3a2a7a'], hlove: ['#ffb0d0', '#c01f6a'], hshock: ['#e8f0ff', '#5a6a9a'], hcool: ['#7ad8ff', '#1a4a9a'], hlol: ['#fff27a', '#e06a1a'], hwink: ['#9affc8', '#1a8a5a'] };
+const EMO_COL_BASE = { hhappy: ['#fff27a', '#ff9a1a'], hcry: ['#9ad8ff', '#2a5ab0'], hmad: ['#ff8a6a', '#a01008'], hlike: ['#9affb0', '#1a9a3a'], hdis: ['#ff9a8a', '#a01a1a'], hsleep: ['#c8b0ff', '#3a2a7a'], hlove: ['#ffb0d0', '#c01f6a'], hshock: ['#e8f0ff', '#5a6a9a'], hcool: ['#7ad8ff', '#1a4a9a'], hlol: ['#fff27a', '#e06a1a'], hwink: ['#9affc8', '#1a8a5a'] };
 Object.assign(EMO_COL, EMO_COL_BASE);
 function emoTag(x, y, e) {   // эмоция играет на самом герое, над головой — маленький значок с её иконкой
   if (!e) return false; const t = time - e.t0; if (t > EMO_DUR || t < 0) return false;
@@ -7348,12 +7388,19 @@ function emoTag(x, y, e) {   // эмоция играет на самом гер
   pell(ctx, 0, 0, 15, 15, OL); pell(ctx, 0, 0, 13, 13, C[0]); ctx.beginPath(); ctx.moveTo(-4, 13); ctx.lineTo(4, 13); ctx.lineTo(0, 19); ctx.fillStyle = OL; ctx.fill();
   emoIcon(e.id, 0, 0, 0.8); ctx.restore(); return true;
 }
-function drawEmoBtn() {
-  const wl = emoWheel(); if (!wl.length) return; const b = EMO_BTN, cx = b.x + 24, cy = b.y + 24, pu = 1 + Math.sin(time * 4) * 0.06, sk = mpSkin(skinId), cur = wl[Math.floor(time / 1.6) % wl.length];
-  ctx.globalAlpha = 0.35 + Math.sin(time * 4) * 0.12; pell(ctx, cx, cy, 34 * pu, 34 * pu, '#ff5ab0'); ctx.globalAlpha = 1;
-  pell(ctx, cx, cy, 29, 29, OL); pell(ctx, cx, cy, 26, 26, emOpen ? '#ffd23a' : '#ffffff'); emoPortrait(cur, sk, cx - 23, cy - 23, 46, 46, time % 3.2, true, 0.62);
-  for (let k = 0; k < 3; k++) { const a = time * 2 + k * 2.1; prect(ctx, cx + Math.cos(a) * 32 - 2, cy + Math.sin(a) * 32 - 2, 4, 4, '#fff6a0'); }
-  if (emOpen) wl.forEach((id, i) => { const r = emoItem(i), pop = Math.min(1, Math.max(0, (time - emOpenT - i * 0.05) * 6)); if (pop <= 0) return; const ix = r.x + 24, iy = r.y + 24; ctx.save(); ctx.translate(ix, iy); ctx.scale(pop, pop); ctx.translate(-ix, -iy); pell(ctx, ix, iy, 28, 28, OL); pell(ctx, ix, iy, 25, 25, '#ffffff'); emoPortrait(id, sk, ix - 22, iy - 22, 44, 44, (time - emOpenT) % 3.2, true, 0.58); ctx.restore(); });
+function drawEmoBtn() {   // облачко-сообщение «…»: нажал — смайлики; выбрал — герой показывает, облачко закрывается
+  const wl = emoWheel(); if (!wl.length) return; drawEmoBubble(EMO_BTN, emOpen);
+  if (!emOpen) return; const sk = mpSkin(skinId);
+  wl.forEach((id, i) => { const r = emoItem(i), pop = Math.min(1, Math.max(0, (time - emOpenT - i * 0.04) * 7)); if (pop <= 0) return; const ix = r.x + 23, iy = r.y + 23;
+    ctx.save(); ctx.translate(ix, iy); ctx.scale(pop, pop); ctx.translate(-ix, -iy);
+    pell(ctx, ix, iy, 25, 25, OL); pell(ctx, ix, iy, 22, 22, '#ffffff'); emoPortrait(id, sk, ix - 21, iy - 21, 42, 42, time % 3.2, true, 0.56); ctx.restore(); });
+}
+function drawEmoBubble(b, open) {
+  const bob = Math.round(Math.sin(time * 2.5) * 1.5), y = b.y + bob;
+  ctx.fillStyle = OL; ctx.fillRect(b.x, y - 2, b.w, b.h - 6); ctx.fillRect(b.x - 2, y, b.w + 4, b.h - 10); ctx.fillRect(b.x + 8, y + b.h - 8, 10, 6); ctx.fillRect(b.x + 6, y + b.h - 4, 6, 6);
+  ctx.fillStyle = open ? '#ffd23a' : '#ffffff'; ctx.fillRect(b.x + 2, y, b.w - 4, b.h - 10); ctx.fillRect(b.x, y + 2, b.w, b.h - 14); ctx.fillRect(b.x + 10, y + b.h - 10, 6, 4); ctx.fillRect(b.x + 8, y + b.h - 6, 2, 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(b.x + 2, y + b.h - 14, b.w - 4, 4);
+  for (let k = 0; k < 3; k++) { const j = Math.max(0, Math.sin(time * 6 - k * 0.9)) * 3; prect(ctx, b.x + 11 + k * 10, y + 12 - j, 6, 6, '#3a2a5a'); }
 }
 function drawEmotes() {
   const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#4a1a7a'); g.addColorStop(0.55, '#2a1050'); g.addColorStop(1, '#12082a'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -7404,6 +7451,8 @@ function emoSnd(id) {   // у каждой эмоции свой звук
   else if (id === 'rainbow') A([523, 587, 659, 784, 880, 1047, 1319], 0.06, 0.25, 'sine', 0.035);
   else if (id === 'hhappy') A([784, 988, 1175, 1568], 0.07, 0.14, 'triangle', 0.05);
   else if (id === 'hlove') A([988, 1319, 1568], 0.1, 0.25, 'sine', 0.05);
+  else if (id === 'hlike') A([784, 1047, 1568], 0.08, 0.18, 'triangle', 0.05);
+  else if (id === 'hdis') { tone(400, 160, 0.35, 'sawtooth', 0.04); tone(300, 120, 0.3, 'square', 0.025, 0.12); }
   else if (id === 'hsleep') { tone(260, 200, 0.7, 'sine', 0.05); tone(240, 180, 0.6, 'sine', 0.04, 0.8); }
   else if (id === 'hshock') { tone(1200, 300, 0.25, 'square', 0.04); noise(0.12, 0.05, 3000); }
   else if (id === 'hcool') { tone(300, 900, 0.18, 'triangle', 0.05); tone(1568, 1568, 0.15, 'sine', 0.03, 0.2); }
@@ -8103,7 +8152,7 @@ function populate(cur, pl, mode, m, d, zi) {
     if (Object.keys(o).length) spawnEnemy(pick(o), cur, pl, d, z.look || {});
   }
   if (m > 60 && Math.random() < 0.05) ents.push({ type: 'gem', x: (cur.cx + pl.cx) / 2 + rand(-20, 20), y: pl.y0 - 10, r: 10, t: 0 });
-  if (m > 150 && Math.random() < 0.0012) ents.push({ type: 'ruby', x: (cur.cx + pl.cx) / 2 + rand(-20, 20), y: pl.y0 - 24, r: 13, t: 0 });   // очень редкий красный кристалл
+  if (m > 300 && Math.random() < 0.0005) ents.push({ type: 'ruby', x: (cur.cx + pl.cx) / 2 + rand(-20, 20), y: pl.y0 - 24, r: 13, t: 0 });   // очень редкий красный кристалл
   if (m > 40 && Math.random() < 0.05) ents.push({ type: 'shield', x: (cur.cx + pl.cx) / 2, y: pl.y0 - 30, r: 11, t: 0 });
   else if (m > 30 && Math.random() < 0.05) ents.push({ type: 'magnet', x: (cur.cx + pl.cx) / 2, y: pl.y0 - 30, r: 11, t: 0 });
 }
@@ -9318,7 +9367,6 @@ function uiClick(pt) {
   if (state === 'play' && inRect(pt, BTN.pause)) { if (!mp.active) { paused = !paused; pauseAsk = false; } return true; }
   if (state === 'play' && paused) { pauseClick(pt); return true; }
   if (state === 'menu') {
-    if (menuEmoClick(pt)) return true;
     if (mp.link && inRect(pt, BTN_RDY)) { mpReadyClick(); return true; }
     if (menuMetaClick(pt)) return true;
     if (mp.link && inRect(pt, BTN_TR)) { sfx.click(); trOpen(); return true; }
@@ -9395,22 +9443,22 @@ const WHEELS = [
     { kind: 'gems', n: 15, w: 20, col: '#a64aff' }, { kind: 'skin', r: 2, w: 20, col: '#e05aff' },
     { kind: 'coins', n: 1500, w: 16, col: '#ffd23a' }, { kind: 'skin', r: 3, w: 8, col: '#ffb02a' },
     { kind: 'gems', n: 30, w: 14, col: '#7a1ab0' }, { kind: 'skin', r: 2, w: 14, col: '#c04aff' },
-    { kind: 'gems', n: 60, w: 4, col: '#3ab0ff' }, { kind: 'skin', r: 3, w: 4, col: '#ff3d7f' }, { kind: 'ruby', n: 1, w: 4, col: '#ff5a6a' },
+    { kind: 'gems', n: 60, w: 4, col: '#3ab0ff' }, { kind: 'skin', r: 3, w: 4, col: '#ff3d7f' }, { kind: 'ruby', n: 1, w: 1.5, col: '#ff5a6a' },
   ] },
   { theme: 'mega', cost: { gems: 40 }, segs: [
-    { kind: 'coins', n: 1000, w: 12, col: '#ffd23a' }, { kind: 'gems', n: 20, w: 8, col: '#3ab0ff' }, { kind: 'skin', r: 1, w: 10, col: '#5ac8ff' }, { kind: 'emote', id: 'heart', w: 6, col: '#ff7a9a' },
-    { kind: 'power', slot: 0, w: 7, col: '#3ce06a' }, { kind: 'skin', r: 2, w: 8, col: '#e05aff' }, { kind: 'coins', n: 3000, w: 6, col: '#ff8a1e' }, { kind: 'emote', id: 'cool', w: 5, col: '#ffe03a' },
-    { kind: 'skin', r: 3, w: 4, col: '#ffb02a' }, { kind: 'gems', n: 60, w: 4, col: '#a64aff' }, { kind: 'power', slot: 1, w: 7, col: '#5ac8ff' }, { kind: 'emote', id: 'star', w: 3, col: '#fff27a' },
-    { kind: 'skin', r: 2, w: 6, col: '#c04aff' }, { kind: 'coins', n: 500, w: 12, col: '#7ad8ff' }, { kind: 'emote', id: 'angry', w: 4, col: '#ff5a4a' }, { kind: 'skin', r: 4, w: 1.5, col: '#ff3d9a' },
-    { kind: 'ruby', n: 2, w: 3, col: '#ff5a6a' },
+    { kind: 'coins', n: 1000, w: 12, col: '#ffd23a' }, { kind: 'gems', n: 20, w: 8, col: '#3ab0ff' }, { kind: 'skin', r: 1, w: 10, col: '#5ac8ff' }, { kind: 'emote', id: 'hlove', w: 6, col: '#ff7a9a' },
+    { kind: 'power', slot: 0, w: 7, col: '#3ce06a' }, { kind: 'skin', r: 2, w: 8, col: '#e05aff' }, { kind: 'coins', n: 3000, w: 6, col: '#ff8a1e' }, { kind: 'emote', id: 'hcool', w: 5, col: '#ffe03a' },
+    { kind: 'skin', r: 3, w: 4, col: '#ffb02a' }, { kind: 'gems', n: 60, w: 4, col: '#a64aff' }, { kind: 'power', slot: 1, w: 7, col: '#5ac8ff' }, { kind: 'emote', id: 'hwink', w: 3, col: '#fff27a' },
+    { kind: 'skin', r: 2, w: 6, col: '#c04aff' }, { kind: 'coins', n: 500, w: 12, col: '#7ad8ff' }, { kind: 'emote', id: 'hshock', w: 4, col: '#ff5a4a' }, { kind: 'skin', r: 4, w: 1.5, col: '#ff3d9a' },
+    { kind: 'ruby', n: 1, w: 1.5, col: '#ff5a6a' },
   ] },
   { theme: 'golden', cost: { ruby: 10 }, segs: [   // золотое: только легенды и мифики, легенд больше
     { kind: 'skin', r: 3, w: 14, col: '#ffb02a' }, { kind: 'skin', r: 4, w: 5, col: '#ff3d9a' }, { kind: 'skin', r: 3, w: 14, col: '#ffd23a' }, { kind: 'skin', r: 3, w: 14, col: '#ffb02a' },
     { kind: 'skin', r: 4, w: 5, col: '#c03aff' }, { kind: 'skin', r: 3, w: 14, col: '#ffd23a' }, { kind: 'skin', r: 3, w: 14, col: '#ffb02a' }, { kind: 'skin', r: 4, w: 5, col: '#ff3d9a' },
   ] },
   { theme: 'ruby', cost: { ruby: 3 }, segs: [   // рубиновое: за рубины, лучший шанс на мифика
-    { kind: 'skin', r: 4, w: 7, col: '#ff3d9a' }, { kind: 'gems', n: 40, w: 16, col: '#3a6ad8' }, { kind: 'ruby', n: 2, w: 16, col: '#ff5a6a' }, { kind: 'skin', r: 3, w: 14, col: '#ffb02a' },
-    { kind: 'coins', n: 5000, w: 14, col: '#ffd23a' }, { kind: 'ruby', n: 5, w: 5, col: '#c80a2a' }, { kind: 'emote', id: 'king', w: 8, col: '#ffe27a' }, { kind: 'gems', n: 100, w: 6, col: '#a64aff' },
+    { kind: 'skin', r: 4, w: 7, col: '#ff3d9a' }, { kind: 'gems', n: 40, w: 16, col: '#3a6ad8' }, { kind: 'ruby', n: 1, w: 12, col: '#ff5a6a' }, { kind: 'skin', r: 3, w: 14, col: '#ffb02a' },
+    { kind: 'coins', n: 5000, w: 14, col: '#ffd23a' }, { kind: 'ruby', n: 3, w: 3, col: '#c80a2a' }, { kind: 'emote', id: 'hlol', w: 8, col: '#ffe27a' }, { kind: 'gems', n: 100, w: 6, col: '#a64aff' },
   ] },
 ];
 const WHEEL_NAMES = {
@@ -9689,7 +9737,7 @@ function setClick(pt) {
     return;
   }
   if (inRect(pt, FPS_BTN())) { PERF_HUD = !PERF_HUD; try { localStorage.setItem('wp_perfHud', PERF_HUD ? '1' : '0'); } catch (e) {} sfx.click(); return; }
-  if (inRect(pt, GQ_ROW())) { const r = GQ_ROW(), x0 = r.x + r.w - 213; gq = pt.x >= x0 ? clamp(Math.floor((pt.x - x0) / 71), 0, 2) : (gq + 1) % 3; store.set('gq', gq); dprLvl = 0; perfLow = 0; perfGrace = 2; resize(); try { gfxReset(); } catch (e) {} sfx.click(); vib(10); return; }
+  if (inRect(pt, GQ_ROW())) { const r = GQ_ROW(), x0 = r.x + r.w - 213; gq = pt.x >= x0 + 71 ? clamp(1 + Math.floor((pt.x - x0 - 71) / 71), 1, 2) : gq === 1 ? 2 : 1; store.set('gq', gq); dprLvl = 0; perfLow = 0; perfGrace = 2; resize(); try { gfxReset(); } catch (e) {} sfx.click(); vib(10); return; }
   for (let i = 0; i < LANGS.length; i++) if (inRect(pt, langRect(i))) {
     lang = LANGS[i]; store.set('lang', lang); sfx.click(); return;
   }
@@ -12294,7 +12342,7 @@ function badge(x, y) {
 // кристалл и рубин — пиксель-арт, как монеты и герои: по точкам, без сглаженных линий (раньше были гладкие
 // многоугольники — на экране телефона они выглядели мутными рядом с пиксельной графикой)
 const GEM_PIX = ["...OOOOOOOOO...", "..OHWLLLLLMMO..", ".OHWLLLLLLMMDO.", "OHWLLLLLLLMMDDO", "OKKKKKKKKKKKKKO", "OBBLLBBBMMMDDDO", ".OBBLLBBMMMDDO.", "..OBBLBBMMDDO..", "...OBBLBMMDO...", "....OBBMMDO....", ".....OBMDO.....", "......OMO......", ".......O......."];
-const GEM_COL = { O: OL, H: '#ffffff', W: '#ffffff', L: '#bff0ff', M: '#5ac8ff', D: '#1a70c8', B: '#8ae0ff', K: '#e8fbff' };
+const GEM_COL = { O: OL, H: '#ffffff', W: '#ffffff', L: '#bff0ff', M: '#5ac8ff', D: '#1a70c8', B: '#8ae0ff', K: '#6ad0ff' };   // поясок — голубой, не белый
 const RUBY_PIX = ['...OOOOO...', '..OLLLLLO..', '.OLWWLLLDO.', 'OLLRRRRRDDO', 'OLRRRRRRRDO', 'OLRRRRRRRDO', 'OLRRRRRRRDO', 'OMMRRRRRDDO', '.OMMDDDDDO.', '..ODDDDDO..', '...OOOOO...'];
 const RUBY_COL = { O: OL, W: '#ffffff', L: '#ff7a8e', R: '#e81838', D: '#9a0420', M: '#c80a2a' };
 // значок по точкам рисуется один раз в маленький холст (раньше — десятки fillRect на каждый кристалл каждый кадр)
@@ -12331,8 +12379,7 @@ function pixIconRaw(ctx, rows, cols, x, y, s) {
   for (let r = 0; r < rows.length; r++) { const row = rows[r]; let c = 0; while (c < w) { const ch = row[c]; if (ch === '.') { c++; continue; } let e = c + 1; while (e < w && row[e] === ch) e++; ctx.fillStyle = cols[ch]; ctx.fillRect(x0 + c * u, y0 + r * u, (e - c) * u, u); c = e; } }
 }
 function gemIcon(x, y, s = 1) {
-  pixIcon(GEM_PIX, GEM_COL, x, y, s);
-  if (s >= 0.6) { const ph = (time * 0.7 + x * 0.013) % 1; if (ph < 0.25) { const a = Math.sin(ph / 0.25 * Math.PI), u = Math.max(1, Math.round(s * 2.2)); ctx.globalAlpha = a; prect(ctx, x - 4 * u - 1, y - 4 * u - 3 * a, 2, 2 + 4 * a, '#ffffff'); prect(ctx, x - 4 * u - 2 - 2 * a, y - 4 * u - 1, 4 + 4 * a, 2, '#ffffff'); ctx.globalAlpha = 1; } }   // искорка
+  pixIcon(GEM_PIX, GEM_COL, x, y, s);   // без белой мигающей полоски
 }
 function rubyIcon(x, y, s = 1) { pixIcon(RUBY_PIX, RUBY_COL, x, y, s); }
 function rubyDraw(x, y, t) {   // в мире: пульсирующее свечение и искры вокруг
@@ -12372,7 +12419,6 @@ function drawMenu() {
   if (hint > 0.05) drawPkTap(W - 56, 505);
   ctx.globalAlpha = 1;
   drawDayWins();
-  drawMenuEmo();
   drawMenuMsg();
 }
 // «Сеть» — большая жёлтая кнопка внизу справа: дышит, по ней бежит блик, два скрещённых меча
@@ -12395,6 +12441,11 @@ function drawPlayBtn() {
 // «Победы дня» в меню над кнопкой «Сеть»: 10 клеток, первая — особая; готовая награда подпрыгивает
 const DWIN_BOX = { x: 12, y: 540, w: 336, h: 34 }, DWIN_B0 = { x: 12, y: 540, w: 336, h: 34 };
 function drawDayWins() {
+  const g = dayWins();
+  if (g.cl >= g.n && g.cl < DWIN_N && time - dwinPop > 0.7) { const b = DWIN_B0; uiCache('dwin', [g.n, g.cl, g.rr.join(','), lang].join('|'), b.x - 4, b.y - 16, b.w + 8, b.h + 22, drawDayWins0); return; }   // ждать нечего — полоса неподвижна
+  drawDayWins0();
+}
+function drawDayWins0() {
   const g = dayWins(), b = DWIN_B0, pop = clamp(1 - (time - dwinPop) / 0.6, 0, 1);
   const fin = g.cl >= DWIN_N, ft = fin ? (g.ft && Date.now() - g.ft < 60000 && time - dwinFinT < 3 ? Math.min(1, Math.max(0, time - dwinFinT - 0.3) / 0.9) : 1) : 0;
   if (fin && ft < 1 && !drawDayWins.snd && time - dwinFinT > 0.3) { drawDayWins.snd = true; try { tone(900, 200, 0.5, 'sawtooth', 0.04); noise(0.3, 0.05, 900); } catch (e) {} }
@@ -15098,17 +15149,28 @@ function drawTent() {
   TENT_TABS.forEach((r, i) => { const on = i === tentTab; ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 6); ctx.fillStyle = on ? '#ffd23a' : '#5a2a8a'; ctx.fillRect(r.x, r.y, r.w, r.h); if (on) { ctx.fillStyle = '#c08a10'; ctx.fillRect(r.x, r.y + r.h - 4, r.w, 4); }
     text([T('powers'), tr('СУНДУКИ', 'CHESTS'), T('allies'), tr('ЭМОЦИИ', 'EMOTES')][i], r.x + r.w / 2, r.y + 20, 1, on ? OL : '#ffffff', 'center', null, r.w - 6); if (i === 1 && tDailyReady()) badge(r.x + r.w - 4, r.y + 2); });
   // прилавок-доска
-  prect(ctx, 0, 186, W, 14, OL); prect(ctx, 0, 188, W, 10, '#c8803a'); prect(ctx, 0, 188, W, 3, '#f0b070');
-  prect(ctx, 0, 200, W, 400, '#8a5a2a'); for (let y = 218; y < 600; y += 22) prect(ctx, 0, y, W, 2, '#6a3a18'); prect(ctx, 0, 600, W, 4, OL);
+  // мастерская алхимика: тёмный зал, полки со светящимися зельями, магический круг и искры
+  prect(ctx, 0, 186, W, 14, OL); prect(ctx, 0, 188, W, 10, '#7a3ac8'); prect(ctx, 0, 188, W, 3, '#c89aff');
+  { const g0 = ctx.createLinearGradient(0, 200, 0, 600); g0.addColorStop(0, '#2a1458'); g0.addColorStop(1, '#100624'); ctx.fillStyle = g0; ctx.fillRect(0, 200, W, 400); }
+  ctx.save(); ctx.translate(W / 2, 400); ctx.rotate(time * 0.15); ctx.strokeStyle = 'rgba(200,154,255,0.12)'; ctx.lineWidth = 2;
+  for (const r2 of [150, 120]) { ctx.beginPath(); ctx.arc(0, 0, r2, 0, 7); ctx.stroke(); }
+  ctx.beginPath(); for (let i = 0; i <= 5; i++) { const a = i * Math.PI * 4 / 5 - Math.PI / 2; ctx.lineTo(Math.cos(a) * 120, Math.sin(a) * 120); } ctx.stroke(); ctx.restore();
+  for (const sy of [262, 362, 462, 562]) { prect(ctx, 0, sy, W, 4, '#3a1f6a'); prect(ctx, 0, sy, W, 1, '#6a4ab8'); }   // полки
+  for (let i = 0; i < 18; i++) { const x = 6 + hash(i * 5) * (W - 12), sy = [262, 362, 462, 562][i % 4], h = 8 + (i % 3) * 3, col = ['#3ce06a', '#ff5ab0', '#3ab0ff', '#ffd23a'][i % 4], gl = 0.5 + Math.sin(time * 2 + i) * 0.3;
+    ctx.globalAlpha = 0.18 * gl; pell(ctx, x, sy - h / 2, 8, 8, col); ctx.globalAlpha = 0.55; prect(ctx, x - 3, sy - h, 6, h, col); prect(ctx, x - 1, sy - h - 3, 2, 3, '#c8b0e8'); ctx.globalAlpha = 1; }
+  for (let k = 0; k < 10; k++) { const q = (time * 0.25 + hash(k * 3)) % 1; ctx.globalAlpha = Math.sin(q * Math.PI) * 0.7; prect(ctx, hash(k * 7) * W, 600 - q * 400, 2, 2, k % 2 ? '#c8a0ff' : '#9affd8'); } ctx.globalAlpha = 1;
+  prect(ctx, 0, 600, W, 4, OL);
   const popped = tentPop(W / 2, 400);
   if (tentTab === 0) POWERS.forEach((pp, i) => {
     const r = TENT_SLOT(i), cx = r.x + r.w / 2, bob = Math.sin(time * 3 + i) * 1.5, gem = !!pp.price.gems, col = POW_COL[pp.id] || '#ffd23a';
-    prect(ctx, r.x, r.y, r.w, r.h, OL);
-    const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); g.addColorStop(0, '#ffffff'); g.addColorStop(1, gem ? '#d8c0ff' : '#f4dca0'); ctx.fillStyle = g; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4);
-    ctx.globalAlpha = 0.35 + Math.sin(time * 4 + i) * 0.12; pell(ctx, cx, r.y + 22, 16, 13, col); ctx.globalAlpha = 1;
-    powerIcon(pp.id, cx, r.y + 22 + bob, 0.95);
-    text(powName(pp), cx, r.y + 48, 1, OL, 'center', null, r.w - 4);
-    priceDraw(cx - 10, r.y + 64, pp.price, 1, canPay(pp.price) ? '#1a6a2a' : '#a08a7a');
+    prect(ctx, r.x, r.y, r.w, r.h, OL);   // стеклянная карточка: тёмная, с цветной каймой силы
+    const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); g.addColorStop(0, gem ? '#5a2aa0' : '#3a2a7a'); g.addColorStop(1, gem ? '#22083a' : '#1a1240'); ctx.fillStyle = g; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4);
+    ctx.fillStyle = col; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, 3); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(r.x + 2, r.y + 5, r.w - 4, 2);
+    ctx.globalAlpha = 0.45 + Math.sin(time * 4 + i) * 0.15; pell(ctx, cx, r.y + 24, 15, 13, col); ctx.globalAlpha = 1;
+    powerIcon(pp.id, cx, r.y + 24 + bob, 0.95);
+    text(powName(pp), cx, r.y + 50, 1, '#ffffff', 'center', OL, r.w - 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(r.x + 4, r.y + 55, r.w - 8, 13);
+    priceDraw(cx - 10, r.y + 65, pp.price, 1, canPay(pp.price) ? '#9affb0' : '#a898b8');
     const n = pw[pp.id] || 0; pell(ctx, r.x + r.w - 9, r.y + 9, 9, 9, OL); pell(ctx, r.x + r.w - 9, r.y + 9, 7, 7, n ? '#3ce06a' : '#a898b8'); text(String(Math.min(99, n)), r.x + r.w - 9, r.y + 14, 1, '#ffffff', 'center', null);
   });
   else TCHESTS.forEach((C, i) => {
@@ -15939,11 +16001,11 @@ function drawSettings() {
   });
   { const r = GQ_ROW();   // качество графики: нажатие переключает по кругу
     ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4); ctx.fillStyle = '#4a3428'; ctx.fillRect(r.x, r.y, r.w, r.h);
-    text(tr('КАЧЕСТВО', 'QUALITY'), r.x + 10, r.y + 21, 2, '#ffffff', 'left', null, r.w - 226);
+    text(tr('КАЧЕСТВО', 'QUALITY'), r.x + 10, r.y + 21, 2, '#ffffff', 'left', null, r.w - 160);
     const names = [tr('НИЗКОЕ', 'LOW'), tr('НОРМ', 'NORMAL'), tr('ВЫСОКОЕ', 'HIGH')], cols = ['#ff8a3a', '#3ab0ff', '#3ce06a'];
-    for (let i = 0; i < 3; i++) { const bx = r.x + r.w - 213 + i * 71, on = gq === i; ctx.fillStyle = OL; ctx.fillRect(bx, r.y + 2, 69, r.h - 4); ctx.fillStyle = on ? cols[i] : '#6a5446'; ctx.fillRect(bx + 2, r.y + 4, 65, r.h - 8); if (on) { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(bx + 2, r.y + 4, 65, 3); }
+    for (let i = 1; i < 3; i++) { const bx = r.x + r.w - 213 + 71 + (i - 1) * 71, on = gq === i; ctx.fillStyle = OL; ctx.fillRect(bx, r.y + 2, 69, r.h - 4); ctx.fillStyle = on ? cols[i] : '#6a5446'; ctx.fillRect(bx + 2, r.y + 4, 65, r.h - 8); if (on) { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(bx + 2, r.y + 4, 65, 3); }
       text(names[i], bx + 35, r.y + 19, 1, on ? '#ffffff' : '#c8b8a8', 'center', on ? OL : null, 62); }
-    const info = [tr('ЭКОНОМИЯ БАТАРЕИ - 60 К/С', 'BATTERY SAVER - 60 FPS'), tr('ЧЁТКО - 60 К/С', 'SHARP - 60 FPS'), tr('МАКС. РЕЗКОСТЬ И КАДРЫ', 'MAX SHARPNESS AND FPS')][gq];
+    const info = ['', tr('ЧЁТКО - 60 К/С', 'SHARP - 60 FPS'), tr('МАКС. РЕЗКОСТЬ И КАДРЫ', 'MAX SHARPNESS AND FPS')][gq];
     text(info, r.x + r.w - 2, r.y + r.h + 11, 1, '#ffd23a', 'right', OL, r.w - 110);
     const fb = FPS_BTN(); ctx.fillStyle = OL; ctx.fillRect(fb.x, fb.y, fb.w, fb.h); ctx.fillStyle = PERF_HUD ? '#3ce06a' : '#a0503a'; ctx.fillRect(fb.x + 2, fb.y + 2, fb.w - 4, fb.h - 4);
     text(tr('СЧЁТЧИК FPS: ', 'FPS METER: ') + (PERF_HUD ? T('on') : T('off')), fb.x + fb.w / 2, fb.y + 13, 1, '#ffffff', 'center', OL, fb.w - 6); }
@@ -16255,7 +16317,10 @@ function frame0(now) {
   const step = now - last, raw = now - (frame0.prev || now); frame0.prev = now;
   // частота экрана: самый короткий промежуток между вызовами за последние ~2 с (считаем по всем вызовам, а не только нарисованным)
   if (raw > 0) { refMin = Math.min(refMin, raw); if (++refN >= 120) { refMs = clamp(refMin, 6, 34); refMin = 1e9; refN = 0; } }
-  if (step < 5.5 || (gqCap() && step < 16.67 - refMs * 0.5)) { requestAnimationFrame(frame); return; }   // 120 Гц → 60 кадров, 90 Гц остаётся 90
+  // 60 кадров/с на любом экране: копим время и рисуем, когда набежал кадр (остаток переносим). Раньше на 90 Гц каждый второй
+  // вызов пропускался — выходило 45 к/с, и каждый кадр считался «медленным»: резкость падала до минимума, а быстрее не становилось
+  if (step < 5.5) { requestAnimationFrame(frame); return; }
+  if (gqCap()) { frame0.acc = Math.min(33.4, (frame0.acc || 0) + raw); if (frame0.acc < 16.67 - refMs * 0.5) { requestAnimationFrame(frame); return; } frame0.acc = Math.max(0, frame0.acc - 16.67); }
   const t0 = performance.now(), gap = now - last;
   let dt = gap / 1000; last = now;
   if (dt > 0.05) dt = 0.05;
@@ -16273,7 +16338,7 @@ function frame0(now) {
   // идёт смена карты (два фона сразу) — кадры тяжелее обычного, но это ненадолго: в расчёт резкости их не берём,
   // иначе холст пересоздавался прямо посреди перехода и потом ещё долго оставался мутным
   const inBlend = state === 'play' && zoneBlend().t > 0;
-  if (!inBlend) { perfAcc += performance.now() - t0; perfN++; if (gap > refMs * 1.6 && gap < 100) perfSlow++; }   // пропущен кадр экрана — тормоз   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
+  if (!inBlend) { perfAcc += performance.now() - t0; perfN++; if (gap > Math.max(refMs, gqCap() ? 16.67 : 0) * 1.6 && gap < 100) perfSlow++; }   // пропущен кадр экрана — тормоз   // 27, а не 23: на экранах 90 Гц кадр через один — это 22 мс, не тормоз
   if (perfN >= 90) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
@@ -16297,7 +16362,32 @@ const TITLE_WORDS = [['ПОКОРИТЕЛЬ НЕБА', 'SKY CONQUEROR'], ['КО�
   ['ЛЕГЕНДА СТЕН', 'WALL LEGEND'], ['НЕУДЕРЖИМЫЙ', 'UNSTOPPABLE'], ['ХОЗЯИН ВЫСОТЫ', 'LORD OF HEIGHTS'], ['ВЕЧНЫЙ ПРЫГУН', 'ETERNAL JUMPER'],
   ['ГЕРОЙ ОБЛАКОВ', 'CLOUD HERO'], ['ЗВЕЗДА ШАХТЫ', 'SHAFT STAR'], ['БЕССТРАШНЫЙ', 'FEARLESS'], ['ЧЕМПИОН СТОЛБОВ', 'POLE CHAMPION']];
 const idHash = id => [...String(id)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
-const heroTitle = id => { const w = TITLE_WORDS[idHash(id) % TITLE_WORDS.length]; return tr(w[0], w[1]); };
+// титул героя — свой у каждого: по его облику (огонь, лёд, ниндзя, пират…), иначе «<ИМЯ> №1» — тоже только его
+const TITLE_THEMES = [
+  [/огн|пламен|инферно|феникс|лава|вулкан|fire|flame|lava|phoenix|inferno/i, [['ПОВЕЛИТЕЛЬ ПЛАМЕНИ', 'LORD OF FLAMES'], ['НЕСУЩИЙ ОГОНЬ', 'FIREBRINGER'], ['СЕРДЦЕ ВУЛКАНА', 'VOLCANO HEART']]],
+  [/лёд|лед|снеж|мороз|ice|frost|snow/i, [['ХОЗЯИН ЛЬДА', 'MASTER OF ICE'], ['ВЕЧНАЯ МЕРЗЛОТА', 'PERMAFROST'], ['ЛЕДЯНОЕ СЕРДЦЕ', 'HEART OF ICE']]],
+  [/ниндз|шиноби|сёгун|самура|ninja|shinobi|samurai|shogun/i, [['ТЕНЬ В НОЧИ', 'SHADOW OF THE NIGHT'], ['ПУТЬ КЛИНКА', 'WAY OF THE BLADE'], ['БЕЗМОЛВНЫЙ УДАР', 'SILENT STRIKE']]],
+  [/пират|капитан|pirate|captain/i, [['ГРОЗА СЕМИ МОРЕЙ', 'TERROR OF SEVEN SEAS'], ['КАПИТАН ВЫСОТЫ', 'CAPTAIN OF HEIGHTS']]],
+  [/драко|dragon/i, [['ДРАКОНИЙ ВЛАСТЕЛИН', 'DRAGON OVERLORD'], ['КРЫЛЬЯ ДРАКОНА', 'DRAGON WINGS']]],
+  [/косм|звёзд|звезд|галакт|лун|солн|cosm|star|galax|moon|sun/i, [['ДИТЯ ЗВЁЗД', 'CHILD OF THE STARS'], ['ПОКОРИТЕЛЬ КОСМОСА', 'SPACE CONQUEROR'], ['СВЕТ ГАЛАКТИКИ', 'GALAXY LIGHT']]],
+  [/робот|кибер|меха|неон|robot|cyber|mech|neon/i, [['ЖЕЛЕЗНОЕ СЕРДЦЕ', 'IRON HEART'], ['ВЕРСИЯ 2.0', 'VERSION 2.0'], ['СИСТЕМА: ПОБЕДА', 'SYSTEM: VICTORY']]],
+  [/призрак|жнец|тен|демон|бездн|ghost|reaper|shadow|demon|abyss|void/i, [['ВЕСТНИК ТЬМЫ', 'HERALD OF DARKNESS'], ['ДУША БЕЗДНЫ', 'SOUL OF THE ABYSS']]],
+  [/ангел|божеств|богин|angel|divine|goddess/i, [['НЕБЕСНЫЙ СТРАЖ', 'HEAVENLY GUARDIAN'], ['КРЫЛЬЯ СВЕТА', 'WINGS OF LIGHT']]],
+  [/корол|импер|царь|фараон|владык|king|emperor|pharaoh|lord|queen|empress/i, [['ЕГО ВЕЛИЧЕСТВО', 'HIS MAJESTY'], ['ВЛАСТЕЛИН СТОЛБОВ', 'RULER OF POLES']]],
+  [/кот|кош|cat|kitty/i, [['ДЕВЯТЬ ЖИЗНЕЙ', 'NINE LIVES'], ['МЯГКИЕ ЛАПКИ', 'SOFT PAWS']]],
+  [/лис|кицун|fox|kitsune/i, [['ХИТРЫЙ ХВОСТ', 'SLY TAIL'], ['ДЕВЯТЬ ХВОСТОВ', 'NINE TAILS']]],
+  [/зомби|мертв|zombie|undead/i, [['НЕУПОКОЕННЫЙ', 'RESTLESS DEAD'], ['ВСТАВШИЙ ИЗ МОГИЛЫ', 'RISEN FROM THE GRAVE']]],
+  [/единорог|радуг|unicorn|rainbow/i, [['МАГИЯ РАДУГИ', 'RAINBOW MAGIC'], ['СКАЗОЧНЫЙ', 'FAIRYTALE']]],
+  [/гром|молни|шторм|thunder|storm|lightning/i, [['ГОЛОС ГРОМА', 'VOICE OF THUNDER'], ['ВСПЫШКА МОЛНИИ', 'LIGHTNING FLASH']]],
+  [/алмаз|кристал|золот|diamond|crystal|gold/i, [['БЕСЦЕННЫЙ', 'PRICELESS'], ['СИЯНИЕ АЛМАЗА', 'DIAMOND SHINE']]],
+  [/маг|колдун|ведьм|чарод|wizard|witch|mage|sorcer/i, [['ТАЙНЫЙ ЗНАК', 'SECRET SIGIL'], ['ВЕРХОВНЫЙ МАГ', 'ARCHMAGE']]],
+  [/eldar/i, [['ЛИЦО ELDAR STUDIOS', 'FACE OF ELDAR STUDIOS']]],
+  [/пиклз|pickles/i, [['ЛУЧШИЙ ДРУГ ПИКЛСА', 'PICKLES\' BEST FRIEND']]],
+];
+const heroTitle = id => { const k = skinById(id); if (!k) { const w = TITLE_WORDS[idHash(id) % TITLE_WORDS.length]; return tr(w[0], w[1]); }
+  const nm = (k.nm || []).join(' ') + ' ' + id;
+  for (const [re, L] of TITLE_THEMES) if (re.test(nm)) { const w = L[idHash(id) % L.length]; return tr(w[0], w[1]); }
+  return skinName(k).toUpperCase() + ' №1'; };
 // особые титулы, рамки и иконки из Pass (у героев — свои по id)
 const PASS_TITLES = { pass1: ['ОБЛАДАТЕЛЬ PASS', 'PASS HOLDER'], pass2: ['ЛЕГЕНДА СЕЗОНА', 'SEASON LEGEND'], free1: ['НОВИЧОК СЕЗОНА', 'SEASON ROOKIE'], divine: ['БОЖЕСТВЕННЫЙ', 'DIVINE'] };   // «божественный» — из набора премиума, переливается
 const divineCol = (t = time) => { const q = Math.round((Math.sin(t * 3) + 1) * 4) / 8; return hexMix('#ffffff', '#ffd23a', q); };   // 9 оттенков — чтобы не плодить кэш надписей
@@ -16310,12 +16400,26 @@ const FRAME_STYLES = {
   rainbow: { bg: 'linear-gradient(90deg,#ff3a3a,#ffa02a,#ffe03a,#3ae05a,#3ab0ff,#a64aff,#ff3a3a)', bd: '#ffffff', anim: 1 },
   galaxy: { bg: 'radial-gradient(circle at 20% 50%,#ff7ad8 0,transparent 30%),radial-gradient(circle at 80% 40%,#7ad8ff 0,transparent 30%),linear-gradient(90deg,#0a0420,#3a1a6a,#0a0420)', bd: '#c8a0ff', anim: 1 },
 };
+const HFR_CACHE = new Map();
+function heroFrameTile(k) {
+  const c = document.createElement('canvas'); c.width = 40; c.height = 28; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  const hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : null, A = hx(k.body) || '#ffb02a', B = hx(k.scarf) || hx(k.light) || '#ffffff', D = hx(k.dark) || '#2a1408';
+  const gr = g.createLinearGradient(0, 0, 0, 28); gr.addColorStop(0, hexMix(A, '#ffffff', 0.35)); gr.addColorStop(0.55, A); gr.addColorStop(1, D); g.fillStyle = gr; g.fillRect(0, 0, 40, 28);
+  g.fillStyle = hexMix(D, '#000000', 0.3); for (let x = 0; x < 40; x += 4) g.fillRect(x, 26, 2, 2);   // кайма снизу
+  g.fillStyle = B; for (const [x, y] of [[28, 6], [34, 14], [27, 21]]) { g.fillRect(x, y - 2, 1, 5); g.fillRect(x - 2, y, 5, 1); }   // ромбики-искры цвета шарфа
+  g.fillStyle = '#ffffff'; g.fillRect(31, 9, 1, 1); g.fillRect(24, 15, 1, 1);
+  try { const spr = heroSpriteGet(k, 'idle', 0, false, 5); drawRaw.call(g, spr, 12, 15, 24, 22, 1, 3, 24, 22); } catch (e) {}   // голова героя
+  if (k.r >= 3) { g.fillStyle = '#ffe27a'; g.fillRect(0, 0, 40, 1); g.fillRect(0, 27, 40, 1); }
+  return c.toDataURL();
+}
 const frameStyle = id => {
   if (FRAME_STYLES[id]) return FRAME_STYLES[id];
   const k = id && id.startsWith('h:') ? skinById(id.slice(2)) : null;   // рамка героя — в его цветах
   if (!k) return FRAME_STYLES.basic;
-  const a = /^#/.test(k.body) ? k.body : '#ffb02a', b = /^#/.test(k.scarf || '') ? k.scarf : (k.dark || '#7a4a2a');
-  return { bg: `linear-gradient(90deg,${k.dark || '#2a1408'},${a} 30%,${b} 50%,${a} 70%,${k.dark || '#2a1408'})`, bd: k.r >= 3 ? '#ffe27a' : '#ffffff', anim: 1, hero: k.id };
+  // рамка героя — не просто цвет: бегущая лента с головой героя, его узором и искрами (картинка делается один раз)
+  let s = HFR_CACHE.get(k.id); if (s) return s;
+  s = { bg: 'url(' + heroFrameTile(k) + ') 0 0/40px 28px', bd: k.r >= 3 ? '#ffe27a' : '#ffffff', pat: 1, pw: '40px', ph: '0px', spd: 2.4, hero: k.id };
+  HFR_CACHE.set(k.id, s); return s;
 };
 const frameName = id => FRAME_STYLES[id] && FRAME_STYLES[id].nm ? tr(FRAME_STYLES[id].nm[0], FRAME_STYLES[id].nm[1]) : FRAME_STYLES[id] ? ({ basic: tr('ОБЫЧНАЯ', 'BASIC'), gold: tr('ЗОЛОТАЯ', 'GOLDEN'), fire: tr('ОГНЕННАЯ', 'FIRE'), ice: tr('ЛЕДЯНАЯ', 'ICE'), neon: tr('НЕОНОВАЯ', 'NEON'), rainbow: tr('РАДУЖНАЯ', 'RAINBOW'), galaxy: tr('ГАЛАКТИКА', 'GALAXY') })[id]
   : id && id.startsWith('h:') && skinById(id.slice(2)) ? tr('РАМКА: ', 'FRAME: ') + skinName(skinById(id.slice(2))) : '';
@@ -16467,30 +16571,57 @@ function avatarArt(id, t) {
 }
 // аватарка на холсте игры: квадрат с фоном и рисунком (герой — голова героя)
 const AV_PIX = new Map();
+// аватарка: рисунок в 64×64 (вдвое детальнее), чёткая палитра, тёмная обводка, фон с лучами, свет сзади и блик.
+// «Божественный» (из набора премиума) остаётся как был
+const AV_S = 64;
+// фон аватарки-героя: в его цветах, с лучами и светом (раньше — тёмный квадрат)
+const AVBG = new Map();
+function heroAvBg(k, gold) {
+  const key = (gold ? 'g' : '') + k.id; let c = AVBG.get(key); if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), hx = v => /^#[0-9a-f]{6}$/i.test(v || '') ? v : null;
+  const A = gold ? '#ffe27a' : hexMix(hx(k.body) || '#5a3ab8', '#ffffff', 0.25), D = gold ? '#c07a00' : hexMix(hx(k.dark) || '#1a1030', '#000000', 0.35);
+  for (let b = 0; b < 4; b++) { g.fillStyle = hexMix(A, D, b / 3); g.fillRect(0, b * 8, 32, 8); }
+  g.save(); g.translate(16, 18); g.fillStyle = 'rgba(255,255,255,0.12)'; for (let r2 = 0; r2 < 8; r2++) { g.rotate(Math.PI / 4); g.beginPath(); g.moveTo(0, 0); g.lineTo(-4, -26); g.lineTo(4, -26); g.fill(); } g.restore();
+  g.fillStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.arc(16, 17, 11, 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(2, 2, 6, 2); g.fillRect(2, 4, 2, 3);
+  AVBG.set(key, c); return c;
+}
 function avatarPix(a, fr) {
   const key = a.id + fr; let c = AV_PIX.get(key); if (c) return c;
-  const art = document.createElement('canvas'); art.width = art.height = 32;
-  withCtx(art, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); avatarArt(a.id, fr * 0.4); });
-  const ag = art.getContext('2d'), d = ag.getImageData(0, 0, 32, 32), px = d.data, cnt = new Map();
+  const old = a.pack, S2 = old ? 32 : AV_S, k = S2 / 32;
+  const art = document.createElement('canvas'); art.width = art.height = S2;
+  withCtx(art, () => { ctx.setTransform(k, 0, 0, k, 0, 0); avatarArt(a.id, fr * 0.4); });
+  const ag = art.getContext('2d'), d = ag.getImageData(0, 0, S2, S2), px = d.data, cnt = new Map();
   for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 250) { const q = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]; cnt.set(q, (cnt.get(q) || 0) + 1); }
-  const pal = [...cnt.entries()].filter(e => e[1] >= 2).sort((u, v) => v[1] - u[1]).slice(0, 12).map(e => [e[0] >> 16, (e[0] >> 8) & 255, e[0] & 255]);
+  const pal = [...cnt.entries()].filter(e => e[1] >= 2 * k * k).sort((u, v) => v[1] - u[1]).slice(0, old ? 12 : 16).map(e => [e[0] >> 16, (e[0] >> 8) & 255, e[0] & 255]);
   for (let i = 0; i < px.length; i += 4) {   // каждый пиксель — либо пусто, либо один из основных цветов рисунка
     if (px[i + 3] < 110) { px[i + 3] = 0; continue; }
     let best = null, bd = 1e9; for (const q of pal) { const dd = (q[0] - px[i]) ** 2 + (q[1] - px[i + 1]) ** 2 + (q[2] - px[i + 2]) ** 2; if (dd < bd) { bd = dd; best = q; } }
     if (best) { px[i] = best[0]; px[i + 1] = best[1]; px[i + 2] = best[2]; } px[i + 3] = 255;
   }
+  if (!old) {   // обводка 1 точкой вокруг рисунка — смотрится чётче на любом фоне
+    const al = new Uint8Array(S2 * S2); for (let p2 = 0; p2 < S2 * S2; p2++) al[p2] = px[p2 * 4 + 3];
+    for (let y = 0; y < S2; y++) for (let x = 0; x < S2; x++) { const p2 = y * S2 + x; if (al[p2]) continue;
+      if ((x > 0 && al[p2 - 1]) || (x < S2 - 1 && al[p2 + 1]) || (y > 0 && al[p2 - S2]) || (y < S2 - 1 && al[p2 + S2])) { const q = p2 * 4; px[q] = 0x1a; px[q + 1] = 0x10; px[q + 2] = 0x30; px[q + 3] = 255; } }
+  }
   ag.putImageData(d, 0, 0);
-  c = document.createElement('canvas'); c.width = c.height = 32; const cg = c.getContext('2d');
-  for (let b = 0; b < 4; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 3); cg.fillRect(0, b * 8, 32, 8); }   // фон ступеньками, как в пиксель-арте
-  cg.fillStyle = 'rgba(255,255,255,0.18)'; cg.fillRect(2, 2, 6, 2); cg.fillRect(2, 4, 2, 4);
+  c = document.createElement('canvas'); c.width = c.height = S2; const cg = c.getContext('2d');
+  if (old) { for (let b = 0; b < 4; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 3); cg.fillRect(0, b * 8, 32, 8); } cg.fillStyle = 'rgba(255,255,255,0.18)'; cg.fillRect(2, 2, 6, 2); cg.fillRect(2, 4, 2, 4); cg.drawImage(art, 0, 0); AV_PIX.set(key, c); return c; }
+  for (let b = 0; b < 8; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 7); cg.fillRect(0, b * 8, S2, 8); }   // фон ступеньками
+  cg.save(); cg.translate(32, 34); cg.rotate(fr * 0.08); cg.fillStyle = 'rgba(255,255,255,0.10)';   // лучи
+  for (let r2 = 0; r2 < 8; r2++) { cg.rotate(Math.PI / 4); cg.beginPath(); cg.moveTo(0, 0); cg.lineTo(-7, -48); cg.lineTo(7, -48); cg.fill(); } cg.restore();
+  cg.fillStyle = 'rgba(255,255,255,0.16)'; for (let r2 = 22; r2 > 4; r2 -= 6) { cg.beginPath(); cg.arc(32, 32, r2, 0, 7); cg.fill(); }   // свет за рисунком
+  cg.fillStyle = 'rgba(0,0,0,0.25)'; cg.fillRect(14, 56, 36, 3);   // тень снизу
   cg.drawImage(art, 0, 0);
+  cg.fillStyle = 'rgba(255,255,255,0.35)'; cg.fillRect(4, 4, 12, 3); cg.fillRect(4, 7, 3, 7);   // блик в углу
+  cg.fillStyle = 'rgba(0,0,0,0.3)'; cg.fillRect(0, S2 - 3, S2, 3); cg.fillRect(S2 - 3, 0, 3, S2);   // объём: тень по краю
   AV_PIX.set(key, c); return c;
 }
 function avatarDraw(av, cx, cy, size, t = time) {
   const a = avatarDef(av), x = cx - size / 2, y = cy - size / 2;
-  if (a) { const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; drawRaw.call(ctx, avatarPix(a, Math.floor(t * 4) % 4), 0, 0, 32, 32, x, y, size, size); ctx.imageSmoothingEnabled = sm; return; }
+  if (a) { const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; const pc = avatarPix(a, Math.floor(t * 4) % 4); drawRaw.call(ctx, pc, 0, 0, pc.width, pc.height, x, y, size, size); ctx.imageSmoothingEnabled = sm; return; }
   const gold = String(av).startsWith('g:'), k = skinById(gold ? av.slice(2) : av) || SKINS[0];
-  ctx.fillStyle = gold ? '#ffd23a' : '#1a1030'; ctx.fillRect(x, y, size, size);
+  { const bgc = heroAvBg(k, gold); const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false; drawRaw.call(ctx, bgc, 0, 0, 32, 32, x, y, size, size); ctx.imageSmoothingEnabled = sm; }
   const spr = heroSpriteGet(k, 'idle', (Math.floor(t * 10) % 20) / 10, false, 10);   // голова в аватарке: цикл 2 с по 10 кадров/с — всё из кэша
   ctx.save(); ctx.beginPath(); ctx.rect(x, y, size, size); ctx.clip(); drawRaw.call(ctx, spr, SPR_X + 4, SPR_Y + 6, 24, 24, x, y, size, size); ctx.restore();
 }
@@ -16625,8 +16756,12 @@ function openCosmetics() {
 const NICK_MIN = 3, NICK_MAX = 16, NICK_PRICE = 10, NICK_FREE = 1;
 const NICK_INVIS = /[\p{Cc}\p{Cf}\p{Co}\p{Cn}\p{Zl}\p{Zp} ͏ᅟᅠ ឴឵᠋-᠏ -   ⠀　ㅤ︀-️ﾠ]/u;
 const NICK_EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{1F1E6}-\u{1F1FF}⃣]/u;
+// смайлик (с вариантом, цветом кожи и «склейками») считается одним знаком
+const NICK_EMO_SEQ = /(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u{1F1E6}-\u{1F1FF}])(?:\u{FE0F}|[\u{1F3FB}-\u{1F3FF}]|\u{200D}(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}))*/gu;
+// имя для базы (рейтинг, друзья): смайлики убираем — правила базы пропускают только буквы; слишком мало осталось — запасное имя
+function netNick(s) { s = String(s || ''); const v = s.replace(NICK_EMO_SEQ, '').replace(/\s+/g, ' ').trim(); return nickError(v) ? (nickError(s) ? 'Player' + String(mp.id || '').replace(/\D/g, '').slice(0, 4) : (v.length >= 1 ? (v + '___').slice(0, 3) : 'Player')) : v; }
 function nickError(s) {
-  s = String(s == null ? '' : s);
+  s = String(s == null ? '' : s).replace(NICK_EMO_SEQ, 'E');   // смайлики можно: проверяем остальное, смайлик — как одна буква
   if (NICK_INVIS.test(s)) return tr('В ИМЕНИ ЕСТЬ НЕВИДИМЫЕ СИМВОЛЫ', 'THE NAME HAS INVISIBLE CHARACTERS');
   // смайлики в имени разрешены (невидимые символы и «склейки» из них — по-прежнему нет)
   const n = [...s].length;
@@ -16652,7 +16787,7 @@ function nickField(val, onEnter) {
   const err = document.createElement('span'), cnt = document.createElement('span'); err.style.cssText = 'color:#ff8a7a;text-align:left'; cnt.style.cssText = 'margin-left:auto;white-space:nowrap';
   row.append(err, cnt); w.append(inp, row);
   const value = () => inp.value.normalize('NFC');
-  const upd = () => { const n = [...inp.value].length; cnt.textContent = n + '/' + NICK_MAX; cnt.style.color = n > NICK_MAX ? '#ff6a5a' : '#c8b8f0'; err.textContent = inp.value ? nickError(value()) : ''; };
+  const upd = () => { const n = [...inp.value.replace(NICK_EMO_SEQ, 'E')].length; cnt.textContent = n + '/' + NICK_MAX; cnt.style.color = n > NICK_MAX ? '#ff6a5a' : '#c8b8f0'; err.textContent = inp.value ? nickError(value()) : ''; };
   inp.addEventListener('input', upd); inp.addEventListener('keydown', e => { if (e.key === 'Enter' && onEnter) onEnter(); });
   upd();
   return { el: w, inp, value, check() { const e = nickError(value()); err.textContent = e; if (e) { try { sfx.no(); } catch (x) {} inp.animate && inp.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 240); } return !e; } };
@@ -16797,7 +16932,7 @@ const PBOX = [
   { nm: ['ОБЫЧНЫЙ', 'COMMON'], col: '#b8b8c8', dk: '#6a6a7a', up: 0.5, rw: () => ({ k: 'coins', n: 40 + Math.floor(Math.random() * 40) }) },
   { nm: ['РЕДКИЙ', 'RARE'], col: '#3ab0ff', dk: '#1a5aa0', up: 0.3, rw: () => (Math.random() < 0.5 ? { k: 'coins', n: 150 } : { k: 'gems', n: 2 }) },
   { nm: ['ЭПИЧЕСКИЙ', 'EPIC'], col: '#c04aff', dk: '#6a1ab0', up: 0.12, rw: () => (Math.random() < 0.5 ? { k: 'gems', n: 6 } : { k: 'power', n: 3 }) },
-  { nm: ['ЛЕГЕНДАРНЫЙ', 'LEGENDARY'], col: '#ffb02a', dk: '#c06a00', up: 0, rw: () => (Math.random() < 0.7 ? { k: 'gems', n: 20 } : { k: 'ruby', n: 1 }) },
+  { nm: ['ЛЕГЕНДАРНЫЙ', 'LEGENDARY'], col: '#ffb02a', dk: '#c06a00', up: 0, rw: () => (Math.random() < 0.88 ? { k: 'gems', n: 20 } : { k: 'ruby', n: 1 }) },
 ];
 function passBoxOpen(free, startLv) {
   const v = passData(); if (!free) { if (!(v.bx > 0)) return; v.bx--; store.set('pass', v); }
@@ -16840,11 +16975,11 @@ function dayWins() { let g = store.get('dwin', null); if (!g || g.d !== dayNum()
 // ---- дропы: у каждого своя редкость (шансы ниже); тапаешь — редкость может подняться, потом он раскрывается и из него вылетают призы ----
 const DROP_PIX = ["......OOOO......", "....OOLLLLOO....", "...OLLHHLLLLO...", "..OLHHLLLLLLMO..", ".OLHLLLYYLLLMMO.", ".OLLLLLYYLLLMMO.", "OLLLLLYYYYLLLMMO", "OLYYYYYYYYYYYMMO", "OLLYYYYYYYYYYMMO", "OLLLYYYYYYYYLMMO", ".OLLLYYYYYYLLMO.", ".OLLYYYLLYYYMMO.", "..OLYYLLLLYYMO..", "...OMMMMMMMMO...", "....OOMMMMOO....", "......OOOO......"], CHECK_PIX = ["..........OO", ".........OGO", "........OGGO", ".OO....OGGO.", "OGGO..OGGO..", "OGGGOOGGO...", ".OGGGGGGO...", "..OGGGGO....", "...OGGO.....", "....OO......"], CHECK_COL = { O: '#1a1030', G: '#3ce06a' };
 const DROP_R = [
-  { ru: 'РЕДКИЙ', en: 'RARE', p: 50, c: ['#5ae06a', '#c8ffc0', '#2a9a3a'] },
-  { ru: 'СВЕРХРЕДКИЙ', en: 'SUPER RARE', p: 28, c: ['#3ab0ff', '#bfe8ff', '#1a60c0'] },
-  { ru: 'ЭПИЧЕСКИЙ', en: 'EPIC', p: 15, c: ['#c04aff', '#f0c0ff', '#6a1ab0'] },
-  { ru: 'МИФИЧЕСКИЙ', en: 'MYTHIC', p: 5, c: ['#ff3a5a', '#ffc0c8', '#a0102a'] },
-  { ru: 'ЛЕГЕНДАРНЫЙ', en: 'LEGENDARY', p: 2, c: ['#ffc23a', '#fff6b0', '#c07a00'] }];
+  { ru: 'РЕДКИЙ', en: 'RARE', p: 52, c: ['#5ae06a', '#c8ffc0', '#2a9a3a'] },
+  { ru: 'СВЕРХРЕДКИЙ', en: 'SUPER RARE', p: 30, c: ['#3ab0ff', '#bfe8ff', '#1a60c0'] },
+  { ru: 'ЭПИЧЕСКИЙ', en: 'EPIC', p: 16.5, c: ['#c04aff', '#f0c0ff', '#6a1ab0'] },
+  { ru: 'МИФИЧЕСКИЙ', en: 'MYTHIC', p: 1, c: ['#ff3a5a', '#ffc0c8', '#a0102a'] },
+  { ru: 'ЛЕГЕНДАРНЫЙ', en: 'LEGENDARY', p: 0.5, c: ['#ffc23a', '#fff6b0', '#c07a00'] }];
 const DROP_UNK = ['#7a6aa8', '#b8a8e0', '#3a2a6a'];
 const DROP_BONUS = 10, DROP_BIG = 3;   // в 1 дропе из 10 — ещё и ящик с героем; из них большой — 3 из 100 дропов
 // у каждого цвета — своя копия строк: заготовки значков хранятся по строкам
@@ -16857,8 +16992,8 @@ function dropPrizes(r) {
   if (r === 0) L.push(R < 0.6 ? { k: 'coins', n: 50 + Math.floor(Math.random() * 40) } : R < 0.85 ? { k: 'xp', n: 60 } : { k: 'power', n: 1 });
   else if (r === 1) L.push(R < 0.45 ? { k: 'coins', n: 150 + Math.floor(Math.random() * 60) } : R < 0.75 ? { k: 'gems', n: 3 } : { k: 'power', n: 2 });
   else if (r === 2) { L.push(R < 0.5 ? { k: 'gems', n: 6 } : { k: 'coins', n: 350 }); L.push({ k: 'power', n: 2 }); }
-  else if (r === 3) { L.push(R < 0.6 ? { k: 'gems', n: 15 } : { k: 'ruby', n: 1 }); L.push({ k: 'coins', n: 250 }); }
-  else { L.push(R < 0.6 ? { k: 'gems', n: 40 } : { k: 'ruby', n: 2 }); L.push({ k: 'coins', n: 500 }); L.push({ k: 'xp', n: 200 }); }
+  else if (r === 3) { L.push(R < 0.85 ? { k: 'gems', n: 15 } : { k: 'ruby', n: 1 }); L.push({ k: 'coins', n: 250 }); }
+  else { L.push(R < 0.7 ? { k: 'gems', n: 40 } : { k: 'ruby', n: 1 }); L.push({ k: 'coins', n: 500 }); L.push({ k: 'xp', n: 200 }); }
   const b = Math.random() * 100; if (b < DROP_BIG) L.push({ k: 'chest', gold: true }); else if (b < DROP_BONUS) L.push({ k: 'chest' });
   return L;
 }
@@ -17182,6 +17317,7 @@ function heroCnv(k, size, opt = {}) {
   const paint = t => withCtx(c, g => {
     g.clearRect(0, 0, S, S);
     if (opt.gold) { const gr = g.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2); gr.addColorStop(0, '#fff6a0'); gr.addColorStop(1, '#c07a00'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    else if (opt.avbg) { g.imageSmoothingEnabled = false; drawRaw.call(g, heroAvBg(k, false), 0, 0, 32, 32, 0, 0, S, S); }
     else if (opt.bg) { g.fillStyle = opt.bg; g.fillRect(0, 0, S, S); }
     heroSprite(k, opt.pose || 'idle', t, false);
     if (opt.head) drawRaw.call(g, hcv, SPR_X + 4, SPR_Y + 8 - 4, 24, 24, 0, 0, S, S);   // крупно голова
@@ -17195,13 +17331,13 @@ function heroCnv(k, size, opt = {}) {
 // аватарка: 'id' — герой, 'g:id' — золотая иконка героя с дорожки кубков
 function avatarCnv(av, size, anim) {
   if (avatarDef(av)) {   // аватарка-картинка
-    const c = document.createElement('canvas'); c.width = c.height = 32; c.style.width = c.style.height = size + 'px'; c.style.imageRendering = 'pixelated';
-    const paint = t => withCtx(c, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, 32, 32); avatarDraw(av, 16, 16, 32, t); });
+    const c = document.createElement('canvas'); c.width = c.height = AV_S; c.style.width = c.style.height = size + 'px'; c.style.imageRendering = 'pixelated';
+    const paint = t => withCtx(c, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, AV_S, AV_S); avatarDraw(av, AV_S / 2, AV_S / 2, AV_S, t); });
     paint(0.3); if (anim) moAnim.push({ c, paint });
     return c;
   }
   const gold = String(av).startsWith('g:'), k = skinById(gold ? av.slice(2) : av) || SKINS[0];
-  return heroCnv(k, size, { head: true, gold, bg: gold ? null : '#2a1a4a', t: 0.2 });
+  return heroCnv(k, size, { head: true, gold, avbg: !gold, t: 0.2 });
 }
 function framed(el, frameId, pad = 3) {
   const f = frameStyle(frameId), w = moEl('div', 'fr' + (f.anim ? ' anim' : ''));
@@ -18042,7 +18178,7 @@ function openBoard(keep) {
 // главное всегда на виду (герои, магазин, колесо, задания); остальное раскрывается стрелкой «ЕЩЁ»
 Object.assign(BTN, { prof: { x: 52, y: 12, w: 150, h: 34 }, rank: { x: 12, y: 100, w: 292, h: 32 }, mp: { x: 208, y: 580, w: 140, h: 52 }, friends: { x: W - 46, y: 99, w: 34, h: 34 },
   quest: { x: 152, y: 584, w: 46, h: 46 }, pass: { x: 12, y: 584, w: 132, h: 46 }, wheel: { x: -999, y: -999, w: 0, h: 0 },   // колесо — во вкладке магазина
-  clan: { x: W - 46, y: 142, w: 34, h: 34 }, ach: { x: W - 88, y: 12, w: 34, h: 34 }, menuB: { x: W - 46, y: 54, w: 34, h: 34 },   // награды — круглой иконкой у новостей, под звуком — меню
+  clan: { x: W - 46, y: 154, w: 34, h: 34 }, ach: { x: W - 88, y: 12, w: 34, h: 34 }, menuB: { x: W - 46, y: 54, w: 34, h: 34 },   // награды — круглой иконкой у новостей, под звуком — меню
   tent: { x: 12, y: 282, w: 116, h: 34 }, allies: { x: -999, y: -999, w: 0, h: 0 }, emo: { x: -999, y: -999, w: 0, h: 0 }, more: { x: -999, y: -999, w: 0, h: 0 } });   // надписи WALL PLAY больше нет — всё поднято
 const MORE_KEYS = ['tent', 'allies', 'emo'];
 // круглые иконки меню: награды (у новостей), меню (под звуком), друзья (справа от рейтинга)
@@ -18052,7 +18188,8 @@ function drawTopIcons() {
   { const b = BTN.friends, x = b.x + b.w / 2, y = b.y + b.h / 2;   // друзья — квадратная кнопка со скруглёнными углами
     sqBtn(b, '#ff7a2a', '#ffa05a', '#c04a00');
     pixIcon(FRI_PIX, FRI_COL, x, y + 1, 0.62);
-    if (FR.inbox.length) badge(b.x + b.w - 2, b.y + 4); }
+    if (FR.inbox.length) badge(b.x + b.w - 2, b.y + 4);
+    text(tr('ДРУЗЬЯ', 'FRIENDS'), x, b.y + b.h + 12, 1, '#ffffff', 'center', OL, 50); }
 }
 const FRI_PIX0 = ['....................', '......OO............', '....OOssOO..........', '....OssssO..OO......', '...OsOssOsOOttOO....', '...OssssssOttttO....', '....OssssOtOttOtO...', '....OOssOOpttttpO...', '......OO.OttmmttO...', '....OObbOOOttttO....', '...ObbbbbbOOttO.....', '..ObbbbbbbbOggO.....', '..ObbbbbbOOggggOO...', '.ObbbbbbOggggggggO..', '.ObbbbbbOggggggggO..', '.OOOOOOOOOOOOOOOOOO.'];
 const FRI_COL0 = { O: '#2a1a3a', s: '#ffe0c0', t: '#fff0dc', m: '#d84a4a', p: '#ff9aa0', b: '#3ab0ff', g: '#3ce06a' };
@@ -18082,6 +18219,7 @@ function drawClanBtn() {
   drawRaw.call(ctx, clanBtnImg, b.x + 5, b.y + 5, 24, 24); ctx.globalAlpha = 1;
   if (locked) pixIcon(LOCK_PIX, LOCK_COL, b.x + b.w / 2, b.y + b.h / 2 + 1, 0.8);
   if (CLAN.news || (CLAN.my && CLAN.in === 'my' && CLAN.my.rq.length) || pigReady()) badge(b.x + b.w - 2, b.y + 4);
+  text(tr('КЛУБ', 'CLUB'), b.x + b.w / 2, b.y + b.h + 12, 1, '#ffffff', 'center', OL, 50);
 }
 const moreOpen = () => menuMoreT > 0.85;
 let menuSw = null;
@@ -18113,24 +18251,38 @@ function drawQuestIcon() {
   pixIcon(QUEST_PIX, QUEST_COL, cx, cy - 1, 0.95);
   text(tr('ЗАДАНИЯ', 'QUESTS'), cx, b.y + b.h + 10, 1, '#ffffff', 'center', OL, 70);
 }
+// неподвижные куски меню (профиль, путь славы, победы дня) — готовой картинкой в точках экрана; перерисовка — только когда меняются данные
+const UIC = new Map();
+function uiCache(id, key, x, y, w, h, fn) {
+  if (ctx.canvas !== cv || perfNoCache) { fn(); return; }
+  let e = UIC.get(id);
+  if (!e || e.key !== key || e.c.__gen !== GFX_GEN || e.K !== cv.width / W) { const c = gfxPic(e && e.c, x, y, w, h, fn); e = { key, c, K: cv.width / W }; UIC.set(id, e); }
+  const t = ctx.getTransform(); if (t.b || t.c) { fn(); return; }
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); drawRaw.call(ctx, e.c, Math.round(t.a * x + t.e), Math.round(t.d * y + t.f)); ctx.restore();
+}
 function drawMenuMeta() {
   // профиль: аватарка, ник и кубки
   const b = BTN.prof;
+  uiCache('prof', [mp.nick, troTotal(), META.prof.av, META.prof.title, myNc(), lang, Math.floor(time * 4) % 4, META.prof.title === 'divine' ? Math.round(time * 4) : 0].join('|'), b.x - 4, b.y - 4, b.w + 8, b.h + 12, () => drawProfBox(b));
+  drawGloryBar();
+  drawQuestIcon(); drawClanBtn();
+  if (questReady()) badge(BTN.quest.x + BTN.quest.w - 4, BTN.quest.y + 2);
+  drawPassBtn();
+  const gn = META.troGain; if (gn && Date.now() - gn.t < 6000) { const a = (Date.now() - gn.t) / 6000; ctx.globalAlpha = 1 - a * a; text('+' + gn.n, b.x + b.w - 10, b.y + 32 + a * 14, 2, '#ffe680', 'center', OL); ctx.globalAlpha = 1; }
+}
+function drawProfBox(b) {
   ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 6); ctx.fillStyle = '#3a2a6a'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(b.x, b.y, b.w, 4);
   avatarDraw(META.prof.av, b.x + 17, b.y + 17, 30);
   text(mp.nick || tr('ПРОФИЛЬ', 'PROFILE'), b.x + 38, b.y + 15, 1, nickCol(myNc()), 'left', OL, b.w - 42);
   const tn = String(troTotal()); trophyIcon(b.x + 44, b.y + 25, 0.5); text(tn, b.x + 52, b.y + 30, 1, '#ffe680', 'left', OL, 50);
   const tt = titleText(META.prof.title); if (tt) text(tt, b.x + 58 + tn.length * 7, b.y + 30, 1, META.prof.title === 'divine' ? divineCol() : '#ffd23a', 'left', OL, b.w - 64 - tn.length * 7);   // титул рядом с именем
-  drawGloryBar();
-  drawQuestIcon(); drawClanBtn();
-  if (questReady()) badge(BTN.quest.x + BTN.quest.w - 4, BTN.quest.y + 2);
-  drawPassBtn();
-  const gn = META.troGain; if (gn && Date.now() - gn.t < 6000) { const a = (Date.now() - gn.t) / 6000; ctx.globalAlpha = 1 - a * a; text('+' + gn.n, b.x + b.w - 10, b.y + 32 + a * 14, 2, '#ffe680', 'center', OL); ctx.globalAlpha = 1; }   // новые кубки
 }
 // ---- Путь славы: награды за кубки (как дорога трофеев), полоса сверху в меню ----
 const GLORY = (() => {
   const T = [10, 25, 50, 80, 120, 160, 200, 250, 300, 375, 450, 525, 600, 700, 800, 900, 1000, 1150, 1300, 1500, 1750, 2000, 2300, 2600, 3000, 3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000, 10000];
-  return T.map((t, i) => ({ t, rw: i % 6 === 5 ? { k: 'chest', gold: i > 20 } : i % 4 === 3 ? { k: 'drop', r: Math.min(3, 1 + Math.floor(i / 10)) } : i % 3 === 1 ? { k: 'gems', n: 3 + Math.floor(i / 4) * 2 } : i % 3 === 2 ? { k: 'power', n: 1 + Math.floor(i / 12) } : { k: 'coins', n: 100 + i * 40 } }));
+  // спокойнее: в основном монеты, кристаллы понемногу, дропы изредка, ящики с героем — только на круглых рубежах
+  const CH = { 1000: 0, 3000: 0, 6000: 0, 10000: 1 };
+  return T.map((t, i) => ({ t, rw: CH[t] != null ? { k: 'chest', gold: !!CH[t] } : i % 8 === 7 ? { k: 'drop', r: i > 24 ? 1 : 0 } : i % 4 === 1 ? { k: 'gems', n: 1 + Math.floor(i / 12) } : i % 5 === 3 ? { k: 'power', n: 1 } : { k: 'coins', n: 40 + i * 15 } }));
 })();
 const gloryGot = () => Math.min(GLORY.length, nat(store.get('glory', 0)));
 const gloryNext = () => GLORY[gloryGot()] || null;
@@ -18184,6 +18336,9 @@ function openGlory() {
 #mo .rs .rn{order:3;gap:3px} #mo .rs .btn{order:4;padding:6px 10px;font-size:12px}`; document.head.appendChild(st); }
 // полоса «Путь славы» в меню: кубки, полоска до следующей награды и сама награда
 function drawGloryBar() {
+  const b = BTN.rank; uiCache('glory', [troTotal(), gloryGot(), gloryReady(), lang].join('|'), b.x - 4, b.y - 4, b.w + 8, b.h + 12, drawGloryBar0);
+}
+function drawGloryBar0() {
   const b = BTN.rank, tro = troTotal(), n = gloryNext(), got = gloryGot(), prev = got ? GLORY[got - 1].t : 0, ready = gloryReady();
   ctx.fillStyle = OL; ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 6); const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h); g.addColorStop(0, '#5a3ab8'); g.addColorStop(1, '#2a1a6a'); ctx.fillStyle = g; ctx.fillRect(b.x, b.y, b.w, b.h);
   ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(b.x, b.y, b.w, 3); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(b.x, b.y + b.h - 3, b.w, 3);
@@ -18192,7 +18347,7 @@ function drawGloryBar() {
   const bx = b.x + 32, by = b.y + 18, bw = b.w - 76; ctx.fillStyle = OL; ctx.fillRect(bx - 2, by - 2, bw + 4, 12); ctx.fillStyle = '#140a30'; ctx.fillRect(bx, by, bw, 8);
   const f = n ? clamp((tro - prev) / (n.t - prev), 0, 1) : 1; ctx.fillStyle = ready ? '#3ce06a' : '#ffd23a'; ctx.fillRect(bx, by, Math.round(bw * f), 8); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(bx, by, Math.round(bw * f), 2);
   text(ready ? tr('ЗАБЕРИ НАГРАДУ!', 'CLAIM REWARD!') : n ? tro + '/' + n.t : String(tro), bx + bw, b.y + 13, 1, ready ? '#9affb0' : '#ffffff', 'right', OL, 120);
-  const rx = b.x + b.w - 22, ry = b.y + b.h / 2 + (ready ? Math.round(-Math.abs(Math.sin(time * 5)) * 3) : 0);   // следующая награда
+  const rx = b.x + b.w - 22, ry = b.y + b.h / 2;   // следующая награда
   if (n) { const rw = n.rw; if (rw.k === 'drop') dropIcon(rw.r, rx, ry, 0.55); else if (rw.k === 'coins') coinIcon(rx, ry, 8); else if (rw.k === 'gems') gemIcon(rx, ry, 0.55); else if (rw.k === 'chest') { ctx.save(); ctx.translate(rx, ry + 4); ctx.scale(0.6, 0.6); chestIcon(0, 0, false, 0, !!rw.gold); ctx.restore(); } else powerIcon('magnet', rx, ry, 0.6); }
 }
 function menuMetaClick(pt) {
@@ -18978,7 +19133,7 @@ setInterval(() => {
 const FR = { code: '', list: (v => Array.isArray(v) ? v.filter(f => f && typeof f.u === 'string') : [])(store.get('friends', [])), pres: {}, inbox: [], skew: 0, pollT: 0, presT: 0, err: '', note: '' };
 const FR_ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const frSave = () => store.set('friends', FR.list.slice(0, 100));
-const frNick = () => nickValid(mp.nick) ? mp.nick : 'Player' + String(mp.id).slice(0, 4);
+const frNick = () => nickValid(mp.nick) ? netNick(mp.nick) : 'Player' + String(mp.id).slice(0, 4);
 const frAv = () => String((META.prof && META.prof.av) || skinId).slice(0, 44);
 const frNow = () => Date.now() + FR.skew;
 const frLive = () => fbOn() && !!store.get('fbAuth', null);   // уже входили (гость или Google) — можно в сеть без лишних окон
@@ -19055,8 +19210,12 @@ async function frPresAll() {
 }
 const frOpenNow = () => moStack.length && moStack[moStack.length - 1].fr;
 const frOnline = f => { const d = FR.pres[f.u]; return !!d && frNow() - (+d.t || 0) < 50000; };
+// когда друг был в сети: запоминаем у себя (своя отметка друга стирается, когда он выходит из игры)
+const FR_SEEN = (v => v && typeof v === 'object' ? v : {})(store.get('frSeen', {}));
+function frSeenNote(u, t) { if (!(t > 0)) return; if ((FR_SEEN[u] || 0) < t) { FR_SEEN[u] = t; clearTimeout(frSeenNote.t); frSeenNote.t = setTimeout(() => store.set('frSeen', FR_SEEN), 1000); } }
 function frSeen(f) {   // «в сети» или «был … назад»
-  const d = FR.pres[f.u]; if (!d || !d.t) return tr('НЕ В СЕТИ', 'OFFLINE');
+  let d = FR.pres[f.u]; if (d && d.t) frSeenNote(f.u, +d.t);
+  if (!d || !d.t) { const s = FR_SEEN[f.u]; if (!s) return tr('НЕ В СЕТИ', 'OFFLINE'); d = { t: s }; }
   if (frOnline(f)) return d.st === 'play' ? tr('● ИГРАЕТ СЕЙЧАС', '● PLAYING NOW') : tr('● В СЕТИ', '● ONLINE');
   const m = Math.max(1, Math.round((frNow() - d.t) / 60000));
   if (m < 60) return trf('БЫЛ {n} МИН НАЗАД', 'SEEN {n} MIN AGO', { n: m });
@@ -19087,7 +19246,7 @@ function frWatch(on) {
   for (const u of want) { if (FRW[u] || !FB.tok) continue;
     try { const es = new EventSource(fbUrl('pres/' + u)); FRW[u] = es;
       const ev = e => { try { const m = JSON.parse(e.data); if (!m) return; const path = (m.path || '/').split('/').filter(Boolean);
-        if (!path.length) FR.pres[u] = m.data && typeof m.data === 'object' ? m.data : null; else FR.pres[u] = Object.assign({}, FR.pres[u] || {}, { [path[0]]: m.data });
+        if (!path.length) { if (!m.data && FR.pres[u] && FR.pres[u].t) frSeenNote(u, frNow()); FR.pres[u] = m.data && typeof m.data === 'object' ? m.data : null; }   // вышел только что — запомнили время else FR.pres[u] = Object.assign({}, FR.pres[u] || {}, { [path[0]]: m.data });
         clearTimeout(frWatch.t); frWatch.t = setTimeout(() => { if (frOpenNow()) moRefresh(); }, 250); } catch (x) {} };
       es.addEventListener('put', ev); es.addEventListener('patch', ev); es.addEventListener('cancel', () => { es.close(); delete FRW[u]; }); es.onerror = () => { es.close(); delete FRW[u]; };
     } catch (e) {} }
@@ -21083,7 +21242,7 @@ function rpDrawWorld() {   // герои повтора — поверх мир�
   for (const e of rpPeople(RP.t0 + RP.t)) {
     if (e.dead || e.y < camY - 80 || e.y > camY + H + 80) continue;
     const k = mpSkin(e.s), pose = e.fin ? 'cheer' : e.st === 'wall' ? 'cling' : e.st === 'ground' ? 'idle' : e.vy < -40 ? 'jump' : 'fall';
-    heroSprite(k, pose, time + e.x * 0.01, false);
+    heroSprite(k, pose, time + (e.n || '').length * 0.37, false);
     ctx.save(); ctx.translate(even(e.x), even(e.y)); ctx.scale(e.f, 1); if (e.st === 'air' && !e.fin) ctx.rotate(clamp(e.vy / 2400, -0.25, 0.25));
     if (e.me) { const tc = tintSprite('#3ce06a', 1); for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) ctx.drawImage(tc, -32 + dx, -52 + dy, 64, 80); }   // свой герой — с зелёным контуром, как в раунде
     ctx.drawImage(hcv, -32, -52, 64, 80); ctx.restore();
