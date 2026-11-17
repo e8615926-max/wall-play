@@ -9242,7 +9242,7 @@ function uiClick(pt) {
     if (inRect(pt, BTN.store)) return open(1);
     if (inRect(pt, BTN.wheel)) return open(2);
     if (inRect(pt, BTN.ach)) { audio(); startMusic(); state = 'ach'; acScroll = 0; sfx.click(); return true; }
-    if (inRect(pt, BTN.menuB)) { audio(); startMusic(); sfx.click(); openMainMenu(); return true; }
+    if (inRect(pt, BTN.menuB)) { audio(); startMusic(); sfx.click(); openSideMenu(); return true; }
     if (inRect(pt, BTN.mp)) { audio(); startMusic(); sfx.click(); mpOpen(); return true; }
     if (inRect(pt, BTN.friends)) { audio(); startMusic(); sfx.click(); openFriends(); return true; }
     if (inRect(pt, BTN.clan)) { audio(); startMusic(); if (!CLAN.in && troTotal() < CLAN_NEED) { sfx.no(); menuMsg(trf('КЛУБЫ — С {n} КУБКОВ', 'CLUBS AT {n} TROPHIES', { n: CLAN_NEED }), trf('У ТЕБЯ {n}', 'YOU HAVE {n}', { n: troTotal() })); return true; } sfx.click(); openClans(); return true; }
@@ -20347,11 +20347,52 @@ function openMainMenu() {
     big(tr('КОНСТРУКТОР КАРТ', 'MAP MAKER'), trf('СВОИ КАРТЫ: {n} ИЗ {m}', 'YOUR MAPS: {n} OF {m}', { n: edMaps().length, m: ED_MAX }), ['#3a9a3a', '#1a4a1a'], menuIcon('map'), openMaps);
   });
 }
+// меню «три полоски»: панель справа во всю высоту выезжает, пункты влетают справа по очереди (как в Brawl Stars)
+let sideUi = null;
+function openSideMenu() {
+  if (sideUi) return;
+  if (!document.getElementById('sideCss')) { const st = document.createElement('style'); st.id = 'sideCss'; st.textContent = `
+#side{position:fixed;inset:0;z-index:95;font-family:Montserrat,sans-serif;font-weight:900;text-transform:uppercase}
+#side .bg{position:absolute;inset:0;background:rgba(8,4,24,.55);animation:sdBg .25s ease-out}
+#side .pn{position:absolute;top:0;bottom:0;right:0;width:min(80vw,340px);background:linear-gradient(180deg,#3a2a7a,#1a1040);border-left:4px solid #1a0a04;box-shadow:-10px 0 30px #0009;display:flex;flex-direction:column;padding:max(14px,env(safe-area-inset-top)) 12px 14px;gap:10px;animation:sdIn .32s cubic-bezier(.2,1.2,.4,1);overflow-y:auto}
+#side.out .pn{transform:translateX(105%);transition:transform .22s ease-in} #side.out .bg{opacity:0;transition:opacity .22s}
+#side .hd{display:flex;align-items:center;justify-content:space-between;color:#ffd23a;font-size:20px;letter-spacing:2px;text-shadow:0 3px 0 #1a0a04,2px 0 #1a0a04,-2px 0 #1a0a04}
+#side .x{width:40px;height:40px;border-radius:50%;border:3px solid #1a0a04;background:#ff5a4a;color:#fff;font:900 18px sans-serif;box-shadow:0 3px 0 #1a0a04;cursor:pointer}
+#side .it{display:flex;align-items:center;gap:12px;padding:10px;border:3px solid #1a0a04;border-radius:14px;color:#fff;cursor:pointer;box-shadow:0 4px 0 #1a0a04,inset 0 2px 0 #ffffff44;opacity:0;animation:sdItem .38s cubic-bezier(.2,1.3,.4,1) forwards;font-size:15px;text-shadow:0 2px 0 #1a0a04}
+#side .it:active{transform:translateY(3px);box-shadow:0 1px 0 #1a0a04}
+#side .it small{display:block;font-size:10px;color:#ffffffcc;text-shadow:none;font-weight:800;margin-top:2px}
+#side .it canvas{width:44px;height:44px;flex:none;image-rendering:pixelated;border:3px solid #1a0a04;border-radius:10px;background:#1a1030}
+@keyframes sdIn{from{transform:translateX(100%)}} @keyframes sdBg{from{opacity:0}} @keyframes sdItem{from{opacity:0;transform:translateX(120px)}to{opacity:1;transform:none}}`; document.head.appendChild(st); }
+  sideUi = document.createElement('div'); sideUi.id = 'side';
+  const bg = document.createElement('div'); bg.className = 'bg'; const pn = document.createElement('div'); pn.className = 'pn';
+  const close = (then) => { if (!sideUi) return; const s = sideUi; sideUi = null; s.classList.add('out'); setTimeout(() => s.remove(), 230); if (then) setTimeout(then, 120); };
+  bg.onclick = () => { sfx.click(); close(); };
+  const hd = document.createElement('div'); hd.className = 'hd'; hd.append(document.createTextNode('WALL PLAY')); const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = () => { sfx.click(); close(); }; hd.appendChild(x); pn.appendChild(hd);
+  const items = [
+    [tr('ДАННЫЕ БОЯ', 'BATTLE LOG'), trf('ПОВТОРЫ РАУНДОВ ЗА 5 ДНЕЙ: {n}', 'ROUND REPLAYS FROM 5 DAYS: {n}', { n: rpList().length }), ['#3a5ad8', '#1a2a8a'], 'replay', openReplays],
+    [tr('СПИСОК ЛИДЕРОВ', 'LEADERBOARDS'), tr('ОБЩИЙ РЕЙТИНГ И ТОП ПО ГЕРОЯМ', 'OVERALL AND BY HERO'), ['#ffb02a', '#a05a00'], 'board', () => openBoard()],
+    [tr('ВХОДЯЩИЕ', 'INBOX'), tr('НОВОСТИ И СООБЩЕНИЯ', 'NEWS AND MESSAGES'), ['#c04aff', '#5a1aa0'], 'inbox', openNews],
+    [tr('ДРУЖЕСКИЙ БОЙ', 'FRIENDLY BATTLE'), tr('КОМНАТА ПО КОДУ ДЛЯ ДРУЗЕЙ', 'A ROOM WITH A CODE FOR FRIENDS'), ['#3ce06a', '#1a7a3a'], 'friend', mpOpen],
+    [tr('СОЗДАНИЕ КАРТ', 'MAP MAKER'), trf('СВОИ КАРТЫ: {n} ИЗ {m}', 'YOUR MAPS: {n} OF {m}', { n: edMaps().length, m: ED_MAX }), ['#2ab8a0', '#0a5a4a'], 'map', openMaps],
+    ['WALL PLAY ID', tr('АККАУНТ, ВХОД И СОХРАНЕНИЕ', 'ACCOUNT, SIGN-IN AND SAVES'), ['#ff5a8a', '#a01a4a'], 'id', openAccounts],
+  ];
+  items.forEach(([t, sub, col, ic, fn], i) => {
+    const it = document.createElement('div'); it.className = 'it'; it.style.background = 'linear-gradient(90deg,' + col[0] + ',' + col[1] + ')'; it.style.animationDelay = (0.06 + i * 0.05) + 's';
+    const w = document.createElement('div'); w.style.cssText = 'flex:1;min-width:0'; w.textContent = t; const s = document.createElement('small'); s.textContent = sub; w.appendChild(s);
+    it.append(menuIcon(ic), w); it.onclick = () => { sfx.click(); close(fn); }; pn.appendChild(it);
+  });
+  sideUi.append(bg, pn); document.body.appendChild(sideUi);
+  try { tone(500, 900, 0.12, 'triangle', 0.04); } catch (e) {}
+}
 function menuIcon(kind) {
   const c = document.createElement('canvas'); c.width = c.height = 32; c.style.cssText = 'width:48px;height:48px;image-rendering:pixelated;flex:none;border:3px solid #2a1408;border-radius:12px;background:#1a1030';
   withCtx(c, () => {
     ctx.setTransform(1, 0, 0, 1, 0, 0); const P = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
     if (kind === 'replay') { P(6, 8, 20, 16, OL); P(8, 10, 16, 12, '#7ad8ff'); P(13, 12, 2, 8, '#ffffff'); P(15, 13, 2, 6, '#ffffff'); P(17, 14, 2, 4, '#ffffff'); P(6, 26, 20, 2, '#ffd23a'); P(18, 25, 4, 4, '#ffffff'); }
+    else if (kind === 'board') { P(4, 18, 8, 10, OL); P(12, 10, 8, 18, OL); P(20, 14, 8, 14, OL); P(5, 19, 6, 8, '#c8d0e0'); P(13, 11, 6, 16, '#ffd23a'); P(21, 15, 6, 12, '#e0904a'); P(15, 13, 2, 3, '#ffffff'); P(14, 4, 4, 5, '#ffd23a'); }
+    else if (kind === 'inbox') { P(4, 8, 24, 18, OL); P(6, 10, 20, 14, '#ffffff'); P(6, 10, 2, 2, '#c8c8e0'); for (let i = 0; i < 6; i++) { P(6 + i * 2, 10 + i, 2, 2, '#8a8aa8'); P(24 - i * 2, 10 + i, 2, 2, '#8a8aa8'); } P(22, 4, 8, 8, OL); P(23, 5, 6, 6, '#ff3a3a'); }
+    else if (kind === 'friend') { P(6, 6, 6, 6, OL); P(7, 7, 4, 4, '#ffe0c0'); P(4, 13, 10, 9, OL); P(5, 14, 8, 7, '#3ab0ff'); P(20, 6, 6, 6, OL); P(21, 7, 4, 4, '#ffe0c0'); P(18, 13, 10, 9, OL); P(19, 14, 8, 7, '#ff5a5a'); P(12, 22, 8, 6, OL); P(13, 23, 6, 4, '#ffd23a'); P(15, 18, 2, 5, '#c8d0e0'); }
+    else if (kind === 'id') { P(3, 7, 26, 18, OL); P(5, 9, 22, 14, '#e8f0ff'); P(7, 11, 7, 8, '#ffb07a'); P(8, 12, 5, 4, '#ffe0c0'); P(16, 12, 9, 2, '#5a5a7a'); P(16, 16, 7, 2, '#8a8aa8'); P(5, 9, 22, 2, '#3ab0ff'); }
     else if (kind === 'map') { P(4, 6, 24, 22, OL); P(6, 8, 20, 18, '#5ae07a'); P(10, 10, 3, 14, '#c8803a'); P(19, 12, 3, 12, '#c8803a'); P(14, 8, 4, 4, '#ffd23a'); P(22, 20, 6, 6, OL); P(23, 21, 4, 4, '#ffffff'); }
     else { ctx.fillStyle = OL; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, r = i % 2 ? 6 : 14; ctx.lineTo(16 + Math.cos(a) * r, 17 + Math.sin(a) * r); } ctx.fill(); ctx.fillStyle = '#ffd23a'; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, r = i % 2 ? 4 : 11; ctx.lineTo(16 + Math.cos(a) * r, 17 + Math.sin(a) * r); } ctx.fill(); }
   });
