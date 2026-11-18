@@ -3398,7 +3398,9 @@ function pick(opts) {
 }
 
 // Пиксельные примитивы: «пиксель» = 2×2 точки
+let AV_HQ = false;   // рисуем аватарку: точные фигуры без привязки к сетке 2×2 (иначе глаза выходили разного размера)
 function prect(c, x, y, w, h, col) {
+  if (AV_HQ) { c.fillStyle = col; c.fillRect(x, y, w, h); return; }
   const x0 = even(x), y0 = even(y), x1 = even(x + w), y1 = even(y + h);
   if (x1 > x0 && y1 > y0) { c.fillStyle = col; c.fillRect(x0, y0, x1 - x0, y1 - y0); }
 }
@@ -3406,6 +3408,7 @@ function prect(c, x, y, w, h, col) {
 // вместо десятков полосок — монеты, солнце, облака, значки и кнопки; центр — на сетке 2 px, как и сами полоски
 const PELL_CACHE = new Map(), PELL_SEEN = new Set();
 function pell(c, cx, cy, rx, ry, col) {
+  if (AV_HQ) { c.fillStyle = col; c.beginPath(); c.ellipse(cx, cy, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, 7); c.fill(); return; }
   if (ry >= 5 && typeof col === 'string' && c.imageSmoothingEnabled === false && rx > 0) {
     rx = Math.round(rx * 2) / 2; ry = Math.round(ry * 2) / 2;
     const key = rx + ',' + ry + ',' + col;
@@ -16573,7 +16576,7 @@ function avatarArt(id, t) {
 const AV_PIX = new Map();
 // аватарка: рисунок в 64×64 (вдвое детальнее), чёткая палитра, тёмная обводка, фон с лучами, свет сзади и блик.
 // «Божественный» (из набора премиума) остаётся как был
-const AV_S = 64;
+const AV_S = 48;
 // фон аватарки-героя: в его цветах, с лучами и светом (раньше — тёмный квадрат)
 const AVBG = new Map();
 function heroAvBg(k, gold) {
@@ -16590,12 +16593,21 @@ function avatarPix(a, fr) {
   const key = a.id + fr; let c = AV_PIX.get(key); if (c) return c;
   const old = a.pack, S2 = old ? 32 : AV_S, k = S2 / 32;
   const art = document.createElement('canvas'); art.width = art.height = S2;
-  withCtx(art, () => { ctx.setTransform(k, 0, 0, k, 0, 0); avatarArt(a.id, fr * 0.4); });
+  let pal;
+  if (old) withCtx(art, () => { ctx.setTransform(1, 0, 0, 1, 0, 0); avatarArt(a.id, fr * 0.4); });
+  else {   // точные фигуры в 6 раз крупнее → уменьшение с усреднением → чёткая палитра: симметрично и ровно
+    const HQ = S2 * 4, hi = document.createElement('canvas'); hi.width = hi.height = HQ;
+    AV_HQ = true; try { withCtx(hi, () => { ctx.setTransform(HQ / 32, 0, 0, HQ / 32, 0, 0); ctx.imageSmoothingEnabled = true; avatarArt(a.id, fr * 0.4); }); } finally { AV_HQ = false; }
+    const hd = hi.getContext('2d').getImageData(0, 0, HQ, HQ).data, hc = new Map();
+    for (let i = 0; i < hd.length; i += 4) if (hd[i + 3] > 250) { const q = (hd[i] << 16) | (hd[i + 1] << 8) | hd[i + 2]; hc.set(q, (hc.get(q) || 0) + 1); }
+    pal = [...hc.entries()].filter(e => e[1] >= 24).sort((u, v) => v[1] - u[1]).slice(0, 16).map(e => [e[0] >> 16, (e[0] >> 8) & 255, e[0] & 255]);
+    const ag0 = art.getContext('2d'); ag0.imageSmoothingEnabled = true; ag0.imageSmoothingQuality = 'high'; ag0.drawImage(hi, 0, 0, S2, S2);
+  }
   const ag = art.getContext('2d'), d = ag.getImageData(0, 0, S2, S2), px = d.data, cnt = new Map();
-  for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 250) { const q = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]; cnt.set(q, (cnt.get(q) || 0) + 1); }
-  const pal = [...cnt.entries()].filter(e => e[1] >= 2 * k * k).sort((u, v) => v[1] - u[1]).slice(0, old ? 12 : 16).map(e => [e[0] >> 16, (e[0] >> 8) & 255, e[0] & 255]);
+  if (old) { for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 250) { const q = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]; cnt.set(q, (cnt.get(q) || 0) + 1); }
+    pal = [...cnt.entries()].filter(e => e[1] >= 2).sort((u, v) => v[1] - u[1]).slice(0, 12).map(e => [e[0] >> 16, (e[0] >> 8) & 255, e[0] & 255]); }
   for (let i = 0; i < px.length; i += 4) {   // каждый пиксель — либо пусто, либо один из основных цветов рисунка
-    if (px[i + 3] < 110) { px[i + 3] = 0; continue; }
+    if (px[i + 3] < (old ? 110 : 128)) { px[i + 3] = 0; continue; }
     let best = null, bd = 1e9; for (const q of pal) { const dd = (q[0] - px[i]) ** 2 + (q[1] - px[i + 1]) ** 2 + (q[2] - px[i + 2]) ** 2; if (dd < bd) { bd = dd; best = q; } }
     if (best) { px[i] = best[0]; px[i + 1] = best[1]; px[i + 2] = best[2]; } px[i + 3] = 255;
   }
@@ -16607,14 +16619,15 @@ function avatarPix(a, fr) {
   ag.putImageData(d, 0, 0);
   c = document.createElement('canvas'); c.width = c.height = S2; const cg = c.getContext('2d');
   if (old) { for (let b = 0; b < 4; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 3); cg.fillRect(0, b * 8, 32, 8); } cg.fillStyle = 'rgba(255,255,255,0.18)'; cg.fillRect(2, 2, 6, 2); cg.fillRect(2, 4, 2, 4); cg.drawImage(art, 0, 0); AV_PIX.set(key, c); return c; }
-  for (let b = 0; b < 8; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 7); cg.fillRect(0, b * 8, S2, 8); }   // фон ступеньками
+  cg.save(); cg.scale(S2 / 64, S2 / 64);   // фон рисуется в разметке 64×64
+  for (let b = 0; b < 8; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 7); cg.fillRect(0, b * 8, 64, 8); }   // фон ступеньками
   cg.save(); cg.translate(32, 34); cg.rotate(fr * 0.08); cg.fillStyle = 'rgba(255,255,255,0.10)';   // лучи
   for (let r2 = 0; r2 < 8; r2++) { cg.rotate(Math.PI / 4); cg.beginPath(); cg.moveTo(0, 0); cg.lineTo(-7, -48); cg.lineTo(7, -48); cg.fill(); } cg.restore();
   cg.fillStyle = 'rgba(255,255,255,0.16)'; for (let r2 = 22; r2 > 4; r2 -= 6) { cg.beginPath(); cg.arc(32, 32, r2, 0, 7); cg.fill(); }   // свет за рисунком
-  cg.fillStyle = 'rgba(0,0,0,0.25)'; cg.fillRect(14, 56, 36, 3);   // тень снизу
+  cg.fillStyle = 'rgba(0,0,0,0.25)'; cg.fillRect(14, 56, 36, 4); cg.restore();   // тень снизу
   cg.drawImage(art, 0, 0);
-  cg.fillStyle = 'rgba(255,255,255,0.35)'; cg.fillRect(4, 4, 12, 3); cg.fillRect(4, 7, 3, 7);   // блик в углу
-  cg.fillStyle = 'rgba(0,0,0,0.3)'; cg.fillRect(0, S2 - 3, S2, 3); cg.fillRect(S2 - 3, 0, 3, S2);   // объём: тень по краю
+  cg.fillStyle = 'rgba(255,255,255,0.35)'; cg.fillRect(3, 3, 9, 2); cg.fillRect(3, 5, 2, 5);   // блик в углу
+  cg.fillStyle = 'rgba(0,0,0,0.3)'; cg.fillRect(0, S2 - 2, S2, 2); cg.fillRect(S2 - 2, 0, 2, S2);   // объём: тень по краю
   AV_PIX.set(key, c); return c;
 }
 function avatarDraw(av, cx, cy, size, t = time) {
@@ -16973,7 +16986,7 @@ const dayGReady = () => { const g = dayGames(); return DAYG.some((s, i) => g.n >
 const DWIN_N = 10;
 function dayWins() { let g = store.get('dwin', null); if (!g || g.d !== dayNum()) { g = { d: dayNum(), n: 0, cl: 0, rr: [] }; store.set('dwin', g); } g.n = Math.min(DWIN_N, nat(g.n)); g.cl = Math.min(g.n, nat(g.cl)); if (!Array.isArray(g.rr)) g.rr = []; return g; }
 // ---- дропы: у каждого своя редкость (шансы ниже); тапаешь — редкость может подняться, потом он раскрывается и из него вылетают призы ----
-const DROP_PIX = ["......OOOO......", "....OOLLLLOO....", "...OLLHHLLLLO...", "..OLHHLLLLLLMO..", ".OLHLLLYYLLLMMO.", ".OLLLLLYYLLLMMO.", "OLLLLLYYYYLLLMMO", "OLYYYYYYYYYYYMMO", "OLLYYYYYYYYYYMMO", "OLLLYYYYYYYYLMMO", ".OLLLYYYYYYLLMO.", ".OLLYYYLLYYYMMO.", "..OLYYLLLLYYMO..", "...OMMMMMMMMO...", "....OOMMMMOO....", "......OOOO......"], CHECK_PIX = ["..........OO", ".........OGO", "........OGGO", ".OO....OGGO.", "OGGO..OGGO..", "OGGGOOGGO...", ".OGGGGGGO...", "..OGGGGO....", "...OGGO.....", "....OO......"], CHECK_COL = { O: '#1a1030', G: '#3ce06a' };
+const DROP_PIX = ["OOOOOOOOOOOOOOOOOO", "OHHHHHHHBBHHHHHLLO", "OHWWWHHHBBHHHHHLLO", "OHHHHHHHBBHHHHHLLO", "OMMMMMMMDDMMMMMLLO", "OHHHHHHHBBHHHHHHHO", "OOWLLLLLBYLLLLMMOO", ".OWLLLLLYYYLLLMMO.", ".OWLLLLYYYYYLLMMO.", ".OLLLLLLYYYLLLMMO.", ".OLLLLLLYBYLLLMMO.", ".OLLLLLLBBLLLLMMO.", ".OMMMMMMBBMMMMMMO.", ".OMMMMMMBBMMMMMMO.", ".OOOOOOOOOOOOOOOO."], CHECK_PIX = ["..........OO", ".........OGO", "........OGGO", ".OO....OGGO.", "OGGO..OGGO..", "OGGGOOGGO...", ".OGGGGGGO...", "..OGGGGO....", "...OGGO.....", "....OO......"], CHECK_COL = { O: '#1a1030', G: '#3ce06a' };
 const DROP_R = [
   { ru: 'РЕДКИЙ', en: 'RARE', p: 52, c: ['#5ae06a', '#c8ffc0', '#2a9a3a'] },
   { ru: 'СВЕРХРЕДКИЙ', en: 'SUPER RARE', p: 30, c: ['#3ab0ff', '#bfe8ff', '#1a60c0'] },
@@ -16981,19 +16994,19 @@ const DROP_R = [
   { ru: 'МИФИЧЕСКИЙ', en: 'MYTHIC', p: 1, c: ['#ff3a5a', '#ffc0c8', '#a0102a'] },
   { ru: 'ЛЕГЕНДАРНЫЙ', en: 'LEGENDARY', p: 0.5, c: ['#ffc23a', '#fff6b0', '#c07a00'] }];
 const DROP_UNK = ['#7a6aa8', '#b8a8e0', '#3a2a6a'];
-const DROP_BONUS = 10, DROP_BIG = 3;   // в 1 дропе из 10 — ещё и ящик с героем; из них большой — 3 из 100 дропов
+const DROP_BONUS = 2.5, DROP_BIG = 0.5;   // в 1 дропе из 10 — ещё и ящик с героем; из них большой — 3 из 100 дропов
 // у каждого цвета — своя копия строк: заготовки значков хранятся по строкам
-const DROP_ICONS = DROP_R.map(r => r.c).concat([DROP_UNK]).map((c, i) => ({ rows: DROP_PIX.slice(), cols: { O: '#1a1030', L: c[0], H: c[1], M: c[2], Y: i === 5 ? '#d8d0f0' : '#ffffff' } }));
+const DROP_ICONS = DROP_R.map(r => r.c).concat([DROP_UNK]).map((c, i) => ({ rows: DROP_PIX.slice(), cols: { O: '#1a1030', L: c[0], H: c[1], M: c[2], B: i === 4 ? '#ffffff' : '#ffd23a', D: '#c8820a', W: '#ffffff', Y: i === 5 ? '#d8d0f0' : '#ffffff' } }));   // дроп — ящик с лентой и звездой
 const dropIcon = (r, x, y, s) => { const d = DROP_ICONS[r < 0 ? 5 : r]; pixIcon(d.rows, d.cols, x, y, s); };
-function dropCnv(r, size) { const c = document.createElement('canvas'); c.width = c.height = 16; c.style.cssText = 'width:' + size + 'px;height:' + size + 'px;image-rendering:pixelated'; const g = c.getContext('2d'), d = DROP_ICONS[r < 0 ? 5 : r]; d.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const col = d.cols[row[x]]; if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); } } }); return c; }
+function dropCnv(r, size) { const c = document.createElement('canvas'); c.width = DROP_PIX[0].length; c.height = DROP_PIX.length; c.style.cssText = 'width:' + size + 'px;height:' + Math.round(size * c.height / c.width) + 'px;image-rendering:pixelated'; const g = c.getContext('2d'), d = DROP_ICONS[r < 0 ? 5 : r]; d.rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const col = d.cols[row[x]]; if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); } } }); return c; }
 function dropRoll(min = 0) { let x = Math.random() * 100, r = 0; for (let i = DROP_R.length - 1; i >= 0; i--) { const lo = DROP_R.slice(i + 1).reduce((a, q) => a + q.p, 0); if (x < lo + DROP_R[i].p && x >= lo) { r = i; break; } } return Math.max(min, r); }
-function dropPrizes(r) {
-  const R = Math.random(), L = [];
-  if (r === 0) L.push(R < 0.6 ? { k: 'coins', n: 50 + Math.floor(Math.random() * 40) } : R < 0.85 ? { k: 'xp', n: 60 } : { k: 'power', n: 1 });
-  else if (r === 1) L.push(R < 0.45 ? { k: 'coins', n: 150 + Math.floor(Math.random() * 60) } : R < 0.75 ? { k: 'gems', n: 3 } : { k: 'power', n: 2 });
-  else if (r === 2) { L.push(R < 0.5 ? { k: 'gems', n: 6 } : { k: 'coins', n: 350 }); L.push({ k: 'power', n: 2 }); }
-  else if (r === 3) { L.push(R < 0.85 ? { k: 'gems', n: 15 } : { k: 'ruby', n: 1 }); L.push({ k: 'coins', n: 250 }); }
-  else { L.push(R < 0.7 ? { k: 'gems', n: 40 } : { k: 'ruby', n: 1 }); L.push({ k: 'coins', n: 500 }); L.push({ k: 'xp', n: 200 }); }
+function dropPrizes(r) {   // спокойно: обычно один приз; ящик с героем — редкая удача
+  const R = Math.random(), L = [], n = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  if (r === 0) L.push(R < 0.6 ? { k: 'coins', n: n(20, 40) } : R < 0.9 ? { k: 'xp', n: 30 } : { k: 'power', n: 1 });
+  else if (r === 1) L.push(R < 0.55 ? { k: 'coins', n: n(60, 90) } : R < 0.8 ? { k: 'xp', n: 60 } : R < 0.93 ? { k: 'power', n: 1 } : { k: 'gems', n: 1 });
+  else if (r === 2) L.push(R < 0.5 ? { k: 'coins', n: n(140, 180) } : R < 0.8 ? { k: 'gems', n: 3 } : { k: 'power', n: 2 });
+  else if (r === 3) { L.push(R < 0.6 ? { k: 'gems', n: 8 } : { k: 'coins', n: 400 }); }
+  else { L.push(R < 0.85 ? { k: 'gems', n: 20 } : { k: 'ruby', n: 1 }); L.push({ k: 'coins', n: 300 }); }
   const b = Math.random() * 100; if (b < DROP_BIG) L.push({ k: 'chest', gold: true }); else if (b < DROP_BONUS) L.push({ k: 'chest' });
   return L;
 }
@@ -17010,7 +17023,7 @@ function dropShow(opt = {}) {
   const ov = document.createElement('div'); ov.id = 'dropov';
   for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown', 'wheel']) ov.addEventListener(ev, e => e.stopPropagation(), { passive: ev === 'wheel' || ev.startsWith('touch') });
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-  const rays = el('div', 'rays'), ttl = el('div', 'tt', opt.road ? tr('ПУТЬ СЛАВЫ', 'ROAD OF GLORY') : tr('ПОБЕДА ДНЯ', 'DAILY WIN')), stage = el('div', 'stage'), box = el('div', 'box'), nm = el('div', 'nm'), hint = el('div', 'hint', tr('ТАПНИ!', 'TAP!'));
+  const rays = el('div', 'rays'), ttl = el('div', 'tt', opt.road ? tr('ПУТЬ СЛАВЫ', 'ROAD OF GLORY') : tr('ПОБЕДА ДНЯ', 'DAILY WIN')), stage = el('div', 'stage'), box = el('div', 'box'), nm = el('div', 'nm'), hint = el('div', 'hint', tr('ЖМИ! ЖМИ!', 'TAP! TAP!'));
   const left = el('div', 'lf'); if (!opt.road) left.textContent = trf('ДРОП {a} ИЗ {b}', 'DROP {a} OF {b}', { a: g.cl + 1, b: DWIN_N });
   let cnv = dropCnv(shown, 170); box.appendChild(cnv); stage.appendChild(box);
   const paint = () => { const R = DROP_R[shown]; ov.style.setProperty('--dc', R.c[0]); ov.style.setProperty('--dk', R.c[2]); nm.textContent = tr(R.ru, R.en); const c2 = dropCnv(shown, 170); box.replaceChild(c2, cnv); cnv = c2; };
@@ -17023,7 +17036,7 @@ function dropShow(opt = {}) {
     if (shown < r) {   // редкость поднимается
       shown++; paint(); burst(16); box.classList.remove('up'); void box.offsetWidth; box.classList.add('up');
       try { tone(520 + shown * 160, 900 + shown * 240, 0.16, 'square', 0.05); tone(1040 + shown * 200, 1040 + shown * 200, 0.12, 'triangle', 0.04, 0.1); } catch (e) {}
-      hint.textContent = shown >= 3 ? tr('ОГО! ЕЩЁ ТАП!', 'WOW! TAP AGAIN!') : tr('ЕЩЁ ТАП!', 'TAP AGAIN!'); if (shown >= 3) vib([30, 20, 60]);
+      hint.textContent = shown >= 3 ? tr('ОГО! ЖМИ ЕЩЁ!', 'WOW! TAP AGAIN!') : tr('ЖМИ! ЖМИ!', 'TAP! TAP!'); if (shown >= 3) vib([30, 20, 60]);
       return;
     }
     opened = true; hint.textContent = '';
@@ -17910,7 +17923,7 @@ function openDayWins() { moOpen(tr('ПОБЕДЫ ДНЯ', 'DAILY WINS'), bd => {
 function dropChancesCard() {
   const c = moEl('div', 'card'); c.appendChild(moTxt('div', 'ol', tr('ШАНСЫ ДРОПОВ', 'DROP CHANCES')));
   DROP_R.forEach((R, i) => { const r = moEl('div', 'row'); r.style.cssText = 'gap:8px;margin-top:6px'; const n = moTxt('div', 'ol', tr(R.ru, R.en)); n.style.cssText = 'flex:1;color:' + R.c[0]; r.append(dropCnv(i, 28), n, moTxt('div', 'ol', R.p + '%')); c.appendChild(r); });
-  c.appendChild(moTxt('div', 'sm', trf('ПЕРВЫЙ ДРОП ДНЯ — НЕ НИЖЕ СВЕРХРЕДКОГО. ТАПАЙ ПО ДРОПУ — РЕДКОСТЬ МОЖЕТ ПОДНЯТЬСЯ. БОНУС: ЯЩИК С ГЕРОЕМ — {a}%, БОЛЬШОЙ ЯЩИК — {b}%', 'THE FIRST DROP OF THE DAY IS AT LEAST SUPER RARE. TAP THE DROP — ITS RARITY MAY RISE. BONUS: A HERO BOX — {a}%, A BIG BOX — {b}%', { a: DROP_BONUS - DROP_BIG, b: DROP_BIG })));
+  c.appendChild(moTxt('div', 'sm', trf('ПЕРВЫЙ ДРОП ДНЯ — НЕ НИЖЕ СВЕРХРЕДКОГО. ТАПАЙ ПО ДРОПУ — РЕДКОСТЬ МОЖЕТ ПОДНЯТЬСЯ. БОНУС: ЯЩИК С ГЕРОЕМ — {a}%, БОЛЬШОЙ ЯЩИК — {b}%', 'THE FIRST DROP OF THE DAY IS AT LEAST SUPER RARE. TAP THE DROP — ITS RARITY MAY RISE. BONUS: A HERO BOX — {a}%, A BIG BOX — {b}%', { a: +(DROP_BONUS - DROP_BIG).toFixed(1), b: DROP_BIG })));
   c.lastChild.style.marginTop = '8px'; return c;
 }
 function dayGamesCard() {
