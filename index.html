@@ -3410,6 +3410,7 @@ function pick(opts) {
 }
 
 // Пиксельные примитивы: «пиксель» = 2×2 точки
+const APP_VER = 'v84';
 let AV_HQ = false;   // рисуем аватарку: точные фигуры без привязки к сетке 2×2 (иначе глаза выходили разного размера)
 function prect(c, x, y, w, h, col) {
   if (AV_HQ) { c.fillStyle = col; c.fillRect(x, y, w, h); return; }
@@ -12378,7 +12379,9 @@ function drawLogo(y) {
 
 const BADGE_PIX = ['....OOOO....', '..OOLRRROO..', '.OLLRWWRRRO.', '.OLRRWWRRRO.', 'OLRRRWWRRRRO', 'ORRRRWWRRRRO', 'ORRRRWWRRRRO', 'ORRRRRRRRRDO', '.ORRRWWRRDO.', '.ORRRWWRDDO.', '..OORRRDOO..', '....OOOO....'];
 const BADGE_COL = { O: '#1a0a14', L: '#ff9a9a', R: '#ff3a3a', D: '#c01a2a', W: '#ffffff' };
+let MENU_NOBADGE = false;
 function badge(x, y) {
+  if (MENU_NOBADGE) return;
   const b = Math.sin(time * 5), dy = Math.round(b * 1.5);
   ctx.globalAlpha = 0.25 + Math.max(0, b) * 0.2; pell(ctx, x, y + dy, 15, 15, '#ff3a3a'); ctx.globalAlpha = 1;
   pixIcon(BADGE_PIX, BADGE_COL, x, y + dy, 1);
@@ -12439,22 +12442,24 @@ function priceDraw(cx, y, pr, k = 1, col = OL) {
   text(str, x0 + 12 * k, y, k, col, 'left', null);
 }
 function drawMenu() {
-  coinIcon(24, 154); text(String(flyShown('c')), 36, 164, 2, '#ffffff', 'left', OL, 70);
-  gemIcon(108, 154, 0.8); text(String(flyShown('g')), 122, 164, 2, '#bfeaff', 'left', OL, 50);
-  rubyIcon(180, 154, 0.7); text(String(rubies), 193, 164, 2, '#ffc0c8', 'left', OL, 36);
-  trophyIcon(238, 154); text(best + T('m'), 252, 164, 2, '#ffffff', 'left', OL, 56);
-  button(BTN.shop, T('heroes'), '#ff3d7f', '#c01f5a');
-  button(BTN.store, T('shop'), '#ffb02a', '#c06a00');
-  if (canClaim() || freeSpin()) badge(BTN.store.x + BTN.store.w - 4, BTN.store.y + 2);
+  // неподвижное — готовыми картинками (перерисовка, только когда меняются числа или значки)
+  uiCache('cash', [flyShown('c'), flyShown('g'), rubies, best, lang].join('|'), 8, 138, 312, 34, () => {
+    coinIcon(24, 154); text(String(flyShown('c')), 36, 164, 2, '#ffffff', 'left', OL, 70);
+    gemIcon(108, 154, 0.8); text(String(flyShown('g')), 122, 164, 2, '#bfeaff', 'left', OL, 50);
+    rubyIcon(180, 154, 0.7); text(String(rubies), 193, 164, 2, '#ffc0c8', 'left', OL, 36);
+    trophyIcon(238, 154); text(best + T('m'), 252, 164, 2, '#ffffff', 'left', OL, 56); });
+  uiCache('lbtn', lang, 4, BTN.store.y - 10, 140, BTN.tent.y + BTN.tent.h - BTN.store.y + 24, () => {
+    button(BTN.shop, T('heroes'), '#ff3d7f', '#c01f5a'); button(BTN.store, T('shop'), '#ffb02a', '#c06a00'); button(BTN.tent, T('tent'), '#a64aff', '#6a1ac0'); });
+  if (canClaim() || freeSpin()) badge(BTN.store.x + BTN.store.w - 4, BTN.store.y + 2);   // значки «!» — живые, поверх готовой картинки
+  if (tDailyReady()) badge(BTN.tent.x + BTN.tent.w - 4, BTN.tent.y + 2);
   drawPlayBtn();
-  drawTopIcons();
+  MENU_NOBADGE = true; try { uiCache('topR', lang, W - 96, 4, 96, 150, () => { drawTopIcons(); drawNewsBtn(); }); } finally { MENU_NOBADGE = false; }
+  if (FR.inbox.length) badge(BTN.friends.x + BTN.friends.w - 2, BTN.friends.y + 4);
+  if (newsUnread()) badge(BTN.news.x + BTN.news.w - 2, BTN.news.y + 4);
   if (state === 'menu' && p && p.state !== 'dead') drawStreak(p.x + 24, p.y - camR - 44, heroStk(skinId), 1);   // страйк героя — рядом с ним
-  button(BTN.tent, T('tent'), '#a64aff', '#6a1ac0');
-  if (tDailyReady()) badge(BTN.tent.x + BTN.tent.w - 4, BTN.tent.y + 2);   // ежедневный сундук ждёт
   mpMenu();
   drawMenuMeta();
   drawGearBtn();
-  drawNewsBtn();
   const hint = (IDLE[curSkin().id] ? clamp(1 - (idleT - 9.5) * 2, 0, 1) : 1) * (1 - menuMoreT);   // во время сценки и при открытых кнопках подсказка уходит
   ctx.globalAlpha = hint;
   text(T('tap1'), W / 2 + 10, 470, 2, '#ffffff');
@@ -12581,7 +12586,9 @@ const heroBlink = t => ((t * 1.13) % 3.1 + 3.1) % 3.1 < 0.14;   // герои н
 let CARD_NOHERO = false;   // в готовой карточке героя нет — он рисуется поверх каждый кадр (плавно, из кэша кадров)
 const CARD_CACHE = new Map(), CARD_FPS = 15, CARD_M = { l: 16, t: 50, r: 16, b: 16 };
 let frameT0 = 0, cardSlot = -1;   // начало текущего кадра; в каком кадре уже была перерисовка карточки
-function drawSkinCard(r, k) {
+// карточки страницы обновляются по очереди, по 2 за кадр: у всех одинаковая плавность (раньше одни шли быстро, другие — рывками)
+const CARD_RR = { n: 0, f: 0 };
+function drawSkinCard(r, k, slot) {
   const K = cv.width / W;
   if (!(K > 0) || ctx.canvas !== cv) return drawSkinCard0(r, k);
   const cw = Math.ceil((r.w + CARD_M.l + CARD_M.r) * K), ch = Math.ceil((r.h + CARD_M.t + CARD_M.b) * K);
@@ -12594,7 +12601,8 @@ function drawSkinCard(r, k) {
   const base = stamp.slice(stamp.indexOf('|')), now = performance.now(), wait = now - e.at;
   const must = e.stamp === '' || e.base !== base || !e.c.width;
   // слабый телефон: карточка ждёт свободного времени в кадре; силой — не чаще раза в секунду (раньше каждые 0.4 с — 12 тяжёлых карточек забивали кадр)
-  const can = must || ((now - frameT0 < 4 || cardSlot !== frameT0) && (wait > 50)) || wait > 1000;
+  const rr = slot != null && CARD_RR.n > 0 ? (j => j === (CARD_RR.f * 2) % CARD_RR.n || j === (CARD_RR.f * 2 + 1) % CARD_RR.n)(slot) : null;
+  const can = must || (rr != null ? rr : ((now - frameT0 < 4 || cardSlot !== frameT0) && (wait > 50)) || wait > 1000);
   if (e.stamp !== stamp && can) {
     cardSlot = frameT0; e.at = now; e.base = base;
     if (e.c.width !== cw || e.c.height !== ch) { e.c.width = cw; e.c.height = ch; }
@@ -15419,14 +15427,17 @@ function drawShopHeader() {
   }
 }
 function drawHeroesTab() {
-  for (let i = 0; i < 5; i++) {
+  const ps = pageSkins();   // снизу вверх: высокие шляпы нижнего ряда не закрывают цены верхнего
+  CARD_RR.n = ps.length; CARD_RR.f++;
+  const top = tabRect(0).y + tabRect(0).h + 4;
+  for (let j = ps.length - 1; j >= 0; j--) { const r = shopRect(j);   // карточка со своими эффектами — только в своей клетке (+ место для шляпы сверху): соседей не закрывает
+    ctx.save(); ctx.beginPath(); ctx.rect(r.x - 3, Math.max(top, r.y - 30), r.w + 6, r.y + r.h + 4 - Math.max(top, r.y - 30)); ctx.clip(); drawSkinCard(r, ps[j], j); ctx.restore(); }
+  for (let i = 0; i < 5; i++) {   // вкладки редкости — поверх карточек
     const r = tabRect(i), R = RARITY[i], on = i === shopTab;
     ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
     ctx.fillStyle = on ? R.col : R.dk; ctx.fillRect(r.x, r.y, r.w, r.h);
     text(T('rarity')[i], r.x + r.w / 2, r.y + 17, 1, on ? OL : '#ffffff', 'center', null, r.w - 4);
   }
-  const ps = pageSkins();   // снизу вверх: высокие шляпы нижнего ряда не закрывают цены верхнего
-  for (let j = ps.length - 1; j >= 0; j--) drawSkinCard(shopRect(j), ps[j]);
   for (let j = 0; j < ps.length; j++) if (ps[j].isNew && !owned.includes(ps[j].id)) {   // новинка — яркая лента «НОВЫЙ»
     const r = shopRect(j), pu = 1 + Math.max(0, Math.sin(time * 5)) * 0.08; ctx.save(); ctx.translate(r.x + 26, r.y + 8); ctx.rotate(-0.25); ctx.scale(pu, pu);
     ctx.fillStyle = OL; ctx.fillRect(-26, -9, 52, 18); ctx.fillStyle = '#ff3a5a'; ctx.fillRect(-24, -7, 48, 14); text(tr('НОВЫЙ', 'NEW'), 0, 5, 1, '#ffffff', 'center', OL, 46); ctx.restore(); }
@@ -16088,6 +16099,7 @@ function drawSettings() {
   ctx.fillStyle = 'rgba(42,20,8,0.88)'; ctx.fillRect(0, 0, W, H);
   text(T('settings'), W / 2, 60, 3, '#ffd23a', 'center', OL, W - 120);
   roundBtn(BACK_BTN); text('<', BACK_BTN.x + 21, BACK_BTN.y + 28, 3, OL, 'center', null);
+  text(tr('ВЕРСИЯ ', 'VERSION ') + APP_VER + ' · ' + Math.round(cv.width / W / (Math.min(window.innerWidth / W, window.innerHeight / H) || 1) * 100) / 100 + 'X', W / 2, H - 8, 1, '#c8b8a8', 'center', null, W - 20);   // номер версии: видно, обновилась ли игра
   SET_KEYS.forEach((k, i) => {
     const r = setRow(i), on = SET[k];
     ctx.fillStyle = OL; ctx.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
@@ -16411,7 +16423,7 @@ function perfHudTick(now, t0) {
 function drawPerfHud() {
   const d = performance.now() - PFH.cur; PFH.acc += d; if (d > PFH.mx) PFH.mx = d;
   const mem = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) + 'MB' : '';
-  const l1 = PFH.fps + ' FPS  JS ' + PFH.js.toFixed(1) + '/' + PFH.jsMax.toFixed(0) + 'MS', l2 = 'WORST ' + Math.round(PFH.worst) + 'MS  Q' + gq + ' D' + dprLvl + ' FX' + Math.round(perfFx * 100) + ' ' + mem;
+  const l1 = APP_VER + ' ' + PFH.fps + ' FPS  JS ' + PFH.js.toFixed(1) + '/' + PFH.jsMax.toFixed(0) + 'MS', l2 = 'WORST ' + Math.round(PFH.worst) + 'MS  Q' + gq + ' D' + dprLvl + ' FX' + Math.round(perfFx * 100) + ' ' + mem;
   ctx.save(); ctx.setTransform(cv.width / W, 0, 0, cv.width / W, 0, 0); ctx.globalAlpha = 0.75; ctx.fillStyle = '#000'; ctx.fillRect(4, H - 36, 220, 30); ctx.globalAlpha = 1;
   text(l1, 8, H - 22, 1, PFH.fps >= 55 ? '#7cf08a' : PFH.fps >= 40 ? '#ffd23a' : '#ff6a6a', 'left', null, 214); text(l2, 8, H - 10, 1, '#ffffff', 'left', null, 214); ctx.restore();
 }
