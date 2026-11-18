@@ -2810,7 +2810,7 @@ const DPR_STEPS = [2, 1.75, 1.5, 1.25, 1];
 // качество графики (настройки): низкое / нормальное / высокое — это резкость холста. С базы — нормальное.
 // Если телефон не тянет, игра сама опускает резкость, но только на одну ступень от выбранной
 // низкое — 1× (пиксель-арт остаётся чётким: холст растягивается без размытия), нормальное — 2×, высокое — во всю резкость экрана
-const GQ = [1, 2, 3];
+const GQ = [1, 1.5, 3];   // нормальное — 1,5× (пиксель-арт так же чёткий, а точек почти вдвое меньше, чем при 2×), высокое — во всю резкость
 // частота кадров по качеству: низкое и нормальное — не чаще 60 в секунду (телефон не греется, батарея живёт дольше), высокое — с частотой экрана (90/120/144 Гц)
 const gqCap = () => gq < 2;
 let gq = (() => { try { const v = JSON.parse(localStorage.getItem('wk3_gq')); return v === 2 ? 2 : 1; } catch (e) { return 1; } })();   // «низкого» качества больше нет: только нормальное и высокое
@@ -4628,6 +4628,7 @@ const BACK_PARTS = new Set(['eldarBoard', 'wingsOwl', 'wingsAngel', 'wingsBat', 
   'accretionBack', 'wingsBee', 'jackalEars', 'smokeTail', 'skullFireBack',
   'quiver', 'gladShield', 'helmWheel', 'nineTails', 'waterAura', 'braids', 'mailBag', 'longScarf', 'sunHalo', 'starMane', 'backpack', 'darkAura', 'goldWings', 'lootSack', 'cottonPuffs', 'surfboard', 'branchArm', 'warBanner', 'protonPack', 'boltTail', 'greenCloak', 'dualKatana',
   'rwCloak', 'rwKiAura', 'ogPelt', 'ogAxeBack', 'ogSpiderLegs', 'ogBoilerPack', 'ogGhostJar', 'ogCollar', 'ogScroll', 'ogBattery', 'ogTwinBlades', 'parrotWing', 'beetleShell', 'squirrelTail', 'beaverTail', 'axoGills', 'peacockFan', 'bugWings', 'glowBum', 'moonBack', 'auroraTail', 'jellyTentacles', 'mythWings', 'mythTail', 'reaperCloak', 'bombBasket', 'bladeBack']);
+const PK_FAN_GLOVE = ['...O...', '..OwO..', '..OwO..', '.OOwOO.', 'OwwwwgO', 'OwwwwgO', '.OwwgO.', '.OlccO.', '..OOO..'];
 function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
   const r = Math.round, ol = sk.ol, hx = r(Hd.x), hy = r(Hd.y), bx = r(B.x), by = r(B.y);
   const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(r(x), r(y), w, h); };
@@ -4890,7 +4891,11 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
         R(hx + 4 * f, hy - 4, 6, 1, ol); R(hx + 4 * f, hy - 5, 6, 1, '#1a6a2a');   // козырёк
         R(hx - 2, hy - 7, 3, 2, '#7ae06a'); R(hx - 1, hy - 7, 1, 1, '#c8ffb0'); break;
       }
-      case 'pkGlove': { E(A1.x, A1.y, 2.2, 2.2, ol); E(A1.x, A1.y, 1.6, 1.6, '#ffffff'); R(r(A1.x) - 1, r(A1.y) + 1, 3, 1, '#2fa34a'); break; }   // белая перчатка с огуречной манжетой
+      case 'pkGlove': {   // палец Пиклза, как в игре: белая перчатка, указательный палец вверх, огуречная манжета
+        const gx = r(A1.x) - 3, gy = r(A1.y) - 8 + (flying ? -1 : 0), cl = { O: '#140e14', w: '#ffffff', g: '#bebecd', c: '#2fa34a', l: '#7ae06a' };
+        PK_FAN_GLOVE.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const col = cl[row[x]]; if (col) R(gx + x, gy + y, 1, 1, col); } });
+        break;
+      }
       case 'eldarTee': {   // чёрная футболка с серебряным логотипом ELDAR: клинок-«E»
         c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, B.ry * 2 - 2); c.clip(); E(B.x, B.y, B.rx + 0.5, B.ry + 0.5, '#1a1a22'); c.restore();
         R(bx - 2, by - 3, 4, 1, '#e9eaec'); R(bx - 2, by - 2, 1, 4, '#cfd0d2'); R(bx - 2, by, 3, 1, '#e9eaec'); R(bx - 2, by + 2, 4, 1, '#9ea1a6'); R(bx, by - 1, 3, 1, '#ffffff');   // знак «E» с клинком
@@ -8389,7 +8394,20 @@ function drawOrb(o, a) {
   ctx.globalAlpha = 1;
 }
 
+// в меню камера стоит: небо, облака, дальний лес и кусты (3–4 слоя на весь экран) собираем в одну картинку
+// и обновляем 20 раз в секунду — облака плывут медленно, разницы не видно, а телефону рисовать в 3 раза меньше
+let BG_C = null, BG_T = -1, BG_K = '';
 function drawBackground() {
+  if (state === 'menu' && ctx.canvas === cv && !perfNoCache && !(shake > 0)) {
+    const t = ctx.getTransform(), key = cv.width + 'x' + cv.height + '|' + camR + '|' + zoneIdx + '|' + GFX_GEN;
+    if (!t.b && !t.c && !t.e && !t.f) {
+      if (!BG_C || BG_K !== key || time - BG_T > 0.125 || time < BG_T) { BG_C = gfxPic(BG_C, 0, 0, W, H, drawBackground0); BG_K = key; BG_T = time; }
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); drawRaw.call(ctx, BG_C, 0, 0); ctx.restore(); return;
+    }
+  }
+  drawBackground0();
+}
+function drawBackground0() {
   const b = zoneBlend();
   const g = ctx.createLinearGradient(0, 0, 0, H);
   const s0 = skyOf(b.z), s1 = skyOf(b.n);
@@ -15484,11 +15502,13 @@ function twinkles(r, n, ph = 0, col = '#ffffff') {   // мерцающие зв�
     prect(ctx, x - s, y, s * 2 + 1, 1, col); prect(ctx, x, y - s, 1, s * 2 + 1, col); }
 }
 function clockIcon(x, y) { pell(ctx, x, y, 6, 6, OL); pell(ctx, x, y, 5, 5, '#ffffff'); prect(ctx, x, y - 4, 1, 4, OL); prect(ctx, x, y, 3, 1, OL); prect(ctx, x - 1, y - 7, 3, 2, OL); }
+const STORE_VIEW = [-1e9, 1e9];
 function drawDealsTab() {
   ribbon(W / 2, 110, 220, '#c01a5a', '#7a0a3a'); text(T('skinsDay'), W / 2, 124, 2, '#ffd23a', 'center', OL, 216);
   const tt = T('refreshIn') + ' ' + timeToMidnight(); clockIcon(W / 2 + 6 - tt.length * 3 - 10, 139); text(tt, W / 2 + 6, 142, 1, '#ffffff', 'center', null);
   dailyDeals().forEach((d, i) => {
-    const rr = dealRect(i), r = { x: 0, y: 0, w: 104, h: 180 }, k = d.k, R = RARITY[k.r], own = owned.includes(k.id), cx = r.x + r.w / 2;
+    const rr = dealRect(i); if (rr.y + rr.h < STORE_VIEW[0] || rr.y > STORE_VIEW[1]) return;   // карточка за краем — не рисуем
+    const r = { x: 0, y: 0, w: 104, h: 180 }, k = d.k, R = RARITY[k.r], own = owned.includes(k.id), cx = r.x + r.w / 2;
     ctx.save(); ctx.translate(rr.x, rr.y); ctx.scale(rr.w / 104, rr.h / 180);   // карточка рисуется в своём размере и сжимается в ячейку
     if (d.off) { ctx.globalAlpha = 0.35 + Math.sin(time * 5 + i) * 0.2; pell(ctx, cx, r.y + r.h / 2, r.w / 2 + 10, r.h / 2 + 10, d.off >= 70 ? '#ff3a3a' : R.col); ctx.globalAlpha = 1; }
     ctx.fillStyle = OL; ctx.fillRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6);
@@ -15777,10 +15797,12 @@ function drawPremiumTab() {
 function drawStoreTab() {
   storeScroll = clamp(storeScroll, 0, storeMax());
   ctx.save(); ctx.beginPath(); ctx.rect(0, STORE_TOP, W, H - STORE_TOP); ctx.clip(); ctx.translate(0, -storeScroll);
-  ribbon(W / 2, 110, 220, '#6a1ac0', '#3a0a80'); text(tr('ПРЕМИУМ', 'PREMIUM'), W / 2, 124, 2, '#ffd23a', 'center', OL, 216);
-  ctx.save(); ctx.translate(0, PREM_TR); drawPremiumTab(); ctx.restore();
-  ctx.translate(0, DEALS_SHIFT); drawDealsTab(); drawCosmBanner();
-  ctx.restore();
+  // рисуем только то, что видно: раньше вся длинная лента (премиум, скины дня, баннер) рисовалась каждый кадр целиком
+  const v0 = storeScroll + STORE_TOP - 30, v1 = storeScroll + H + 30; STORE_VIEW[0] = v0 - DEALS_SHIFT; STORE_VIEW[1] = v1 - DEALS_SHIFT;
+  if (v0 < 140) { ribbon(W / 2, 110, 220, '#6a1ac0', '#3a0a80'); text(tr('ПРЕМИУМ', 'PREMIUM'), W / 2, 124, 2, '#ffd23a', 'center', OL, 216); }
+  if (v0 < PREM_TR + 600) { ctx.save(); ctx.translate(0, PREM_TR); drawPremiumTab(); ctx.restore(); }
+  ctx.translate(0, DEALS_SHIFT); if (v1 > DEALS_SHIFT + 90) { drawDealsTab(); if (v1 > DEALS_SHIFT + COSM_BANNER.y - 10) drawCosmBanner(); }
+  ctx.restore(); STORE_VIEW[0] = -1e9; STORE_VIEW[1] = 1e9;
   if (storeMax() > 0) {   // полоска прокрутки справа
     const th = (H - STORE_TOP) * (H - STORE_TOP) / (STORE_H - STORE_TOP), ty = STORE_TOP + (H - STORE_TOP - th) * storeScroll / storeMax();
     ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff'; ctx.fillRect(W - 5, ty, 3, th); ctx.globalAlpha = 1;
@@ -16349,7 +16371,7 @@ function frame0(now) {
     const avg = perfAcc / perfN, slow = perfSlow / perfN; perfAcc = 0; perfN = 0; perfSlow = 0;
     let ch = false;
     const heavy = avg > Math.min(13, refMs * 0.8) || slow > 0.2, easy = avg < Math.min(6, refMs * 0.4) && slow < 0.03;
-    if (heavy && dprLvl < (gq === 1 ? 4 : gq === 2 ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже (на «нормальном» — до 1,25×: телефон упирается в число точек)
+    if (heavy && dprLvl < (gq === 1 ? 2 : gq === 2 ? 1 : 0))   // кадр не влезает в период экрана — резкость на ступень ниже (на «нормальном» — до 1,25×: телефон упирается в число точек)
       { dprLvl++; perfLow = 0; perfDownAt = now; ch = true; }
     else if (heavy && perfFx > 0.5) { perfFx = Math.max(0.5, perfFx - 0.25); perfDownAt = now; }   // резкость уже снижена — меньше необязательных искр и погодных частиц
     else if (easy && perfFx < 1 && now - perfDownAt > 8000) { perfFx = Math.min(1, perfFx + 0.25); perfDownAt = now; }   // стало легко — эффекты возвращаются
