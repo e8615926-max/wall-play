@@ -1689,7 +1689,7 @@ SKINS.push(
 SKINS.push({ id: 'smiley', r: 3, gems: 120, nm: ['ХОМЯК-УЛЫБКА', 'SMILEY HAMSTER'], ...HAM, noScarf: true, noEyes: true, noMuzzle: true, parts: ['blackSuit', 'ogTie', 'ogSmileMask'],
   trail: { kind: 'star', cols: ['#ffd23a', '#ffffff'] }, sfx: 'tux', fx: 'gold' });
 // фанат Мистера Пиклса: зелёная кепка, футболка с огурчиком и белая перчатка, как у самого Пиклса
-SKINS.push({ id: 'picklesfan', r: 2, gems: 60, nm: ['ФАНАТ ПИКЛЗА', 'PICKLES FAN'], ...HAM, noScarf: true, parts: ['pkTee', 'pkCap', 'pkGlove'],
+SKINS.push({ id: 'picklesfan', r: 2, gems: 60, ord: 0, isNew: 1, nm: ['ФАНАТ ПИКЛЗА', 'PICKLES FAN'], ...HAM, noScarf: true, parts: ['pkTee', 'pkCap', 'pkGlove'],
   trail: { kind: 'spark', cols: ['#7ae06a', '#ffffff'] }, sfx: 'tux', fx: 'gold' });
 // цена зависит только от редкости: редкие 200–450, эпики 700–1300 (дорогие — только легенды)
 for (const k of SKINS) {
@@ -15338,6 +15338,9 @@ function drawHeroesTab() {
   }
   const ps = pageSkins();   // снизу вверх: высокие шляпы нижнего ряда не закрывают цены верхнего
   for (let j = ps.length - 1; j >= 0; j--) drawSkinCard(shopRect(j), ps[j]);
+  for (let j = 0; j < ps.length; j++) if (ps[j].isNew && !owned.includes(ps[j].id)) {   // новинка — яркая лента «НОВЫЙ»
+    const r = shopRect(j), pu = 1 + Math.max(0, Math.sin(time * 5)) * 0.08; ctx.save(); ctx.translate(r.x + 26, r.y + 8); ctx.rotate(-0.25); ctx.scale(pu, pu);
+    ctx.fillStyle = OL; ctx.fillRect(-26, -9, 52, 18); ctx.fillStyle = '#ff3a5a'; ctx.fillRect(-24, -7, 48, 14); text(tr('НОВЫЙ', 'NEW'), 0, 5, 1, '#ffffff', 'center', OL, 46); ctx.restore(); }
   if (pageCount() > 1) {
     for (const [b, ch, ok] of [[PAGE_PREV, '<', shopPage > 0], [PAGE_NEXT, '>', shopPage < pageCount() - 1]]) {
       ctx.globalAlpha = ok ? 1 : 0.35;
@@ -19328,6 +19331,12 @@ function frCodeCard() {
 // ---------- экран «ДРУЗЬЯ»: письма и таблица друзей ----------
 // ---------- Новости: что нового в игре (кнопка-газета вверху меню; «!» — пока не прочитано) ----------
 const NEWS = [
+  { v: 8, d: '18.11.2026', hero: 'picklesfan', items: [
+    ['НОВЫЙ ГЕРОЙ «ФАНАТ ПИКЛЗА» — В МАГАЗИНЕ: ГЕРОИ → ЭПИЧЕСКИЕ, ПЕРВЫЙ В СПИСКЕ. ЗЕЛЁНАЯ КЕПКА, ФУТБОЛКА С ОГУРЧИКОМ И БЕЛАЯ ПЕРЧАТКА.', 'NEW HERO «PICKLES FAN» — IN THE SHOP: HEROES → EPIC, FIRST IN THE LIST. GREEN CAP, A PICKLE T-SHIRT AND A WHITE GLOVE.'],
+    ['ПОБЕДЫ ДНЯ — ЯЩИКИ-ДРОПЫ: ЖМИ, И РЕДКОСТЬ МОЖЕТ ПОДНЯТЬСЯ. НОВЫЕ — КАЖДЫЙ ДЕНЬ В 00:00.', 'DAILY WINS ARE NOW DROP BOXES: TAP AND THE RARITY MAY RISE. NEW ONES EVERY DAY AT 00:00.'],
+    ['ПУТЬ СЛАВЫ, ТРЕНИРОВКА С ELDAR В ОКНЕ ГЕРОЯ, ЛАЙК И ДИЗЛАЙК, ИМЯ СО СМАЙЛИКАМИ, НОВЫЕ АВАТАРКИ И РАМКИ ГЕРОЕВ.', 'ROAD OF GLORY, TRAINING WITH ELDAR IN THE HERO WINDOW, LIKE AND DISLIKE, NAMES WITH EMOJI, NEW AVATARS AND HERO FRAMES.'],
+    ['РОВНЫЕ 60 КАДРОВ НА ЭКРАНАХ 90 ГЦ, БЫСТРЕЕ МАГАЗИН И ПОВТОРЫ.', 'A STEADY 60 FPS ON 90 HZ SCREENS, A FASTER SHOP AND REPLAYS.'],
+  ] },
   { v: 7, d: '07.11.2026', hero: 'hamster', items: [
     ['ИГРА ТЕПЕРЬ НА КАЗАХСКОМ! ЯЗЫК ВЫБИРАЕТСЯ САМ — ПО ЯЗЫКУ ТЕЛЕФОНА И СТРАНЕ.', 'THE GAME IS NOW IN KAZAKH! THE LANGUAGE IS PICKED AUTOMATICALLY — BY YOUR PHONE LANGUAGE AND COUNTRY.'],
     ['НОВОЕ ОБУЧЕНИЕ: ЛЕСНАЯ КАРТА, ГДЕ ВСЕГДА ЕСТЬ СТОЛБ НАПРОТИВ. МИСТЕР ПИКЛС ЖДЁТ, ПОКА ТЫ ДОЧИТАЕШЬ, И УЧИТ МАГНИТУ.', 'A NEW TUTORIAL: A FOREST MAP WITH A POLE ALWAYS ACROSS. MR. PICKLES WAITS UNTIL YOU FINISH READING AND TEACHES THE MAGNET.'],
