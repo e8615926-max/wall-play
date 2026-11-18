@@ -1689,7 +1689,7 @@ SKINS.push(
 SKINS.push({ id: 'smiley', r: 3, gems: 120, nm: ['ХОМЯК-УЛЫБКА', 'SMILEY HAMSTER'], ...HAM, noScarf: true, noEyes: true, noMuzzle: true, parts: ['blackSuit', 'ogTie', 'ogSmileMask'],
   trail: { kind: 'star', cols: ['#ffd23a', '#ffffff'] }, sfx: 'tux', fx: 'gold' });
 // фанат Мистера Пиклса: зелёная кепка, футболка с огурчиком и белая перчатка, как у самого Пиклса
-SKINS.push({ id: 'picklesfan', r: 2, gems: 60, ord: 0, isNew: 1, pickles: 1, nm: ['МИСТЕР ПИКЛС', 'MR. PICKLES'], ...HAM, noScarf: true, parts: [],
+SKINS.push({ id: 'picklesfan', r: 2, gems: 60, ord: 0, isNew: 1, nm: ['ФАНАТ ПИКЛСА', 'PICKLES FAN'], ...HAM, noScarf: true, parts: ['pkBackpack', 'pkTee', 'pkBag', 'pkHat', 'pkBalloon'],
   trail: { kind: 'spark', cols: ['#7ae06a', '#ffffff'] }, sfx: 'tux', fx: 'gold' });
 // цена зависит только от редкости: редкие 200–450, эпики 700–1300 (дорогие — только легенды)
 for (const k of SKINS) {
@@ -3410,7 +3410,7 @@ function pick(opts) {
 }
 
 // Пиксельные примитивы: «пиксель» = 2×2 точки
-const APP_VER = 'v84';
+const APP_VER = 'v85';
 let AV_HQ = false;   // рисуем аватарку: точные фигуры без привязки к сетке 2×2 (иначе глаза выходили разного размера)
 function prect(c, x, y, w, h, col) {
   if (AV_HQ) { c.fillStyle = col; c.fillRect(x, y, w, h); return; }
@@ -4647,7 +4647,7 @@ function drawAcc(c, sk, t, Hd, ex1, ex2, ey) {
 // детали особых героев: шляпы, шлемы, крылья, панцири, щупальца…
 const FIRE_C = ['#fff27a', '#ffb21a', '#ff5a1a', '#c01a0a'];
 const WING_CACHE = new Map();   // готовые крылья мифических фениксов по углу взмаха   // цвета огня: от ядра к краю
-const BACK_PARTS = new Set(['eldarBoard', 'wingsOwl', 'wingsAngel', 'wingsBat', 'wingsFairy', 'wingsButterfly', 'wingsFire', 'shell', 'spikes', 'windKey', 'jetpack', 'mermaidHair',
+const BACK_PARTS = new Set(['pkBackpack', 'eldarBoard', 'wingsOwl', 'wingsAngel', 'wingsBat', 'wingsFairy', 'wingsButterfly', 'wingsFire', 'shell', 'spikes', 'windKey', 'jetpack', 'mermaidHair',
   'katanaBack', 'roundShield', 'heroCapeLong', 'frostAura', 'tailFeathers', 'shoulderCannon', 'speedLines', 'smokeWisps', 'lionMane', 'tailTuft',
   'accretionBack', 'wingsBee', 'jackalEars', 'smokeTail', 'skullFireBack',
   'quiver', 'gladShield', 'helmWheel', 'nineTails', 'waterAura', 'braids', 'mailBag', 'longScarf', 'sunHalo', 'starMane', 'backpack', 'darkAura', 'goldWings', 'lootSack', 'cottonPuffs', 'surfboard', 'branchArm', 'warBanner', 'protonPack', 'boltTail', 'greenCloak', 'dualKatana',
@@ -4904,20 +4904,28 @@ function drawParts(c, sk, t, pose, blink, back, Hd, B, A1, ex1, ex2, ey) {
         for (const [dx, h2] of [[-4, 3], [-1, 4], [2, 3], [5, 2]]) { R(hx + dx, hy - 7 - h2, 2, h2 + 1, ol); R(hx + dx, hy - 6 - h2, 1, h2, hc); }   // вихры
         R(hx - 3, hy - 6, 4, 1, hl); R(hx + 2, hy - 7, 2, 1, hl); break;
       }
-      case 'pkTee': {   // зелёная футболка с огурчиком в белой перчатке
+      case 'pkTee': {   // зелёная футболка, на груди — принт: перчатка Мистера Пиклса
         c.save(); c.beginPath(); c.rect(0, r(B.y - B.ry) + 1, 32, B.ry * 2 - 2); c.clip(); E(B.x, B.y, B.rx + 0.5, B.ry + 0.5, '#2fa34a'); c.restore();
-        R(bx - 2, by - 3, 3, 6, '#1a6a2a'); R(bx - 1, by - 3, 1, 6, '#7ae06a'); R(bx - 2, by - 1, 1, 1, '#c8ffb0'); R(bx, by + 1, 1, 1, '#c8ffb0');   // огурчик
-        R(bx + 1, by - 2, 2, 2, '#ffffff'); R(bx + 2, by - 3, 1, 1, '#ffffff');   // перчатка держит его
-        R(bx - 5, by - 4, 2, 2, '#2fa34a'); R(bx + 4, by - 4, 2, 2, '#2fa34a'); R(bx - 5, by + 4, 11, 1, '#1a6a2a'); break;
+        R(bx - 1, by - 3, 1, 2, '#ffffff'); R(bx - 2, by - 1, 4, 2, '#ffffff'); R(bx + 1, by - 1, 1, 1, '#d8d8e0'); R(bx - 2, by + 1, 4, 1, '#7ae06a');   // перчатка с манжетой
+        R(bx - 5, by - 4, 2, 2, '#2fa34a'); R(bx + 4, by - 4, 2, 2, '#2fa34a'); break;
       }
-      case 'pkCap': {   // зелёная кепка козырьком вперёд, на ней огурчик
-        const f = 1; R(hx - 7, hy - 8, 14, 1, ol); R(hx - 7, hy - 7, 14, 3, '#2fa34a'); R(hx - 6, hy - 9, 12, 1, ol); R(hx - 6, hy - 8, 12, 1, '#4ac85a');
-        R(hx + 4 * f, hy - 4, 6, 1, ol); R(hx + 4 * f, hy - 5, 6, 1, '#1a6a2a');   // козырёк
-        R(hx - 2, hy - 7, 3, 2, '#7ae06a'); R(hx - 1, hy - 7, 1, 1, '#c8ffb0'); break;
+      case 'pkHat': {   // шапка Мистера Пиклса: зелёная, с белой перчаткой спереди и помпоном
+        R(hx - 7, hy - 8, 14, 1, ol); R(hx - 7, hy - 7, 14, 3, '#2fa34a'); R(hx - 6, hy - 9, 12, 1, ol); R(hx - 6, hy - 8, 12, 1, '#4ac85a'); R(hx - 7, hy - 5, 14, 1, '#1a6a2a');
+        R(hx - 1, hy - 8, 1, 2, '#ffffff'); R(hx - 2, hy - 7, 3, 2, '#ffffff');   // перчатка на шапке
+        R(hx - 1, hy - 12, 3, 3, ol); R(hx, hy - 11, 1, 1, '#ffffff'); break;   // помпон
       }
-      case 'pkGlove': {   // палец Пиклза, как в игре: белая перчатка, указательный палец вверх, огуречная манжета
-        const gx = r(A1.x) - 3, gy = r(A1.y) - 8 + (flying ? -1 : 0), cl = { O: '#140e14', w: '#ffffff', g: '#bebecd', c: '#2fa34a', l: '#7ae06a' };
-        PK_FAN_GLOVE.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const col = cl[row[x]]; if (col) R(gx + x, gy + y, 1, 1, col); } });
+      case 'pkBackpack': {   // рюкзак за спиной с нашивкой-перчаткой
+        R(bx - 10, by - 6, 6, 9, ol); R(bx - 9, by - 5, 4, 7, '#2fa34a'); R(bx - 9, by - 5, 4, 1, '#4ac85a'); R(bx - 8, by - 3, 2, 2, '#ffffff'); R(bx - 9, by + 1, 4, 1, '#1a6a2a'); break;
+      }
+      case 'pkBag': {   // барсетка через плечо: ремень наискосок и сумочка на боку
+        for (let q = 0; q < 6; q++) R(bx - 3 + q, by - 4 + q, 1, 1, '#5a3a1a');
+        R(bx + 2, by + 2, 5, 4, ol); R(bx + 3, by + 3, 3, 2, '#2fa34a'); R(bx + 4, by + 3, 1, 1, '#ffffff'); break;
+      }
+      case 'pkBalloon': {   // шарик в виде перчатки Пиклса на ниточке — покачивается
+        const sw = Math.round(Math.sin(t * 2) * 1.2), gx = r(A1.x) + 3 + sw, gy = r(A1.y) - 19;
+        for (let q = 0; q < 12; q++) R(r(A1.x) + Math.round((sw + 2) * q / 12), r(A1.y) - q, 1, 1, '#c8c8d8');
+        const cl = { O: '#140e14', w: '#ffffff', g: '#bebecd', c: '#2fa34a', l: '#7ae06a' };
+        PK_FAN_GLOVE.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const col = cl[row[x]]; if (col) R(gx - 3 + x, gy - 8 + y, 1, 1, col); } });
         break;
       }
       case 'eldarTee': {   // чёрная футболка с серебряным логотипом ELDAR: клинок-«E»
@@ -7496,9 +7504,7 @@ function emoSnd(id) {   // у каждой эмоции свой звук
 }
 function emoDo(id) {
   if ((state !== 'play' && state !== 'menu') || !emoWheel().includes(id)) return; p.em = { id, t0: time }; emOpen = false; menuEmOpen = false; idleT = 0;   // выбрал — панель закрывается
-  emoSnd(id); const C = EMO_COL[id] || ['#ffd23a', '#ffffff'];
-  burst(p.x, p.y - 20, 12, C[0], 160, 0.6, 4, -40, 'star'); burst(p.x, p.y - 20, 6, '#ffffff', 90, 0.4, 3, 0);
-  parts.push({ x: p.x, y: p.y - 6, vx: 0, vy: 0, life: 0.4, max: 0.4, color: C[0], size: 40, grav: 0, shape: 'wave' });
+  emoSnd(id);   // только значок над героем и звук — без вспышек вокруг героя
   if (mp.active) mpSend({ t: 'em', e: id });
 }
 // смайлики в меню: облачко «…» (будто кто-то пишет); нажал — веер смайликов, выбрал — герой показывает, веер закрывается
@@ -7695,12 +7701,12 @@ function drawEvent() {
 }
 // ---------- Окно героя: просмотр, геймплей, покупка с подтверждением ----------
 let sv = null;
-const SV_WIN = { x: 12, y: 52, w: 336, h: 536 };
-const SV_X = { x: SV_WIN.x + SV_WIN.w - 44, y: SV_WIN.y + 6, w: 38, h: 38 };
+const SV_WIN = { x: 14, y: 80, w: 332, h: 470 };   // компактнее (было 536 в высоту)
+const SV_X = { x: SV_WIN.x + SV_WIN.w - 46, y: SV_WIN.y + 2, w: 44, h: 44 };
 const SV_BUY = { x: SV_WIN.x + SV_WIN.w - 158, y: SV_WIN.y + SV_WIN.h - 58, w: 146, h: 44 };
 const SV_NO = { x: SV_WIN.x + 12, y: SV_WIN.y + SV_WIN.h - 58, w: 110, h: 44 };
 const SV_ROAD = { x: SV_WIN.x + 12, y: SV_WIN.y + SV_WIN.h - 58, w: 150, h: 44 };   // «дорожка кубков» у своего героя
-const SV_GP = { x: SV_WIN.x + SV_WIN.w - 176, y: SV_WIN.y + 66, w: 168, h: 336 };
+const SV_GP = { x: SV_WIN.x + SV_WIN.w - 166, y: SV_WIN.y + 66, w: 158, h: 282 };
 const SV_TRN = { x: SV_GP.x + 8, y: SV_GP.y + SV_GP.h - 42, w: SV_GP.w - 16, h: 32 };   // «Тренировка» — справа, внизу ролика
 function svOpen(k, pr) { sv = { k, pr, confirm: false, t0: time, no: -9 }; sfx.click(); }
 function svClick(pt) {
@@ -7955,7 +7961,7 @@ function legendFrame(X, Y, Wd, Ht) {
   ctx.fillStyle = OL; ctx.fillRect(X - 1, Y - 1, Wd + 2, Ht + 2);
   for (const [cx, cy] of [[X - 2, Y - 2], [X + Wd + 2, Y - 2], [X - 2, Y + Ht + 2], [X + Wd + 2, Y + Ht + 2]]) { pell(ctx, cx, cy, 6, 6, OL); pell(ctx, cx, cy, 4, 4, '#ffd23a'); prect(ctx, cx - 2, cy - 2, 2, 2, '#ffffff'); }
 }
-const SV_STAGE = { x: SV_WIN.x + 8, y: SV_WIN.y + 64, w: 148, h: 338 };
+const SV_STAGE = { x: SV_WIN.x + 8, y: SV_WIN.y + 64, w: 148, h: 288 };
 function svDraw() {
   const k = sv.k, R = RARITY[k.r], Wn = SV_WIN, own = owned.includes(k.id), t = time - sv.t0, myth = k.r === 4, leg = k.r >= 3;
   if (!sv.demo || sv.demo.k !== k || sv.demo.t > SV_LEN) sv.demo = svDemoNew(k);
@@ -7966,8 +7972,9 @@ function svDraw() {
   ctx.save(); ctx.translate(W / 2, Wn.y + Wn.h / 2); ctx.scale(ps, ps); ctx.translate(-W / 2, -(Wn.y + Wn.h / 2));
   if (myth) mythFrame(k, Wn.x, Wn.y, Wn.w, Wn.h);
   else if (leg) legendFrame(Wn.x, Wn.y, Wn.w, Wn.h);
-  else { ctx.fillStyle = OL; ctx.fillRect(Wn.x - 4, Wn.y - 4, Wn.w + 8, Wn.h + 8); ctx.fillStyle = R.col; ctx.fillRect(Wn.x - 2, Wn.y - 2, Wn.w + 4, Wn.h + 4); }
-  ctx.save(); ctx.beginPath(); ctx.rect(Wn.x, Wn.y, Wn.w, Wn.h); ctx.clip();
+  else { ctx.globalAlpha = 0.45; ctx.fillStyle = '#000'; rrPath(Wn.x - 2, Wn.y + 6, Wn.w + 4, Wn.h + 6, 18); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = OL; rrPath(Wn.x - 4, Wn.y - 4, Wn.w + 8, Wn.h + 8, 18); ctx.fill(); ctx.fillStyle = R.col; rrPath(Wn.x - 2, Wn.y - 2, Wn.w + 4, Wn.h + 4, 16); ctx.fill(); }
+  ctx.save(); rrPath(Wn.x, Wn.y, Wn.w, Wn.h, 14); ctx.clip();
   if (leg) drawScene(k, Wn.x, Wn.y, Wn.w, Wn.h);
   else {
     const g = ctx.createLinearGradient(0, Wn.y, 0, Wn.y + Wn.h); g.addColorStop(0, k.light || '#ffffff'); g.addColorStop(0.45, k.body || '#999999'); g.addColorStop(1, k.dark || '#222222'); ctx.fillStyle = g; ctx.fillRect(Wn.x, Wn.y, Wn.w, Wn.h);
@@ -7992,8 +7999,12 @@ function svDraw() {
   // что умеет герой
   const feats = [tr('АУРА', 'AURA'), tr('ШЛЕЙФ', 'TRAIL'), tr('ПРЫЖОК', 'JUMP'), tr('СЦЕНКА', 'SCENE')].slice(0, k.r >= 3 ? 4 : k.r >= 2 ? 1 : 0);
   if (myth) feats.push(tr('РАМКА', 'FRAME'));
-  feats.forEach((s, i) => { const bw = (Wn.w - 24 - (feats.length - 1) * 4) / feats.length, x = Wn.x + 12 + i * (bw + 4), y = Wn.y + 412; ctx.fillStyle = OL; ctx.fillRect(x, y, bw, 18); ctx.fillStyle = myth ? (i % 2 ? k.myth[1] : k.myth[0]) : R.col; ctx.fillRect(x + 2, y + 2, bw - 4, 14); text(s, x + bw / 2, y + 13, 1, OL, 'center', null, bw - 6); });
-  const cx = Wn.x + Wn.w - 25, cy = Wn.y + 25; ctx.globalAlpha = 0.4 + Math.sin(time * 5) * 0.15; pell(ctx, cx, cy, 24, 24, '#ff6a5a'); ctx.globalAlpha = 1; pell(ctx, cx, cy, 20, 20, OL); pell(ctx, cx, cy, 17, 17, '#e8261a'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 7, cy - 7); ctx.lineTo(cx + 7, cy + 7); ctx.moveTo(cx + 7, cy - 7); ctx.lineTo(cx - 7, cy + 7); ctx.stroke();
+  feats.forEach((s, i) => { const bw = (Wn.w - 24 - (feats.length - 1) * 4) / feats.length, x = Wn.x + 12 + i * (bw + 4), y = Wn.y + 356; ctx.fillStyle = OL; ctx.fillRect(x, y, bw, 18); ctx.fillStyle = myth ? (i % 2 ? k.myth[1] : k.myth[0]) : R.col; ctx.fillRect(x + 2, y + 2, bw - 4, 14); text(s, x + bw / 2, y + 13, 1, OL, 'center', null, bw - 6); });
+  { const cx = Wn.x + Wn.w - 24, cy = Wn.y + 24;   // крестик: крупный, с тенью и объёмом
+    ctx.globalAlpha = 0.35; pell(ctx, cx + 1, cy + 4, 19, 19, '#000'); ctx.globalAlpha = 1;
+    pell(ctx, cx, cy, 19, 19, OL); pell(ctx, cx, cy, 16, 16, '#c8180c'); pell(ctx, cx, cy - 2, 14, 13, '#ff4a3a'); prect(ctx, cx - 9, cy - 12, 8, 3, '#ff9a8a');
+    ctx.strokeStyle = OL; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx - 6, cy - 6); ctx.lineTo(cx + 6, cy + 6); ctx.moveTo(cx + 6, cy - 6); ctx.lineTo(cx - 6, cy + 6); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 6, cy - 7); ctx.lineTo(cx + 6, cy + 5); ctx.moveTo(cx + 6, cy - 7); ctx.lineTo(cx - 6, cy + 5); ctx.stroke(); ctx.lineCap = 'butt'; }
   const py = SV_BUY.y - 22, pr = sv.pr, bad = time - sv.no < 0.5;
   if (!own && k.gift) {   // не продаётся: дарим за привязку аккаунта Google
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(Wn.x + 8, py - 18, Wn.w - 16, 30);
@@ -8011,7 +8022,9 @@ function svDraw() {
     else text(tr('РАНГ С 500', 'RANK AT 500'), Wn.x + Wn.w - 16, py + 4, 1, '#d8d0ff', 'right', OL);
     button(SV_ROAD, tr('ДОРОЖКА', 'ROAD'), '#a64aff', '#5a1aa0'); if (roadReady(k.id)) badge(SV_ROAD.x + SV_ROAD.w - 4, SV_ROAD.y + 2);
   }
-  { const b = SV_TRN, pu = Math.max(0, Math.sin(time * 3)) * 1.5; button({ x: b.x, y: b.y - pu, w: b.w, h: b.h }, '▶ ' + tr('ТРЕНИРОВКА', 'TRAINING'), '#3ab0ff', '#1a5aa0'); }   // тренировка — у любого героя
+  { const b = SV_TRN, pu = Math.max(0, Math.sin(time * 3)) * 1.5, y = b.y - pu; button({ x: b.x + 0, y, w: b.w, h: b.h }, '', '#3ab0ff', '#1a5aa0');
+    const tw = Math.min(b.w - 30, txtNorm(tr('ТРЕНИРОВКА', 'TRAINING')).length * 6); ctx.fillStyle = OL; ctx.beginPath(); const tx = b.x + b.w / 2 - tw / 2 - 8; ctx.moveTo(tx - 4, y + 9); ctx.lineTo(tx + 6, y + 15); ctx.lineTo(tx - 4, y + 21); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(tx - 2, y + 11); ctx.lineTo(tx + 3, y + 15); ctx.lineTo(tx - 2, y + 19); ctx.fill();
+    text(tr('ТРЕНИРОВКА', 'TRAINING'), b.x + b.w / 2 + 6, y + 21, 1, '#ffffff', 'center', OL, b.w - 34); }   // тренировка — у любого героя
   if (own) button(SV_BUY, k.id === skinId ? tr('НАДЕТО', 'EQUIPPED') : tr('ВЫБРАТЬ', 'EQUIP'), k.id === skinId ? '#777777' : '#3ce06a', k.id === skinId ? '#444444' : '#1a7a3a');
   else if (sv.confirm) { button(SV_NO, tr('ОТМЕНА', 'CANCEL'), '#e8261a', '#a01008'); button(SV_BUY, tr('ПОДТВЕРДИТЬ', 'CONFIRM'), '#3ce06a', '#1a7a3a'); }
   else button(SV_BUY, tr('КУПИТЬ', 'BUY'), canPay(pr) ? '#ffb02a' : '#8a7a6a', canPay(pr) ? '#c06a00' : '#5a4a3a');
@@ -11349,7 +11362,8 @@ function drawHero0() {
   }
   if (dead && p.md) { drawMythDeath(sk); return; }
   if (dead && p.vanish) return;   // легендарный герой разлетелся
-  const em = !dead && p.em && time - p.em.t0 >= 0 && time - p.em.t0 < EMO_DUR ? p.em : null, emT = em ? time - em.t0 : 0, emM = em ? emoMotion(em.id, emT) : null;
+  // смайлик-мордочка — только значок над героем: сам герой эмоцию не играет (ни позы, ни эффектов)
+  const em0 = !dead && p.em && time - p.em.t0 >= 0 && time - p.em.t0 < EMO_DUR ? p.em : null, em = em0 && !isBaseEmo(em0.id) ? em0 : null, emT = em ? time - em.t0 : 0, emM = em ? emoMotion(em.id, emT) : null;
   if (!em && !dead && idleT > 10 && IDLE[sk.id]) { drawIdleShow(sk, idleT - 10); return; }   // заскучал — своя сценка
   if (em) emoFx(em.id, p.x, p.y - 12, 1, emT, false);
   heroSprite(sk, emM ? emM.pose : heroPose(), time, blinkT < 0);
@@ -15391,7 +15405,7 @@ function drawShopBg() {
 // кнопка «домой» — справа сверху во всех окнах: сразу в главное меню
 const HOME_BTN = { x: W - 46, y: 12, w: 36, h: 36 }, HOME_ST = new Set(['shop', 'ach', 'set', 'tent', 'allies', 'emotes']);
 const HOME_PIX = ['.....OO.....', '....OWWO....', '...OWWWWO...', '..OWWWWWWO..', '.OWWWWWWWWO.', 'OWWWWWWWWWWO', '..OWWWWWWO..', '..OWWWWWWO..', '..OWWDDWWO..', '..OWWDDWWO..', '..OOOOOOOO..'], HOME_COL = { O: '#1a1030', W: '#ffffff', D: '#5a3ab8' };
-const homeOn = () => HOME_ST.has(state) && !(state === 'set' && setFrom === 'pause');   // из паузы раунда — без «домой»
+const homeOn = () => HOME_ST.has(state) && !(state === 'set' && setFrom === 'pause') && !(state === 'shop' && sv);   // в окне героя — только крестик   // из паузы раунда — без «домой»
 function drawHomeBtn() {
   const b = HOME_BTN, cx = b.x + b.w / 2, cy = b.y + b.h / 2;
   pell(ctx, cx, cy + 2, b.w / 2 + 2, b.h / 2 + 2, OL); pell(ctx, cx, cy, b.w / 2, b.h / 2, '#5a3ab8'); pell(ctx, cx, cy - 4, b.w / 2 - 4, b.h / 2 - 8, '#7a5ad8');
@@ -16694,6 +16708,8 @@ const AV_PIX = new Map();
 // аватарка: рисунок в 64×64 (вдвое детальнее), чёткая палитра, тёмная обводка, фон с лучами, свет сзади и блик.
 // «Божественный» (из набора премиума) остаётся как был
 const AV_S = 48;
+// новые аватарки: настоящий пиксель-арт 24×24 (контур, свет сверху-слева, тень снизу-справа), рисуется вдвое крупнее
+const AV_ART = {"star":{"p":["#1a1030","#ffe384","#ffd23a","#b79729","#ffffff"],"r":["........................","........................","...........aa...........","..........abca..........","..........abda..........","..........abda..........",".........abccca.........",".........abccda.........","....aaaaaabccdaaaaaa....","...abbbbbbccccbbbbbca...","..acccccddccccddccccca..","...acccdaebccdaebccda...","....accdaabccdaabcda....",".....acdaabccdaacda.....","......aabbddddbcaa......","......abcdaaaabcca......","......abccbbbbccda......","......abcccddcccda......",".....abccddaacdccca.....",".....abcdaa..aaccda.....",".....acda......acda.....","......aa........aa......","........................","........................"]},"heart":{"p":["#1a1030","#ff86af","#ff3d7f","#b72b5b","#ffffff"],"r":["........................","........................","........................",".....aaaaaa..aaaaaa.....","....abbbbbcaabbbbbca....","...abcddcccbbccccccca...","..abcdeebcccccccccccca..","..abcdeebcccccccccccda..","..abccbbccccccccccccda..","..abccccccccccccccccda..","..abccccccccccccccccda..","..acccccccccccccccccda..","...acccccccccccccccda...","....acdccccccccccdda....",".....aabccccccccdaa.....","......accccccccda.......",".......acccccccda.......","........acccccda........",".........acccda.........","..........acda..........","...........aa...........","........................","........................","........................"]},"smile":{"p":["#1a1030","#ffe384","#ffd23a","#b79729","#ff8a8a"],"r":["........................",".........aaaaaa.........",".......aabbbbbcaa.......",".....aabbccccccbcaa.....","....abbccccccccccbca....","...abccccccccccccccca...","...abccccccccccccccda...","..abccccddccccddccccca..","..abcccdaabccdaabcccda..",".abccccdaabccdaabccccca.",".abccccdaabccdaabccccda.",".abccccdaabccdaabccccda.",".abcccddbbccccbbddcccda.",".abccdeebccccccdeebccda.",".acccccacdddddddabcccda.","..abccccaaaaaaaabcccda..","..accccdaaaaaaaabcccda..","...abcccbbbbbbbbcccda...","...acccccccccccccccda...","....acdccccccccccdda....",".....aacdccccccddaa.....",".......aacdddddaa.......",".........aaaaaa.........","........................"]},"cat":{"p":["#1a1030","#ff9a3a","#ffc084","#b76e29","#ffb0c0","#ffffff","#ff5a8a"],"r":["........................","........................","...a................a...","..aba..............aba..","..acba...........aacda..","..acbbaa.aaaaaa.abecda..","..acdebbacccccbabeecda..","..abdeeccbbbbbbbeecda...","...acbecbbbbbbbdeecda...","...acbcbbbbbbbbbbecda...","...acbbbbbbbbbbbbcbda...","..acbbbdddbbbbdddbbbba..","..acbbdafacbbdafacbbda..","..acbbdaaacbbdaaacbbda..","..acbbdaaacbbdaaacbbda..","..abdddbccbddbcccdddda..","..aaaaaacbdggcbbdaaaaaa.","...abcccbbbccbbbbccba...","....acbbbbbbbbbbbbda....","....abdbbbbbbbbbbdda....",".....aabdbbbbbbddaa.....",".......aabdddddaa.......",".........aaaaaa.........","........................"]},"pizza":{"p":["#1a1030","#dcb17a","#c8822a","#905d1e","#ffd23a","#ffe384","#b79729","#e8261a","#3a8a2a"],"r":["........................","........................","..aaaaaaaaaaaaaaaaaaaa..",".abbbbbbbbbbbbbbbbbbbca.",".abccccccccccccccccccda.",".acddddddddddddddddddda.","..aeffffeeffffffffffea..","...afeeghhegeeggeeega...","...aeeghhhhifghheega....","....aeghhhhfghhhhfga....",".....afehhfeghhhhea.....",".....aeeffeeeehhfga.....","......afeeeggeefga......","......aeeeghheifga......",".......afghhhhfga.......",".......aeghhhhfga.......","........afehhfga........","........aeeffga.........",".........aeeega.........","..........afga..........","..........aega..........","...........aa...........","........................","........................"]},"flame":{"p":["#1a1030","#ff9871","#ff5a1a","#b74012","#ffce7a","#ffb02a","#b77e1e","#fff2a0"],"r":["........................","...........aa...........","..........abca..........","..........abcca.........","..........abccca........",".........abccccca.......",".........abcccccca......","......a..abccccccca.....",".....acaabcddcccccca....",".....abcabdefcccccda....","....abccbdefffbcccda....","....abcccdeffgccccda....","....abccdefggffccccca...","...abccdefghheffbccda...","...abccdefghhffgbccda...","...acccdeghhhhegbccda...","....accdfghhhhfbccda....",".....abccefhhegbcda.....",".....accdfgffggbcda.....","......accbbbbbbcda......",".......acddddddda.......","........aaaaaaaa........","........................","........................"]},"bolt":{"p":["#1a1030","#ffed84","#ffe23a","#b7a229"],"r":["..............aaa.......",".............abbca......","............abcda.......","...........abccda.......","..........abccda........",".........abcccda........","........abcccda.........","........abcccda.........",".......abcccdaaaaaaa....","......abcccccbbbbbbca...",".....abcccccccccccda....","....abcccccccccccda.....","...acddddddcccccda......","....aaaaaaabcccda.......","..........abccda........",".........abccda.........",".........abccda.........",".........abcda..........","........abcda...........","........abda............","........aca.............",".......aca..............","........a...............","........................"]},"ghost":{"p":["#1a1030","#f8f8ff","#f4f4ff","#afafb7"],"r":["........................",".........aaaaaa.........",".......aabbbbbcaa.......","......abbccccccbca......",".....abccccccccccca.....","....abccccccccccccca....","....abccccccccccccda....","...abcccdddccdddcccca...","...abccdaaabdaaabccda...","...abccdaaabdaaabccda...","...abccdaaabdaaabccda...","...abccdaaabdaaabccda...","...abcccbbbddbbbcccda...","...abcccccdaaccccccda...","...abccccdaaaabccccda...","...abccccdaaaabccccda...","...abccccccaabcccccda...","...abccccccbbcccccccca..","..abccccccccccccccccda..","..accccdccccdcccdcccda..","...acddacdddacddacddda..","....aaa.aaaa.aaa.aaaa...","........................","........................"]},"crown":{"p":["#1a1030","#ffe384","#ffd23a","#b79729","#e8261a","#3ab0ff","#3ce06a","#dcb167","#c8820a","#905d07"],"r":["........................","...........aa...........","..........abca..........","..........acda..........","...........aa...........",".aa.......abca.......aa.","abca......abda......abca","acda.....abccca.....abda",".aa.....abcccda.....aca.",".aca....abccccca...abda.",".acca..abccccccca.abcda.","..abca.abccddccdaabcda..","..abccabccdeecccbbccda..","..abccbccdeeeebcccccda..","..abccddcdeeeebcddccda..","..abcdffbcceebcdggbcda..","..acddffcddccdddggcdda..","...ahhhhhhhhhhhhhhhia...","...ahiiiiiiiiiiiiiija...","...aijjjjjjjjjjjjjjja...","....aaaaaaaaaaaaaaaa....","........................","........................","........................"]},"skull":{"p":["#1a1030","#f5f3eb","#f0ece0","#aca9a1","#ff3a3a"],"r":["........................",".........aaaaaa.........",".......aabbbbbcaa.......",".....aabbccccccbcaa.....","....abbccccccccccbca....","....abccccccccccccda....","...abcccdccccccdcccca...","..abccddacdccddacdccca..","..abcdaaaaabdaaaaabcda..","..abcdaaeaabdaaeaabcda..","..abcdaaaaabdaaaaabcda..","..abcdaaaaabdaaaaabcda..","..acccbcabbccbcabbccda..","...accccbccddccbcccda...","....abccccdaabccccda....","....acdcccdaabcccdda....",".....aabcccbbcccdaa.....","......abccccccccda......","......abdcdcdcdcda......","......acacacacaca.......","......acacacacaca.......",".......a.a.a.a.a........","........................","........................"]},"rocket":{"p":["#1a1030","#f0f4fa","#e8eef8","#e8261a","#f07871","#a71b12","#a7abb2","#3ab0ff","#ffce7a","#ffb02a","#b77e1e"],"r":["........................","................aaaaaa..","...............abbcdeda.","..............abccccdfa.",".............abccccccda.","............abcgcccccca.","...........abcghcccccga.","..........abcghhhcccga..",".........abcghhhhhbga...","........abcccchhhbga....",".......abcccccchbga.....","......abcccccccbga......","...aaabccccccccga.......","..aeedccccccccga........","..aedddccccccga.........",".aefffaaccccga..........",".adaaijaaccga...........","..aaijjjedca............","..aijjjkedda............",".aijjjkaedfa............",".ajjjkaedffa............","..ajkaadfaa.............","...aa..aa...............","........................"]},"alien":{"p":["#1a1030","#ff5ad8","#a2ff98","#6aff5a","#4cb740","#ffffff"],"r":[".........aabbaa.........",".......aacdbbcdaa.......","......accddccddcda......",".....acddddddddddda.....","....acddddddddddddda....","...acddddddddddddddda...","..acddddddddddddddddda..","..acddddddddddddddddea..","..acddddddddddddddddea..",".acdedddddddddddddeedda.",".aceadeedddddddeeeaacea.",".aceaaaadeddddeaaaaacea.",".acddafaaacddeaaaafcdea.",".acdeaaaaacddeaaaaacdea.",".addddaaacdddddaaacddea.","..acddcdacddddeaccddea..","..acddddcddddddcddddea..","..adddddddddddddddddea..","...addddddeeeedddddea...","....addddeaaaacdddea....",".....addddccccdddea.....","......adeddddddeea......",".......aadeeeeeaa.......",".........aaaaaa........."]},"ninja":{"p":["#1a1030","#7a7a84","#2a2a3a","#e8261a","#1e1e29","#f07871","#a71b12","#f5dcc4","#f0c8a0","#ac9073"],"r":["........................",".........aaaaaa.........",".......aabbbbbcaa.......",".....aabbccccccbcaa...a.","....abbccccccccccbca.ada","...aceeeeeeeeeeeeeecafga","..affffffffffffffffffgga","..afddddddddddddddddgada","..adgggggggggggggggggaa.",".achhhhhhhhhhhhhhhhhica.",".achiiijjjiiiijjjiiijca.",".achiijaaahiijaaahiijca.",".achiijaaahiijaaahiijca.",".achiiihhhiiiihhhiiijca.",".acijjjjjjjjjjjjjjjjjca.","..abbbbbbbbbbbbbbbbbca..","..acccccccccccccccccea..","...abccccccccccccccea...","...acccccccccccccccea...","....acecccccccccceea....",".....aacecccccceeaa.....",".......aaceeeeeaa.......",".........aaaaaa.........","........................"]},"planet":{"p":["#1a1030","#ffffff","#ffb6e1","#ff8ad0","#b76395","#ffc8ec","#ffe384","#ffd23a","#b79729"],"r":["........................","........................","...a....................","..aba..............a....","...a.....aaaaaa...aba...","........acccccda...a....",".......acddddddda.......","......aceeeeddddda..aaaa",".....aceffffcdddddaagggh","....acdeffffceeeeggghhii","....acdeffffdgggghiiiiaa","....aceefgggghhiiidaaa..","..aaadggghhiiiicccea....","aagggghiiiiccccdddea....","gghhiiiccccdddddddea....","hiiiaadddddddddddea.....","aaaa..adddddddddea......",".......adddddddea.......","........adeeeeea........",".........aaaaaa.....a...","...................aba..","....................a...","........................","........................"]},"gem":{"p":["#1a1030","#d7f5ff","#bff0ff","#98dcff","#5ac8ff","#89acb7","#4090b7","#ace6ff","#7ad8ff","#579bb7","#84ceff","#3ab0ff","#71a6dc","#1a70c8","#297eb7","#125090"],"r":["........................","........................","........................","......aaaaaaaaaaaa......",".....abbbbbcdddddea.....","....abccccfdeeeeghia....","...abccccfdeeeeeghiia...","...abccccfdeeeeeghija...","..abccccfdeeeeeghiiiia..",".acfffffegggggggijjjjia.",".aihhhhikkkkkkklmmmmmna.","..aiiiijllllllomnnnnpa..","...aiiiiikllllomnnnpa...","....aiiijkllllomnnpa....",".....aiijllllomnnpa.....","......ahiikllomnpa......","......aiijkllomnpa......",".......aijllomnpa.......","........aiikompa........",".........aikona.........","..........alna..........","...........aa...........","........................","........................"]},"eye":{"p":["#1a1030","#ffe384","#ffd23a","#b79729","#ffc073","#ff9a1e","#b76e15","#ffffff"],"r":["........................","........................","........................","........................","........aaaaaaaa........",".....aaabcccccccaaa.....","....abbcdefaaefccbca....","..aabcdefggaaefefbccaa..",".abbccdfhhfaaeffgcccbca.",".abccdeghhfaaeffffbccda.","abcccdefeegaaefffgbcccca","abcccdefffgaaefffgbcccda","abcccdefffgaaefffgbcccda","accccdefffgaaefffgbcccda",".abccdffffgaaefffgbccda.",".acdccceffgaaeffgbccdda.","..aaccdfgfgaaefggbcdaa..","....acdccfgaafgbcdda....",".....aaacccccccdaaa.....","........aaaaaaaa........","........................","........................","........................","........................"]},"panda":{"p":["#1a1030","#7a7a81","#2a2a34","#1e1e25","#ffffff","#b7b7b7","#ffb0c0"],"r":["........................","...aaaa..........aaaa...","..abbbca........abbbca..",".abcccccaaaaaaaabccccca.",".abcccddaeeeeeeacdcccda.",".abccdeeeeeeeeeeeecccda.",".accdeeeeeeeeeeeeeeccda.","..aceeeeeeeeeeeeeeeeca..","..aeeeeeeeeeeeeeeeeeea..","..aeeeffffeeeeffffeefa..",".aeeefbbbceeefbbbceeeea.",".aeefbccdccefbccdcceefa.",".aeefccdebdefccdebdeefa.",".aeeeecdcdeffecdcdeeefa.",".aeeefeeeefaaeeeeefeefa.",".aeefggeefaaaaeefggeefa.","..aeeeeeefaaaaeeeeeefa..","..aeeeeeeeeaaeeeeeeefa..","...aeeeeeeeeeeeeeeefa...","....aeeeeeeeeeeeeefa....",".....aeffeeeeeefffa.....","......aaaefffffaaa......",".........aaaaaa.........","........................"]},"fox":{"p":["#1a1030","#ff8a2a","#ffb67a","#b7631e","#2a1a10","#ffffff","#b7b7b7"],"r":["........................","..a..................a..",".aba................aba.",".acba..............acda.",".abbba............aecda.","..abeba..........aeeba..","..abeeba........aeecda..","..acbeebaaaaaaaaeeecda..","..acdecbccccccccbeecda..","..acbcbddbbbbbbddccbda..","..abbbdaacbbbbdaacbbda..","...acbdaacbbbbdaacbda...","...abbdaacbbbbdaacbda...","...afbdbcbbbbbbcbddfa...","...abfffbddbbdddfffa....","....abfffffbdffffga.....",".....abfffffffffga......","......abfffffffga.......",".......abffggfga........","........abfaafa.........",".........abaaa..........","..........aba...........","...........a............","........................"]},"penguin":{"p":["#1a1030","#717a84","#1a2a3a","#121e29","#ffffff","#b7b7b7","#ff9a1e","#ffc073","#b76e15"],"r":[".........aaaaaa.........",".......aabbbbbcaa.......","......abbccccccbca......",".....abccccccccccca.....","....abccccccccccccca....","...abccccccccccccccca...","..abcccddddccddddcccca..","..abccdeeeecdeeeebccda..","..abccdeefeeeeeffbccda..",".abcccdefaeeeefaebcccca.",".abcccdeeeeeeeeefbcccda.",".abcccdeeeffffeefccccda.",".abccdeeefghhgeeeebccda.",".abccdeeeeegieeeefbccda.",".acccdeeeeeeeeeeefbccda.","..abcdeeeeeeeeeeefbcda..","..abcdeeeeeeeeeeefbcda..","..accdeeeeeeeeeeefbcda..","...accceeeeeeeeefbcda...","....acdeeeeeeeeefbda....",".....accefeeeeffbda.....","......acccefffbcda......",".......aacccccdaa.......",".........aaaaaa........."]},"cupcake":{"p":["#1a1030","#f07871","#e8261a","#a71b12","#ffd7ee","#ffc0e4","#b78aa4","#ff9ad0","#ffc0e1","#b76e95","#ffd23a","#3ab0ff","#3ce06a","#e8a050","#f0c492","#c87a2a","#a77339"],"r":["...........aa...........","..........abca..........",".........abccca.........",".........acccda.........","........aefcdefa........",".......aeffeefffa.......",".......aeffffffga.......",".....aaheffffffghaa.....","....aiijfffffffgiiha....","...aihhhhfgggggkihhha...","...aihhhjliiiiiihhhja...","...aihhhhihhjhhhhhhja...","...ahhhhhhhjmihhhhhja...","....ahjhhhhhihhhhjja....","....annhjjjjjjjjjona....",".....aonponponpooqa.....",".....aoqpoqpoqponqa.....",".....aoqpoqpoqponqa.....",".....aoqpoqpoqponqa.....",".....anqpoqpoqponqa.....","......anpoqpoqpoqa......","......anpnqpnqpnqa......",".......aaaaaaaaaa.......","........................"]},"moon":{"p":["#1a1030","#fff9c4","#fff6a0","#ffffff","#b7b173","#e8d870"],"r":["........................","........................",".........aa.............",".....a.aabca.......a....","....adabbea.......ada...",".....abcea.........a....","....abccea..............","...abcccea..............","...abcccea..............","..abccccea..............","..abccccea..............","..abccccea..............","..abccccea..............","..abccceffa.............","..acccceffca............","...abcccbbccaaaaaaaa....","...accccccccbbbbbbbca...","....accccccccccccceada..",".....acccccccccccea.a...","......acecccccceea......",".......aaceeeeeaa.......",".........aaaaaa.........","........................","........................"]},"controller":{"p":["#1a1030","#84848e","#3a3a4a","#292935","#ffffff","#e8261a","#3ce06a","#3ab0ff"],"r":["........................","........................","........................","........................","........................","........................","........................","........................","....aaaaaaaaaaaaaaaa....","..aabbbbbbbbbbbbbbbcaa..",".abbcddcccccccccddccbca.",".abcdeebcccccccdffbccda.","abcddeecdccccccdffbddcca","abdeeeeeebccccccbbdggbda","abdeeeeeebccccccdddggbda","accbceebbccccccdhhbbbcda",".abcdeebcccccccdhhbccda.",".acdcbbcccccccccbbccdda.","..aacdddddddddddddddaa..","....aaaaaaaaaaaaaaaa....","........................","........................","........................","........................"]},"shark":{"p":["#1a1030","#7a9ab8","#acc0d2","#576e84","#f0f4fa","#e8eef8","#a7abb2","#ffffff"],"r":["........................",".............a..........","............aba.........","...........acbba........","...........acbda........","..........acbbda........","..........acbbda........",".........acbbbda........","........acbbbbbba.......",".....aaacbbbbbbdaaa.....","...aacccbbbbbbbbccbaa...","..accbbbbbbbbbbbbbbcba..",".acbbbbbbbbbbbbbbddbbba.","acbbbbbbbbbbbbbbdaacbbba","acbbbbbbdddddddddaacbbda","acbbbdddeeeeeeefbbbbbbda","abbbdeffggggggggfefbbbda",".abdegaahahahahaheffcda.","..abfffaaaaaaaaaeffgba..","...aafgfeeeeeeeegggaa...",".....aaafgggggggaaa.....","........aaaaaaaa........","........................","........................"]},"robot":{"p":["#1a1030","#ff3a3a","#b6bbd2","#8a92b8","#636984","#dce1eb","#c8d0e0","#9095a1","#3af0ff","#ffd23a"],"r":["...........aa...........","..........abba..........","..........abba..........","..........acda..........","..........acea..........","....aaaaaaadeaaaaaaa....","...afffffffffffffffga...","...afggggggggggggggha...","...afghhhhhgghhhhhgha...","...afhaaaaafhaaaaafha...","..aafhaiiiafhaiiiafhaa..",".acdfhaiiiafhaiiiafhcda.",".acefhaiiiafhaiiiafhcea.",".acefhaaaaafhaaaaafhcea.",".acefgfffffggfffffghcea.",".adefgghhhhhhhhhhgghdea.","..aafghaaaaaaaaaafghaa..","...afghajajajajajfgha...","...afghaaaaaaaaaafgha...","...afggffffffffffggha...","...aghhhhhhhhhhhhhhha...","....aaaaaaaaaaaaaaaa....","........................","........................"]},"sword":{"p":["#1a1030","#f0f4fa","#e8eef8","#a7abb2","#ffe384","#ffd23a","#b79729","#b68e71","#8a4a1a","#633512"],"r":[".................aaaa...","................abbbca..","...............abcccda..","..............abcccdda..",".............abcccdaa...","............abcccda.....","...........abcccda......","..........abcccda.......",".........abcccda........","........abcccda.........","...aaa.abcccda..........","..aeefabcccda...........","..aefffcccda............","..afffffcda.............","...afgggfca.............","....ahhhifa.............","...ahiiijefa............","..ahiiijjeffa...........",".ahiiijafffffa..........",".aijija.afffffa.........","aeefia...afffga.........","aefgia....afgga.........","afgga......aaa..........",".aaa...................."]},"unicorn":{"p":["#1a1030","#ffd23a","#ff7ad8","#ffe384","#b79729","#dcc0ff","#c89aff","#906eb7","#ffffff","#b7b7b7","#ffdcee","#ffc8e4","#b790a4"],"r":["............a...........",".......aa..aba..........",".....aaccaadea..........","....accccaadea..........","....aacccaadbba.........","...affgcccadbea.........","..afgghaccdbbeiaa.......","..afggggicbeeebiiaa.....","..agggghiiiiiiiiiiia....","...afgghiiiiiiiiiija....","...afhhiiiiiiiiiiiiia...","..aigiiijjiiiiijjiiiia..","..aiiiijaaiiiijaaiiija..","..aiiiijaaiiiijaaiiija..","..aiiiijaaiiiijaaiiija..","..aiiiiiiijjjjiiiiiija..","..aiiiiiijkkkliiiiiija..","...aiiiijklmlmliiiija...","....aiiijlmalaliiija....","....aijiiillmliiijja....",".....aaijiiiiiijjaa.....",".......aaijjjjjaa.......",".........aaaaaa.........","........................"]},"tiger":{"p":["#1a1030","#ffc07a","#ff9a2a","#b76e1e","#7ae06a","#ffffff","#b7b7b7","#ff5a8a"],"r":["........................","...aaaa..........aaaa...","..abbbca........abbbca..",".abccccca.a..a.abccccca.",".abccccdaacaacaabccccda.",".abccccdaacaacaabccccda.",".acccccdaacaacaabccccda.","..abcccdaacaacaabcccda..","..abccccbbcbbcbbccccda..","..abccccccccccccccccda..",".abdddccddccccddccdddca.",".acaaabdeabccdeabdaaaca.",".abbbbcdaacdddaabcbbbda.",".abccccdaaffffaabccccda.",".abccccdffghhfffcccccda.",".accccdfffghhffffbcccda.","..abccdfffffffffgbccda..","..acccdfffffffffgbccda..","...accdfffffffffgbcda...","....acccfgffffggbcda....",".....acdccfgggbcdda.....","......aaacccccdaaa......",".........aaaaaa.........","........................"]},"dragon":{"p":["#1a1030","#3ab04a","#84ce8e","#297e35","#ffd23a","#c9eb9c","#a8e060","#78a145"],"r":[".aba................aba.",".abba..............acda.","..acba............acda..","..acbba..........acbda..","..acbbba.aaaaaa.acbbda..","..abbbbbacccccbacbbbda..","...acbbbcbbbbbbcbbbda...","...acbbbbbbbbbbbbbbda...","...acbbbbbbbbbbbbbbda...","..acbbddbbbbbbbbddbbba..","..acbdeebdbbbbddeecbda..",".acbbdeeaecbbdeaeecbbba.",".acbbdeeacbbbdeaeecbbda.",".acbbbbeabddddbaccbbbda.",".acbbbbbbfffffgbdbbbbda.",".acbbbdffggggggfgbbbbda.",".abbbdfgggggggggggcbbda.","..acbdfggghggghgghcbda..","..abbdfgghafghafghcbda..","...abdggggfgggfgghcda...","....abbghgggggghhcda....",".....abbbghhhhhbbda.....","......aaabbbbbbaaa......",".........aaaaaa........."]},"phoenix":{"p":["#1a1030","#ff5a1a","#ff9871","#b74012","#ffe384","#ffd23a","#b79729","#ffce7a","#ffb02a","#b77e1e","#ff9a1e"],"r":["........................","........................",".a....................a.","aba..................aba","abba.......aa.......acda",".acba.....aefa.....acda.",".acbba....aega...aacbda.",".acbbbaa.afggfa.accbbda.",".abbbbcbahhhhhiacbbbda..","..acbbbdhiiiiiiibbbbda..","..acbbdhiijiijiiicbbda..","..abbbdhijahjahijcbbda..","...acbdhijahjahijbbda...","...abdahiihjjhiijabda...","....aaahiijkkhiijaaa....","......aiiiihhiiija......",".......aiiiiiiija.......","........aiiiiija........",".........aijjja.........",".........abccba.........","..........acda..........","..........abda..........","...........aa...........","........................"]},"rainbow":{"p":["#1a1030","#ff3a3a","#ffa02a","#ffe03a","#3ae05a","#3ab0ff","#ffffff","#a64aff","#b7b7b7"],"r":["........................","........................","........................","........................","........................","........................","........................","........................",".........aaaaaa.........",".......aabbbbbbaa.......",".....aabbbbbbbbbbaa.....","....abbbccccccccbbba....","...abbbcccddddcccbbba...","...abbccddddddddccbba...","..abbccddeeeeeeddccbba..","..abccddeeeffeeeddccba..",".abbccdeeffffffeedccbba.",".aggggdeeffhhffeedgggga.","aggggggeffhhhhffegggggga","agggggiaaaaaaaaaagggggia",".agiiia..........agiiia.","..aaaa............aaaa..","........................","........................"]}};
 // фон аватарки-героя: в его цветах, с лучами и светом (раньше — тёмный квадрат)
 const AVBG = new Map();
 function heroAvBg(k, gold) {
@@ -16706,8 +16722,22 @@ function heroAvBg(k, gold) {
   g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(2, 2, 6, 2); g.fillRect(2, 4, 2, 3);
   AVBG.set(key, c); return c;
 }
+function avatarPix2(a, fr, key) {
+  const art = AV_ART[a.id], S2 = AV_S, c = document.createElement('canvas'); c.width = c.height = S2; const cg = c.getContext('2d');
+  for (let b = 0; b < 8; b++) { cg.fillStyle = hexMix(a.bg[0], a.bg[1], b / 7); cg.fillRect(0, b * 6, S2, 6); }   // фон ступеньками
+  cg.save(); cg.translate(24, 26); cg.rotate(fr * 0.06); cg.fillStyle = 'rgba(255,255,255,0.10)'; for (let i = 0; i < 8; i++) { cg.rotate(Math.PI / 4); cg.beginPath(); cg.moveTo(0, 0); cg.lineTo(-5, -36); cg.lineTo(5, -36); cg.fill(); } cg.restore();
+  cg.fillStyle = 'rgba(255,255,255,0.14)'; cg.beginPath(); cg.arc(24, 24, 17, 0, 7); cg.fill();
+  const bob = Math.round(Math.sin(fr / 8 * Math.PI * 2) * 1.2);
+  cg.fillStyle = 'rgba(0,0,0,0.25)'; cg.fillRect(12 - bob, 44, 24 + bob * 2, 2);
+  art.r.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const ch = row[x]; if (ch === '.') continue; cg.fillStyle = art.p[AV_CH.indexOf(ch)]; cg.fillRect(x * 2, y * 2 + bob, 2, 2); } });
+  if (fr < 3) { cg.save(); cg.globalCompositeOperation = 'source-atop'; cg.fillStyle = 'rgba(255,255,255,0.3)'; const sx = -16 + fr * 24; cg.beginPath(); cg.moveTo(sx, S2); cg.lineTo(sx + 6, S2); cg.lineTo(sx + 20, 0); cg.lineTo(sx + 14, 0); cg.fill(); cg.restore(); }
+  cg.fillStyle = 'rgba(255,255,255,0.4)'; cg.fillRect(0, 0, S2, 2); cg.fillRect(0, 0, 2, S2); cg.fillStyle = 'rgba(0,0,0,0.35)'; cg.fillRect(0, S2 - 2, S2, 2); cg.fillRect(S2 - 2, 0, 2, S2);
+  AV_PIX.set(key, c); return c;
+}
+const AV_CH = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 function avatarPix(a, fr) {
   const key = a.id + fr; let c = AV_PIX.get(key); if (c) return c;
+  if (!a.pack && AV_ART[a.id]) return avatarPix2(a, fr, key);
   const old = a.pack, S2 = old ? 32 : AV_S, k = S2 / 32;
   const art = document.createElement('canvas'); art.width = art.height = S2;
   let pal;
@@ -17148,8 +17178,9 @@ function dropShow(opt = {}) {
   let cnv = dropCnv(shown, 170); box.appendChild(cnv); stage.appendChild(box);
   const paint = () => { const R = DROP_R[shown]; ov.style.setProperty('--dc', R.c[0]); ov.style.setProperty('--dk', R.c[2]); nm.textContent = tr(R.ru, R.en); const c2 = dropCnv(shown, 170); box.replaceChild(c2, cnv); cnv = c2; };
   const ch = el('div', 'ch'); DROP_R.forEach(R2 => { const s = el('span', '', tr(R2.ru, R2.en) + ' ' + R2.p + '%'); s.style.color = R2.c[0]; ch.appendChild(s); });
+  stage.appendChild(el('i', 'ring'));   // ящик вылетает снизу, по приземлении — кольцо света и искры
   paint(); ov.append(rays, ttl, left, stage, nm, hint, ch); document.body.appendChild(ov);
-  try { tone(392, 784, 0.25, 'triangle', 0.05); } catch (e) {}
+  try { tone(300, 900, 0.45, 'sine', 0.05); noise(0.35, 0.04, 2500); setTimeout(() => { try { tone(784, 1568, 0.18, 'triangle', 0.06); } catch (e) {} burst(18); }, 560); } catch (e) {}
   const burst = (n, col) => { for (let i = 0; i < n; i++) { const d = el('i', 'sp'), a = Math.random() * 6.283, v = 90 + Math.random() * 130; d.style.background = col || DROP_R[shown].c[i % 2 ? 1 : 0]; d.style.setProperty('--dx', Math.cos(a) * v + 'px'); d.style.setProperty('--dy', Math.sin(a) * v + 'px'); stage.appendChild(d); setTimeout(() => d.remove(), 800); } };
   const tap = () => {
     if (opened) return;
@@ -17182,11 +17213,16 @@ function dropShow(opt = {}) {
 let dwinFinT = -99, dwinAuto = '', dwinNewT = -99;
 function A_NEWDAY() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f * 1.01, 0.12, 'triangle', 0.05, i * 0.07)); noise(0.2, 0.04, 2500, 0.3); }
 { const st = document.createElement('style'); st.textContent = `
-#dropov{position:fixed;inset:0;z-index:97;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:Montserrat,sans-serif;font-weight:900;text-transform:uppercase;color:#fff;background:radial-gradient(circle at 50% 45%,var(--dk) 0%,#140a28 65%);overflow:hidden;animation:dpIn .3s ease-out;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#dropov{position:fixed;inset:0;z-index:130;animation:dpIn .45s ease-out both;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:Montserrat,sans-serif;font-weight:900;text-transform:uppercase;color:#fff;background:radial-gradient(circle at 50% 45%,var(--dk) 0%,#140a28 65%);overflow:hidden;animation:dpIn .3s ease-out;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #dropov .rays{position:absolute;left:50%;top:45%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(from 0deg,#ffffff14 0 10deg,transparent 10deg 20deg);animation:nwRot 18s linear infinite;pointer-events:none}
 #dropov .tt{position:relative;font-size:24px;letter-spacing:3px;color:#ffd23a;text-shadow:0 3px 0 #1a0a04}
 #dropov .lf{position:relative;font-size:13px;opacity:.8;letter-spacing:1px}
-#dropov .stage{position:relative;width:260px;height:240px;display:flex;align-items:center;justify-content:center}
+#dropov .stage{position:relative;width:260px;height:240px;display:flex;align-items:center;justify-content:center;animation:dpEnter .7s cubic-bezier(.2,1.4,.4,1) both}
+#dropov .tt,#dropov .lf,#dropov .nm,#dropov .hint{animation:dpFade .4s ease-out .45s both}
+#dropov .ring{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border:6px solid var(--dc);border-radius:50%;opacity:0;animation:dpRing .7s ease-out .55s both;pointer-events:none}
+@keyframes dpEnter{0%{transform:translateY(320px) scale(.25) rotate(-25deg);opacity:0}60%{opacity:1}100%{transform:none}}
+@keyframes dpFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes dpRing{0%{opacity:.9;transform:scale(.5)}100%{opacity:0;transform:scale(7)}}
 #dropov .box{position:relative;filter:drop-shadow(0 0 22px var(--dc)) drop-shadow(0 8px 0 #0008);animation:dpBob 1.4s ease-in-out infinite}
 #dropov .box.hit canvas{animation:dpHit .18s ease-out}
 #dropov .box.up{animation:dpUp .45s cubic-bezier(.2,2,.4,1)}
@@ -18421,13 +18457,15 @@ const GLORY = (() => {   // 60 ступеней; кубков на ступен�
 const gloryGot = () => Math.min(GLORY.length, nat(store.get('glory', 0)));
 const gloryNext = () => GLORY[gloryGot()] || null;
 const gloryReady = memo(() => { const n = gloryNext(); return !!n && troTotal() >= n.t; });
-function gloryClaim() {
+function gloryClaim(btn) {
   const n = gloryNext(); if (!n || troTotal() < n.t) return; store.set('glory', gloryGot() + 1);
   try { tone(784, 1568, 0.2, 'triangle', 0.06); } catch (e) {}
   const rw = n.rw;
   if (rw.k === 'drop') { dropShow({ road: true, min: rw.r }); moRefresh(); return; }
   if (rw.k === 'chest') { moClose(); freeChest(!!rw.gold); return; }
-  passGive(rw); moReward(tr('НАГРАДА!', 'REWARD!'), passRewNode(rw, 64)); moRefresh();
+  passGive(rw);
+  if ((rw.k === 'coins' || rw.k === 'gems') && btn) { domCoinFly(btn, rw.n, rw.k === 'gems' ? 'g' : 'c'); btn.disabled = true; setTimeout(() => { if (moUi && moUi.style.display === 'flex') moRefresh(); }, 1300); return; }   // монеты и кристаллы летят в счётчик, как в игре
+  moReward(tr('НАГРАДА!', 'REWARD!'), passRewNode(rw, 64)); moRefresh();
 }
 function gloryRwNode(rw, size) {
   if (rw.k === 'drop') { const w = moEl('div'); w.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px'; w.append(dropCnv(rw.r, size * 0.8), moTxt('div', 'sm', tr('ДРОП', 'DROP'))); return w; }
@@ -18438,7 +18476,10 @@ function openGlory() {
     const tro = troTotal(), got = gloryGot();
     const hd = moEl('div', 'card'), top = moEl('div', 'row'); top.style.gap = '10px';
     top.append(iconCnv('trophy', 0, 40), (() => { const c = moEl('div'); c.append(moTxt('div', 'ol big', String(tro)), moTxt('div', 'sm', tr('ВСЕГО КУБКОВ. ПОДНИМАЙ — ЗАБИРАЙ НАГРАДЫ', 'TOTAL TROPHIES. CLIMB AND COLLECT'))); return c; })());
-    hd.appendChild(top); bd.appendChild(hd);
+    hd.appendChild(top);
+    const cash = moEl('div', 'row'); cash.style.cssText = 'gap:14px;margin-top:8px';   // счётчики: награды летят сюда
+    cash.append((() => { const r = moEl('div', 'row'); r.style.gap = '4px'; r.append(iconCnv('coins', 0, 22), moTxt('span', 'ol', String(bank))); return r; })(), (() => { const r = moEl('div', 'row'); r.style.gap = '4px'; r.append(iconCnv('gems', 0, 22), moTxt('span', 'ol', String(gems))); return r; })());
+    hd.appendChild(cash); bd.appendChild(hd);
     const sc = moEl('div', 'road'), tr0 = moEl('div', 'rtrk'); sc.appendChild(tr0);
     let cur = null;
     GLORY.forEach((m, i) => {
@@ -18447,7 +18488,7 @@ function openGlory() {
       const ln = moEl('div', 'rl'); const f = moEl('i'); f.style.width = (fill * 100) + '%'; ln.appendChild(f); c.appendChild(ln);
       const tile = moEl('div', 'rt'); tile.appendChild(gloryRwNode(m.rw, 44)); if (done) tile.appendChild(moTxt('div', 'ck', '✓')); c.appendChild(tile);
       const lb = moEl('div', 'rn row'); lb.append(iconCnv('trophy', 0, 14), moTxt('span', 'ol', String(m.t))); c.appendChild(lb);
-      if (can) { const b = moTxt('button', 'btn gold', tr('ЗАБРАТЬ', 'CLAIM')); b.onclick = () => { sfx.click(); gloryClaim(); }; c.appendChild(b); }
+      if (can) { const b = moTxt('button', 'btn gold', tr('ЗАБРАТЬ', 'CLAIM')); b.onclick = () => { if (b.disabled) return; sfx.click(); gloryClaim(b); }; c.appendChild(b); }
       if (i === got) cur = c;
       tr0.appendChild(c);
     });
